@@ -402,6 +402,7 @@ This task wires up the harness end-to-end with the simplest possible fixture: a 
 **Files:**
 - Create: `spec/conformance/harness/package.json`
 - Create: `spec/conformance/harness/tsconfig.json`
+- Create: `spec/conformance/harness/vitest.config.ts`
 - Create: `spec/conformance/harness/src/run.ts`
 - Create: `spec/conformance/harness/tests/conformance.test.ts`
 - Create: `spec/conformance/fixtures/01-empty-repo/input/.zettelgeist.yaml`
@@ -522,6 +523,10 @@ _No specs._
   },
   "dependencies": {
     "@zettelgeist/core": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.0",
+    "@types/node": "^20.0.0"
   }
 }
 ```
@@ -535,8 +540,26 @@ _No specs._
     "outDir": "dist",
     "rootDir": "."
   },
-  "include": ["src/**/*", "tests/**/*"]
+  "include": ["src/**/*", "tests/**/*", "vitest.config.ts"]
 }
+```
+
+`spec/conformance/harness/vitest.config.ts` (resolves `@zettelgeist/core` to source so the harness runs without a prior build of core):
+
+```ts
+import { defineConfig } from 'vitest/config';
+import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+
+export default defineConfig({
+  resolve: {
+    alias: {
+      '@zettelgeist/core': path.resolve(here, '../../../packages/core/src/index.ts'),
+    },
+  },
+});
 ```
 
 - [ ] **Step 4: Create the disk-backed `FsReader` in the harness**
@@ -575,23 +598,20 @@ export function makeDiskFsReader(rootDir: string): FsReader {
 `spec/conformance/harness/tests/conformance.test.ts`:
 
 ```ts
-import { promises as fs } from 'node:fs';
+import { promises as fsp, readdirSync } from 'node:fs';
 import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { runConformance } from '@zettelgeist/core';
 import { makeDiskFsReader } from '../src/run.js';
 
-const FIXTURES_DIR = path.resolve(__dirname, '../../fixtures');
+const here = path.dirname(fileURLToPath(import.meta.url));
+const FIXTURES_DIR = path.resolve(here, '../../fixtures');
 
-async function listFixtures(): Promise<string[]> {
-  const entries = await fs.readdir(FIXTURES_DIR, { withFileTypes: true });
-  return entries
-    .filter((e) => e.isDirectory())
-    .map((e) => e.name)
-    .sort();
-}
-
-const fixtureNames = await listFixtures();
+const fixtureNames = readdirSync(FIXTURES_DIR, { withFileTypes: true })
+  .filter((e) => e.isDirectory())
+  .map((e) => e.name)
+  .sort();
 
 describe('conformance fixtures', () => {
   for (const name of fixtureNames) {
@@ -603,19 +623,27 @@ describe('conformance fixtures', () => {
       const reader = makeDiskFsReader(inputDir);
       const actual = await runConformance(reader);
 
-      const expectedStatuses = JSON.parse(await fs.readFile(path.join(expectedDir, 'statuses.json'), 'utf8'));
-      const expectedGraph = JSON.parse(await fs.readFile(path.join(expectedDir, 'graph.json'), 'utf8'));
-      const expectedValidation = JSON.parse(await fs.readFile(path.join(expectedDir, 'validation.json'), 'utf8'));
-      const expectedIndex = await fs.readFile(path.join(expectedDir, 'INDEX.md'), 'utf8');
+      const expectedStatuses = JSON.parse(await fsp.readFile(path.join(expectedDir, 'statuses.json'), 'utf8'));
+      const expectedGraph = JSON.parse(await fsp.readFile(path.join(expectedDir, 'graph.json'), 'utf8'));
+      const expectedValidation = JSON.parse(await fsp.readFile(path.join(expectedDir, 'validation.json'), 'utf8'));
+      const expectedIndex = await fsp.readFile(path.join(expectedDir, 'INDEX.md'), 'utf8');
+
+      // Validation errors are matched on { code, path } only — strip other fields per spec §11.
+      const stripDetails = (errs: unknown[]): unknown[] =>
+        (errs as Array<Record<string, unknown>>).map(({ code, path: p }) => ({ code, path: p }));
 
       expect(actual.statuses).toEqual(expectedStatuses);
       expect(actual.graph).toEqual(expectedGraph);
-      expect(actual.validation).toEqual(expectedValidation);
+      expect(stripDetails(actual.validation.errors)).toEqual(stripDetails(expectedValidation.errors));
       expect(actual.index).toBe(expectedIndex); // byte-exact
     });
   }
 });
 ```
+
+Why `readdirSync`: vitest's `describe`/`it` block needs to register tests synchronously during module load. Using top-level `await` for fixture discovery would work, but a synchronous read is clearer and avoids the ESM top-level-await edge cases some test runners hit.
+
+Why the `stripDetails` helper: per spec §11, validation errors compare on `{code, path}` only. The implementation may include extra fields (like `detail` for `E_INVALID_FRONTMATTER`), but those are excluded from the conformance comparison.
 
 - [ ] **Step 6: Install and run — expect failure**
 
@@ -1044,6 +1072,16 @@ describe('loadAllSpecs', () => {
     expect(spec?.frontmatter).toEqual({});
     expect(spec?.tasks).toHaveLength(1);
   });
+
+  it('skips folders under specs/ that contain no .md files', async () => {
+    const fs = makeMemFs({
+      '.zettelgeist.yaml': 'format_version: "0.1"\n',
+      'specs/ghost/.gitkeep': '',
+      'specs/real/requirements.md': '# Real\n',
+    });
+    const specs = await loadAllSpecs(fs);
+    expect(specs.map((s) => s.name)).toEqual(['real']);
+  });
 });
 ```
 
@@ -1069,6 +1107,22 @@ export interface FsReader {
 
 const SPEC_NAME = /^[a-z0-9-]+$/;
 
+/**
+ * Returns true if `dir` (recursively) contains at least one file whose name ends with `.md`.
+ * Exported because validateRepo also needs this check to emit `E_EMPTY_SPEC`.
+ */
+export async function folderContainsMarkdown(fs: FsReader, dir: string): Promise<boolean> {
+  const entries = await fs.readDir(dir);
+  for (const e of entries) {
+    if (e.isDir) {
+      if (await folderContainsMarkdown(fs, `${dir}/${e.name}`)) return true;
+    } else if (e.name.endsWith('.md')) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export async function loadAllSpecs(fs: FsReader, specsDir = 'specs'): Promise<Spec[]> {
   if (!(await fs.exists(specsDir))) return [];
   const entries = await fs.readDir(specsDir);
@@ -1076,6 +1130,10 @@ export async function loadAllSpecs(fs: FsReader, specsDir = 'specs'): Promise<Sp
   for (const entry of entries) {
     if (!entry.isDir) continue;
     if (!SPEC_NAME.test(entry.name)) continue; // strict-name folders only; loose names skipped silently
+    const dir = `${specsDir}/${entry.name}`;
+    // Skip folders that contain no markdown — those produce E_EMPTY_SPEC at validation time
+    // but are not loaded as specs (no node, no status entry, no graph contribution).
+    if (!(await folderContainsMarkdown(fs, dir))) continue;
     const spec = await loadSpec(fs, entry.name, specsDir);
     specs.push(spec);
   }
@@ -1670,7 +1728,7 @@ Expected: failures.
 import { buildGraph } from './graph.js';
 import { parseFrontmatter } from './frontmatter.js';
 import type { FsReader } from './loader.js';
-import { loadAllSpecs } from './loader.js';
+import { folderContainsMarkdown, loadAllSpecs } from './loader.js';
 import type { ValidationError } from './types.js';
 
 export async function validateRepo(
@@ -1714,18 +1772,6 @@ export async function validateRepo(
 
   errors.sort(compareErrors);
   return { errors };
-}
-
-async function folderContainsMarkdown(fs: FsReader, dir: string): Promise<boolean> {
-  const entries = await fs.readDir(dir);
-  for (const e of entries) {
-    if (e.isDir) {
-      if (await folderContainsMarkdown(fs, `${dir}/${e.name}`)) return true;
-    } else if (e.name.endsWith('.md')) {
-      return true;
-    }
-  }
-  return false;
 }
 
 function compareErrors(a: ValidationError, b: ValidationError): number {
