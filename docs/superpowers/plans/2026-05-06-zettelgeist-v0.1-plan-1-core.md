@@ -537,12 +537,17 @@ _No specs._
 {
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "dist",
-    "rootDir": "."
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@zettelgeist/core": ["../../../packages/core/src/index.ts"]
+    }
   },
   "include": ["src/**/*", "tests/**/*", "vitest.config.ts"]
 }
 ```
+
+Why `paths` here mirrors the vitest alias: `tsc` doesn't read `vitest.config.ts`, so without an explicit path mapping it resolves `@zettelgeist/core` to `dist/index.d.ts` — which doesn't exist before a build. Both vitest (runtime) and tsc (typecheck) need to point at the same source file. `noEmit: true` because the harness never produces compiled output (vitest handles its own compilation).
 
 `spec/conformance/harness/vitest.config.ts` (resolves `@zettelgeist/core` to source so the harness runs without a prior build of core):
 
