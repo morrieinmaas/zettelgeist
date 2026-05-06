@@ -1,8 +1,11 @@
 {
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "dist",
-    "rootDir": "."
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@zettelgeist/core": ["../../../packages/core/src/index.ts"]
+    }
   },
   "include": ["src/**/*", "tests/**/*", "vitest.config.ts"]
 }
