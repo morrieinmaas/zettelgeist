@@ -139,6 +139,7 @@ git commit -m "chore: scaffold pnpm monorepo"
 **Files:**
 - Create: `packages/core/package.json`
 - Create: `packages/core/tsconfig.json`
+- Create: `packages/core/tsconfig.build.json`
 - Create: `packages/core/src/index.ts`
 - Create: `packages/core/src/types.ts`
 - Create: `packages/core/tests/sanity.test.ts`
@@ -160,8 +161,8 @@ git commit -m "chore: scaffold pnpm monorepo"
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run"
   },
   "dependencies": {
@@ -170,18 +171,35 @@ git commit -m "chore: scaffold pnpm monorepo"
 }
 ```
 
-- [ ] **Step 2: Create `packages/core/tsconfig.json`**
+- [ ] **Step 2: Create two TS configs — one for IDE+typecheck, one for build**
+
+`packages/core/tsconfig.json` (IDE + typecheck — includes tests, never emits):
 
 ```json
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "noEmit": true
+  },
+  "include": ["src/**/*", "tests/**/*"]
+}
+```
+
+`packages/core/tsconfig.build.json` (build only — src only, emits dist):
+
+```json
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
     "outDir": "dist",
     "rootDir": "src"
   },
   "include": ["src/**/*"]
 }
 ```
+
+Why split: tests live under `tests/` not `src/`. If we include them in the build config, they'd emit to `dist/`. If we exclude them from any config, the IDE language server treats them as orphan files and can't resolve cross-file imports. The split gives the IDE/typecheck a config that knows about tests (no emit) and the build a config that emits only `src/`.
 
 - [ ] **Step 3: Create `packages/core/src/types.ts`**
 
