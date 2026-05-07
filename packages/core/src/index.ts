@@ -10,7 +10,12 @@ export { validateRepo } from './validate.js';
 export { regenerateIndex } from './regen.js';
 
 import type { FsReader } from './loader.js';
-import type { Graph, Status, ValidationError } from './types.js';
+import type { Graph, RepoState, Status, ValidationError } from './types.js';
+import { loadAllSpecs } from './loader.js';
+import { deriveStatus } from './status.js';
+import { buildGraph } from './graph.js';
+import { validateRepo } from './validate.js';
+import { regenerateIndex } from './regen.js';
 
 export interface ConformanceOutput {
   statuses: { specs: Record<string, Status> };
@@ -19,26 +24,29 @@ export interface ConformanceOutput {
   index: string;
 }
 
-const EMPTY_INDEX =
-  '<!-- ZETTELGEIST:AUTO-GENERATED BELOW — do not edit -->\n' +
-  '\n' +
-  '## State\n' +
-  '\n' +
-  '_No specs._\n' +
-  '\n' +
-  '## Graph\n' +
-  '\n' +
-  '_No specs._\n';
-
 export async function runConformance(fs: FsReader): Promise<ConformanceOutput> {
-  // Verify .zettelgeist.yaml exists; later tasks parse it and walk specs/.
   if (!(await fs.exists('.zettelgeist.yaml'))) {
-    throw new Error('not a zettelgeist repo');
+    throw new Error('not a zettelgeist repo (missing .zettelgeist.yaml)');
   }
+
+  const specs = await loadAllSpecs(fs);
+  const repoState: RepoState = { claimedSpecs: new Set(), mergedSpecs: new Set() };
+  const validation = await validateRepo(fs);
+  const graph = buildGraph(specs);
+
+  const statuses: Record<string, Status> = {};
+  for (const s of specs) statuses[s.name] = deriveStatus(s, repoState);
+
+  let existingIndex: string | null = null;
+  if (await fs.exists('specs/INDEX.md')) {
+    existingIndex = await fs.readFile('specs/INDEX.md');
+  }
+  const index = regenerateIndex(specs, repoState, existingIndex);
+
   return {
-    statuses: { specs: {} },
-    graph: { nodes: [], edges: [], cycles: [] },
-    validation: { errors: [] },
-    index: EMPTY_INDEX,
+    statuses: { specs: statuses },
+    graph: { nodes: graph.nodes, edges: graph.edges, cycles: graph.cycles },
+    validation: { errors: validation.errors },
+    index,
   };
 }
