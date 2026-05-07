@@ -947,7 +947,7 @@ export function parseTasks(body: string): Task[] {
     let text = (m[2] ?? '').trim();
     text = text.replace(NUMERIC_PREFIX, '');
 
-    const tags: Task['tags'] = [];
+    const tags: Array<Task['tags'][number]> = [];
     const seen = new Set<string>();
     for (const word of text.split(/\s+/)) {
       if (KNOWN_TAGS.has(word) && !seen.has(word)) {
