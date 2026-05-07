@@ -4,6 +4,7 @@ export { parseFrontmatter } from './frontmatter.js';
 export type { FrontmatterResult } from './frontmatter.js';
 export { parseTasks } from './tasks.js';
 export { loadSpec, loadAllSpecs } from './loader.js';
+export { deriveStatus } from './status.js';
 
 import type { FsReader } from './loader.js';
 import type { Graph, Status, ValidationError } from './types.js';
