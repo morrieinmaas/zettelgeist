@@ -1,0 +1,3 @@
+- [x] 1. Implement core
+- [ ] 2. Get legal sign-off #human-only
+- [ ] 3. Maybe add WebAuthn later #skip
