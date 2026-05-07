@@ -7,6 +7,7 @@ export { loadSpec, loadAllSpecs } from './loader.js';
 export { deriveStatus } from './status.js';
 export { buildGraph } from './graph.js';
 export { validateRepo } from './validate.js';
+export { regenerateIndex } from './regen.js';
 
 import type { FsReader } from './loader.js';
 import type { Graph, Status, ValidationError } from './types.js';
