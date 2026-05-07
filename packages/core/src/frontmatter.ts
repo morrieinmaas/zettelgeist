@@ -8,7 +8,11 @@ export interface FrontmatterResult {
 
 export function parseFrontmatter(text: string): FrontmatterResult {
   try {
-    const parsed = matter(text);
+    // Pass an options object to disable gray-matter's internal content-keyed cache,
+    // which otherwise corrupts subsequent parses of the same input after a thrown
+    // parse error (the file is cached pre-parse, so a second call returns the
+    // partially-mutated cached entry without re-throwing).
+    const parsed = matter(text, {});
     return {
       data: (parsed.data ?? {}) as Record<string, unknown>,
       body: parsed.content,
