@@ -2,6 +2,7 @@ export * from './types.js';
 export type { FsReader } from './loader.js';
 export { parseFrontmatter } from './frontmatter.js';
 export type { FrontmatterResult } from './frontmatter.js';
+export { parseTasks } from './tasks.js';
 
 import type { FsReader } from './loader.js';
 import type { Graph, Status, ValidationError } from './types.js';
