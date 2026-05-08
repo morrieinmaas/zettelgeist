@@ -1,0 +1,7 @@
+{
+  "errors": [
+    { "code": "E_CYCLE", "path": ["cycled-a", "cycled-b"] },
+    { "code": "E_EMPTY_SPEC", "path": "specs/empty" },
+    { "code": "E_INVALID_FRONTMATTER", "path": "specs/broken/requirements.md" }
+  ]
+}

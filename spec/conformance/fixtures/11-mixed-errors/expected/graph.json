@@ -1,0 +1,12 @@
+{
+  "nodes": [
+    { "name": "broken", "partOf": null },
+    { "name": "cycled-a", "partOf": null },
+    { "name": "cycled-b", "partOf": null }
+  ],
+  "edges": [
+    { "from": "cycled-a", "to": "cycled-b" },
+    { "from": "cycled-b", "to": "cycled-a" }
+  ],
+  "cycles": [["cycled-a", "cycled-b"]]
+}
