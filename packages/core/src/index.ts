@@ -6,16 +6,19 @@ export { parseTasks } from './tasks.js';
 export { loadSpec, loadAllSpecs } from './loader.js';
 export { deriveStatus } from './status.js';
 export { buildGraph } from './graph.js';
-export { validateRepo } from './validate.js';
+export { validateRepo, compareErrors } from './validate.js';
 export { regenerateIndex } from './regen.js';
+export { loadConfig } from './config.js';
+export type { ZettelgeistConfig, LoadConfigResult } from './config.js';
 
 import type { FsReader } from './loader.js';
 import type { Graph, RepoState, Status, ValidationError } from './types.js';
 import { loadAllSpecs } from './loader.js';
 import { deriveStatus } from './status.js';
 import { buildGraph } from './graph.js';
-import { validateRepo } from './validate.js';
+import { validateRepo, compareErrors } from './validate.js';
 import { regenerateIndex } from './regen.js';
+import { loadConfig } from './config.js';
 
 export interface ConformanceOutput {
   statuses: { specs: Record<string, Status> };
@@ -29,24 +32,30 @@ export async function runConformance(fs: FsReader): Promise<ConformanceOutput> {
     throw new Error('not a zettelgeist repo (missing .zettelgeist.yaml)');
   }
 
-  const specs = await loadAllSpecs(fs);
+  const cfg = await loadConfig(fs);
+  const specsDir = cfg.config.specsDir;
+
+  const specs = await loadAllSpecs(fs, specsDir);
   const repoState: RepoState = { claimedSpecs: new Set(), mergedSpecs: new Set() };
-  const validation = await validateRepo(fs);
+  const validation = await validateRepo(fs, specsDir);
   const graph = buildGraph(specs);
 
   const statuses: Record<string, Status> = {};
   for (const s of specs) statuses[s.name] = deriveStatus(s, repoState);
 
+  const indexPath = `${specsDir}/INDEX.md`;
   let existingIndex: string | null = null;
-  if (await fs.exists('specs/INDEX.md')) {
-    existingIndex = await fs.readFile('specs/INDEX.md');
+  if (await fs.exists(indexPath)) {
+    existingIndex = await fs.readFile(indexPath);
   }
   const index = regenerateIndex(specs, repoState, existingIndex);
+
+  const errors = [...cfg.errors, ...validation.errors].sort(compareErrors);
 
   return {
     statuses: { specs: statuses },
     graph: { nodes: graph.nodes, edges: graph.edges, cycles: graph.cycles },
-    validation: { errors: validation.errors },
+    validation: { errors },
     index,
   };
 }

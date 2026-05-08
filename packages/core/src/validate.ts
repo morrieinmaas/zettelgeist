@@ -47,7 +47,11 @@ export async function validateRepo(
   return { errors };
 }
 
-function compareErrors(a: ValidationError, b: ValidationError): number {
+/**
+ * Sort comparator for `ValidationError`s. Documented order: by `code` first,
+ * then by `path` (array paths joined with `|` for comparison).
+ */
+export function compareErrors(a: ValidationError, b: ValidationError): number {
   if (a.code !== b.code) return a.code.localeCompare(b.code);
   const aPath = Array.isArray(a.path) ? a.path.join('|') : a.path;
   const bPath = Array.isArray(b.path) ? b.path.join('|') : b.path;
