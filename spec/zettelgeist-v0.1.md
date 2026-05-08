@@ -194,6 +194,8 @@ Each numbered rule below cites the conformance fixture(s) that prove it. New rul
 | Section | Rule | Fixture |
 |---|---|---|
 | §3 | `.zettelgeist.yaml` is the opt-in marker. | 01-empty-repo |
+| §3 | `format_version` missing or non-string → `E_INVALID_FRONTMATTER` on `.zettelgeist.yaml`. | 09-bad-config |
+| §3 | `specs_dir` honored when set. | 10-custom-specs-dir |
 | §4 | A spec is a folder with at least one `.md` file. | 02-single-spec, 08-empty-spec |
 | §4 | Empty spec folder → `E_EMPTY_SPEC`. | 08-empty-spec |
 | §5 | `requirements.md` carries spec-level frontmatter. | 04-cycle, 05-blocked |
@@ -210,3 +212,4 @@ Each numbered rule below cites the conformance fixture(s) that prove it. New rul
 | §10 | `E_CYCLE` is reachable. | 04-cycle |
 | §10 | `E_INVALID_FRONTMATTER` is reachable. | 07-invalid-frontmatter |
 | §10 | `E_EMPTY_SPEC` is reachable. | 08-empty-spec |
+| §10 | Multiple errors sorted by `(code, path)`. | 11-mixed-errors |
