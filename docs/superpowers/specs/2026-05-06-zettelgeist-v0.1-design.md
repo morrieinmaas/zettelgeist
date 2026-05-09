@@ -288,6 +288,16 @@ The detailed plan lands in a separate writing-plans document. High-level order:
 ## 14. What this design does *not* commit to
 
 - That the format is final. v0.1 may change before v1.0; that's why it's `0.x`.
-- That the VSCode extension is the long-term primary surface. It's the v0.1 reference. Other surfaces are explicitly invited to implement against the spec.
+- That the VSCode extension is the long-term primary surface. It's the v0.1 reference. Other surfaces are explicitly invited to implement against the spec. (Plan 2.5 adds a browser-based viewer that may obviate parts of the VSCode extension's scope.)
 - That the MCP tool surface is final. Adding tools is non-breaking; renaming or removing them is a breaking change worth a major version bump.
 - That orchestration will never be in scope. v0.2 may add a "click to run agent" path with explicit LLM ownership. v0.1 just doesn't include it.
+
+## 15. Note: HTML rendering is non-normative
+
+Storage is markdown. Always. The repo is the database.
+
+HTML rendering is a tool concern, not a format concern. Tools may render the same markdown content however they like — into a board view, a Kanban, an SVG graph, an interactive editor. The format spec does not specify any HTML output. Conformance fixtures only test the markdown-to-derived-state pipeline.
+
+The reference rendering surface is shipped by the `zettelgeist` CLI as a bundled viewer (Plan 2.5) — versioned with the format, never committed to user repos by default. This keeps the "clone the repo and you have the entire board" property intact: cloning a Zettelgeist repo never adds viewer code.
+
+Other rendering surfaces (VSCode webviews, IDE plugins, hosted forge views, mobile apps) are encouraged. They share only the format spec + conformance fixtures as their contract — never the reference viewer's HTML/CSS.
