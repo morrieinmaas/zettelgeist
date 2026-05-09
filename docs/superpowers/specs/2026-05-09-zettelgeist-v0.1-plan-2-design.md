@@ -67,7 +67,7 @@ Three new workspace packages, all sharing `@zettelgeist/core` as their dependenc
 - `core` stays unchanged from Plan 1. No I/O, pure functions, injected `FsReader`.
 - Both new surface packages call `core` for all derivation. No status logic anywhere else.
 - Both use the disk-backed `FsReader` from the shared `fs-adapters` package.
-- Every commit-producing path (CLI mutating commands, MCP mutating tools, pre-commit hook) calls **the same regen function** in `core` and uses the same git invocation pattern. No divergence on commit message format (`[zg] <op>: <spec>`).
+- Every code path that calls regen (CLI mutating commands, MCP mutating tools, pre-commit hook in `--check` mode) calls **the same regen function** in `core`. The CLI mutating commands and MCP mutating tools also produce git commits with a uniform message format (`[zg] <op>: <spec>`). The pre-commit hook never writes — it only reads via `--check` and either approves or blocks the user's commit (see §7).
 - The MCP server is **stateless across calls**. Each tool invocation reads the filesystem fresh; `.claim` files are the only ephemeral state and live on disk (gitignored).
 
 **Three external surface artifacts** (npm-installable):
@@ -449,9 +449,10 @@ This section locks in the architecture for HTML rendering, even though Plan 2 on
 **For Plan 2 (this plan):**
 
 - The `serve` subcommand exists in the CLI's command registry.
-- Running `zettelgeist serve` prints `viewer ships in v0.2 (Plan 2.5); tracking: <link>` and exits 0.
+- Running `zettelgeist serve` (without `--json`) prints `viewer ships in v0.2 (Plan 2.5); tracking: <link>` to stderr and exits 1.
+- With `--json`, returns `{ok: false, error: {message: "viewer not yet implemented"}}` and exits 1.
 - No viewer files ship with the package yet.
-- The `--json` envelope for `serve` returns `{ok: false, error: {message: "viewer not yet implemented"}}` (or could return `{ok: true, data: {status: "stub"}}` — TBD; lean toward error for clarity that there's nothing to serve).
+- The non-zero exit signals to scripts that this isn't a working command yet — clearer than a fake-success stub.
 
 **For Plan 2.5 (next):**
 
