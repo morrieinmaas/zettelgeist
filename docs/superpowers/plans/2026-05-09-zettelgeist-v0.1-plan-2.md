@@ -1235,6 +1235,259 @@ git commit -m "feat(cli): regen command (write + --check)"
 
 ---
 
+### Task 9b: Content-aware regen cache via git tree SHA
+
+Layered on top of Task 9's regen. Uses `git rev-parse HEAD:<specs_dir>` to get the tree SHA — git already hashed the entire `specs/` subtree for us. If that tree SHA matches the cached value, the generated INDEX hasn't changed; skip the walk and reuse the cached output. Caches at `.zettelgeist/regen-cache.json` (gitignored).
+
+**Files:**
+- Modify: `packages/cli/src/commands/regen.ts`
+- Modify: `packages/cli/tests/regen.test.ts`
+- Modify: `.gitignore` (add `.zettelgeist/regen-cache.json`)
+
+- [ ] **Step 1: Update `.gitignore`**
+
+Append a new line at the end of `/Users/moritz/Code/morrieinmaas/zettelgeist/.gitignore`:
+
+```gitignore
+.zettelgeist/regen-cache.json
+```
+
+Note: do NOT gitignore the whole `.zettelgeist/` directory — the design doc (Plan 2 §10) reserves that path for user-managed customization (e.g., `viewer.css`) which the user may want to commit.
+
+- [ ] **Step 2: Write failing tests for cache behavior**
+
+Add these tests to `packages/cli/tests/regen.test.ts` (alongside the existing tests):
+
+```ts
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+
+const execFileP = promisify(execFile);
+
+async function gitInit(dir: string): Promise<void> {
+  await execFileP('git', ['init', '-q'], { cwd: dir });
+  await execFileP('git', ['config', 'user.email', 't@e'], { cwd: dir });
+  await execFileP('git', ['config', 'user.name', 'T'], { cwd: dir });
+  await execFileP('git', ['add', '.'], { cwd: dir });
+  await execFileP('git', ['commit', '-q', '-m', 'init'], { cwd: dir });
+}
+
+describe('regenCommand cache', () => {
+  it('writes a cache file after first regen in a git repo', async () => {
+    await gitInit(tmp);
+    await regenCommand({ path: tmp, check: false });
+    const cacheRaw = await fs.readFile(path.join(tmp, '.zettelgeist', 'regen-cache.json'), 'utf8');
+    const cache = JSON.parse(cacheRaw);
+    expect(cache.tree_sha).toMatch(/^[0-9a-f]{40}$/);
+    expect(cache.generated_index).toContain('_No specs._');
+  });
+
+  it('reuses cache when tree SHA matches', async () => {
+    await gitInit(tmp);
+    await regenCommand({ path: tmp, check: false });
+    // Re-run regen. The cache should be a hit; we can't directly observe "didn't walk specs/"
+    // but we can verify that the cache file is still present and unchanged.
+    const cacheBefore = await fs.readFile(path.join(tmp, '.zettelgeist', 'regen-cache.json'), 'utf8');
+    await regenCommand({ path: tmp, check: false });
+    const cacheAfter = await fs.readFile(path.join(tmp, '.zettelgeist', 'regen-cache.json'), 'utf8');
+    expect(cacheAfter).toBe(cacheBefore);
+  });
+
+  it('regenerates and updates cache when tree SHA changes', async () => {
+    await gitInit(tmp);
+    await regenCommand({ path: tmp, check: false });
+    const cacheBefore = JSON.parse(
+      await fs.readFile(path.join(tmp, '.zettelgeist', 'regen-cache.json'), 'utf8'),
+    );
+
+    await fs.mkdir(path.join(tmp, 'specs', 'foo'), { recursive: true });
+    await fs.writeFile(path.join(tmp, 'specs', 'foo', 'requirements.md'), '# foo\n');
+    await execFileP('git', ['add', '.'], { cwd: tmp });
+    await execFileP('git', ['commit', '-q', '-m', 'add foo'], { cwd: tmp });
+
+    await regenCommand({ path: tmp, check: false });
+    const cacheAfter = JSON.parse(
+      await fs.readFile(path.join(tmp, '.zettelgeist', 'regen-cache.json'), 'utf8'),
+    );
+
+    expect(cacheAfter.tree_sha).not.toBe(cacheBefore.tree_sha);
+    expect(cacheAfter.generated_index).toContain('| foo |');
+  });
+
+  it('works gracefully in a non-git directory (no cache, no error)', async () => {
+    // tmp is NOT git-initialized in this test — beforeEach already populated .zettelgeist.yaml
+    // but we did not call gitInit. The default beforeEach does NOT initialize git.
+    const result = await regenCommand({ path: tmp, check: false });
+    expect(result.ok).toBe(true);
+    // Cache file MAY or MAY NOT exist, but the command must not error.
+  });
+});
+```
+
+- [ ] **Step 3: Run — expect failure**
+
+```
+pnpm --filter @zettelgeist/cli test regen
+```
+Expected: cache tests fail (cache logic doesn't exist yet).
+
+- [ ] **Step 4: Update `regen.ts` to use the cache**
+
+Replace `packages/cli/src/commands/regen.ts` with:
+
+```ts
+import { promises as fs } from 'node:fs';
+import * as path from 'node:path';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { runConformance, loadConfig } from '@zettelgeist/core';
+import { makeDiskFsReader } from '@zettelgeist/fs-adapters';
+import { okEnvelope, errorEnvelope, type Envelope } from '../output.js';
+
+const execFileP = promisify(execFile);
+
+export interface RegenInput {
+  path: string;
+  check: boolean;
+}
+
+export interface RegenOk {
+  changed: boolean;
+  path: string;  // resolved INDEX.md relpath
+  cacheHit?: boolean;
+}
+
+interface CacheEntry {
+  tree_sha: string;
+  generated_index: string;
+}
+
+const CACHE_RELPATH = path.join('.zettelgeist', 'regen-cache.json');
+
+async function getSpecsTreeSha(repoPath: string, specsDir: string): Promise<string | null> {
+  try {
+    const { stdout } = await execFileP('git', ['rev-parse', `HEAD:${specsDir}`], { cwd: repoPath });
+    return stdout.trim();
+  } catch {
+    return null;
+  }
+}
+
+async function readCache(repoPath: string): Promise<CacheEntry | null> {
+  try {
+    const raw = await fs.readFile(path.join(repoPath, CACHE_RELPATH), 'utf8');
+    const parsed = JSON.parse(raw) as Partial<CacheEntry>;
+    if (typeof parsed.tree_sha !== 'string' || typeof parsed.generated_index !== 'string') return null;
+    return { tree_sha: parsed.tree_sha, generated_index: parsed.generated_index };
+  } catch {
+    return null;
+  }
+}
+
+async function writeCache(repoPath: string, entry: CacheEntry): Promise<void> {
+  const cacheDir = path.join(repoPath, '.zettelgeist');
+  await fs.mkdir(cacheDir, { recursive: true });
+  const tmpPath = path.join(cacheDir, 'regen-cache.json.tmp');
+  await fs.writeFile(tmpPath, JSON.stringify(entry, null, 2) + '\n', 'utf8');
+  await fs.rename(tmpPath, path.join(cacheDir, 'regen-cache.json'));
+}
+
+export async function regenCommand(input: RegenInput): Promise<Envelope<RegenOk>> {
+  const reader = makeDiskFsReader(input.path);
+
+  if (!(await reader.exists('.zettelgeist.yaml'))) {
+    return errorEnvelope(`not a zettelgeist repo: ${input.path}`);
+  }
+
+  const cfg = await loadConfig(reader);
+  const specsDir = cfg.config.specsDir;
+  const indexAbsPath = path.join(input.path, specsDir, 'INDEX.md');
+  const indexRelPath = path.posix.join(specsDir, 'INDEX.md');
+
+  // Try cache first.
+  const treeSha = await getSpecsTreeSha(input.path, specsDir);
+  let generated: string | null = null;
+  let cacheHit = false;
+  if (treeSha) {
+    const cache = await readCache(input.path);
+    if (cache && cache.tree_sha === treeSha) {
+      generated = cache.generated_index;
+      cacheHit = true;
+    }
+  }
+
+  if (generated === null) {
+    let result;
+    try {
+      result = await runConformance(reader);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return errorEnvelope(msg);
+    }
+    generated = result.index;
+    if (treeSha) {
+      await writeCache(input.path, { tree_sha: treeSha, generated_index: generated });
+    }
+  }
+
+  let onDisk: string | null = null;
+  try {
+    onDisk = await fs.readFile(indexAbsPath, 'utf8');
+  } catch {
+    // missing
+  }
+
+  if (onDisk === generated) {
+    return okEnvelope({ changed: false, path: indexRelPath, cacheHit });
+  }
+
+  if (input.check) {
+    return errorEnvelope(
+      onDisk === null ? `${indexRelPath} is missing` : `${indexRelPath} is stale`,
+    );
+  }
+
+  await fs.mkdir(path.dirname(indexAbsPath), { recursive: true });
+  const tmpPath = `${indexAbsPath}.tmp`;
+  await fs.writeFile(tmpPath, generated, 'utf8');
+  await fs.rename(tmpPath, indexAbsPath);
+
+  return okEnvelope({ changed: true, path: indexRelPath, cacheHit });
+}
+```
+
+Key changes from Task 9's `regen.ts`:
+
+- New helpers: `getSpecsTreeSha`, `readCache`, `writeCache`.
+- `RegenOk` gains an optional `cacheHit` field (true when we used the cache, false otherwise).
+- Before running `runConformance`, try the cache. Only walk if it's a miss.
+- Only cache when there's a tree SHA (i.e., the path is a git repo with a `specs/` tree at HEAD). In a non-git directory or pre-first-commit state, the cache layer is a no-op.
+
+- [ ] **Step 5: Run all regen tests — expect pass**
+
+```
+pnpm --filter @zettelgeist/cli test regen
+```
+Expected: 4 (existing) + 4 (cache) = 8 tests pass.
+
+- [ ] **Step 6: Run conformance + typecheck**
+
+```
+pnpm conformance
+pnpm -r typecheck
+```
+
+The conformance harness uses `runConformance` directly (not the CLI), so it's unaffected by the cache. Both should pass.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add packages/cli .gitignore
+git commit -m "feat(cli): cache regen output by git tree SHA of specs/"
+```
+
+---
+
 ### Task 10: `validate` command
 
 **Files:**
