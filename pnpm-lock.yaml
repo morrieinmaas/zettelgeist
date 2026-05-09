@@ -31,6 +31,12 @@ importers:
         specifier: ^4.0.9
         version: 4.0.9
 
+  packages/fs-adapters:
+    dependencies:
+      '@zettelgeist/core':
+        specifier: workspace:*
+        version: link:../core
+
   spec/conformance/harness:
     dependencies:
       '@zettelgeist/core':
