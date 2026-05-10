@@ -60,6 +60,17 @@ describe('regenCommand', () => {
     const r = await regenCommand({ path: tmp, check: false });
     expect(r.ok).toBe(false);
   });
+
+  it('creates specs/ and INDEX.md when no specs directory exists', async () => {
+    const r = await regenCommand({ path: tmp, check: false });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.data.changed).toBe(true);
+
+    const indexExists = await fs.access(path.join(tmp, 'specs', 'INDEX.md')).then(() => true).catch(() => false);
+    expect(indexExists).toBe(true);
+    const content = await fs.readFile(path.join(tmp, 'specs', 'INDEX.md'), 'utf8');
+    expect(content).toContain('_No specs._');
+  });
 });
 
 describe('regenCommand cache', () => {
