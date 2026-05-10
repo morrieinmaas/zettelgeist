@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Zettelgeist pre-commit hook (husky variant).
+# Users with husky already wired up can use this directly.
+# Users without husky should run `zettelgeist install-hook` for a hook in `.git/hooks/pre-commit`.
+
+pnpm dlx zettelgeist regen --check

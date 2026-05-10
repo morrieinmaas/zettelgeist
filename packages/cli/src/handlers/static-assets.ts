@@ -3,6 +3,43 @@ import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
 import { sendNotFound } from './util.js';
 
+const REST_BACKEND_SHIM = `
+(() => {
+  const json = async (url, opts) => {
+    const r = await fetch(url, opts);
+    if (!r.ok) throw new Error(\`\${opts?.method || 'GET'} \${url} → \${r.status}\`);
+    return r.json();
+  };
+  const post = (url, body) => json(url, {
+    method: 'POST',
+    headers: body !== undefined ? { 'Content-Type': 'application/json' } : {},
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  const put = (url, body) => json(url, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const enc = encodeURIComponent;
+  window.zettelgeistBackend = {
+    listSpecs: () => json('/api/specs'),
+    readSpec: (name) => json(\`/api/specs/\${enc(name)}\`),
+    readSpecFile: (name, rel) => json(\`/api/specs/\${enc(name)}/files/\${rel.split('/').map(enc).join('/')}\`),
+    validateRepo: () => json('/api/validation'),
+    listDocs: () => json('/api/docs'),
+    readDoc: (p) => json(\`/api/docs/\${p.split('/').map(enc).join('/')}\`),
+    writeSpecFile: (name, rel, content) => put(\`/api/specs/\${enc(name)}/files/\${rel.split('/').map(enc).join('/')}\`, { content }),
+    tickTask: (name, n) => post(\`/api/specs/\${enc(name)}/tasks/\${n}/tick\`),
+    untickTask: (name, n) => post(\`/api/specs/\${enc(name)}/tasks/\${n}/untick\`),
+    setStatus: (name, status, reason) => post(\`/api/specs/\${enc(name)}/status\`, { status, reason }),
+    writeHandoff: (name, content) => put(\`/api/specs/\${enc(name)}/handoff\`, { content }),
+    regenerateIndex: () => post('/api/regenerate'),
+    claimSpec: (name, agentId) => post(\`/api/specs/\${enc(name)}/claim\`, { agentId }),
+    releaseSpec: (name) => post(\`/api/specs/\${enc(name)}/release\`),
+  };
+})();
+`;
+
 const MIME_TYPES: Record<string, string> = {
   '.html': 'text/html',
   '.js': 'application/javascript',
@@ -36,10 +73,13 @@ export async function handleStaticRoute(
       return;
     }
 
-    // Inject window.zettelgeistConfig before main.js loads.
-    // Theme key not yet present in core config — default to 'system'.
+    // Inject window.zettelgeistConfig + REST-backed window.zettelgeistBackend
+    // before main.js loads. Theme key not yet present in core config — default
+    // to 'system'.
     const theme = 'system';
-    const inject = `<script>window.zettelgeistConfig = { theme: ${JSON.stringify(theme)} };</script>`;
+    const inject =
+      `<script>window.zettelgeistConfig = { theme: ${JSON.stringify(theme)} };</script>\n` +
+      `<script>${REST_BACKEND_SHIM}</script>`;
     html = html.replace(
       /<script\s+type="module"\s+src="\.\/main\.js"/i,
       `${inject}\n<script type="module" src="./main.js"`,

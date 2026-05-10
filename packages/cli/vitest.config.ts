@@ -11,4 +11,7 @@ export default defineConfig({
       '@zettelgeist/fs-adapters': path.resolve(here, '../fs-adapters/src/index.ts'),
     },
   },
+  test: {
+    exclude: ['**/node_modules/**', '**/dist/**', '**/*.pw.test.ts'],
+  },
 });

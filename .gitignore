@@ -5,3 +5,5 @@ dist/
 .claim
 .zettelgeist/regen-cache.json
 .zettelgeist/exports/
+test-results/
+playwright-report/

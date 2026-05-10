@@ -8,7 +8,8 @@
   "scripts": {
     "build": "node scripts/bundle.mjs && chmod +x dist/bin.js && cp -r templates dist/templates && node scripts/copy-viewer.mjs",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@zettelgeist/core": "workspace:*",
@@ -18,6 +19,7 @@
     "marked": "^14.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.51.0",
     "@types/js-yaml": "^4.0.9",
     "esbuild": "^0.24.0"
   }
