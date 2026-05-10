@@ -1,0 +1,63 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm -r typecheck
+
+      - name: Unit + integration tests
+        run: pnpm -r test
+
+      - name: Conformance fixtures
+        run: pnpm conformance
+
+      - name: Build viewer
+        run: pnpm --filter @zettelgeist/viewer build
+
+      - name: Build CLI
+        run: pnpm --filter @zettelgeist/cli build
+
+      - name: Build MCP server
+        run: pnpm --filter @zettelgeist/mcp-server build
+
+      - name: regen --check
+        run: node packages/cli/dist/bin.js regen --check
+
+  e2e-viewer:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @zettelgeist/viewer build
+      - run: pnpm --filter @zettelgeist/cli build
+      - name: Install Playwright
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Run viewer e2e
+        run: pnpm --filter @zettelgeist/cli test:e2e
