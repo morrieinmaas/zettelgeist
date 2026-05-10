@@ -6,7 +6,7 @@
   "bin": { "zettelgeist": "./dist/bin.js" },
   "files": ["dist"],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && chmod +x dist/bin.js && cp -r templates dist/templates",
+    "build": "tsc -p tsconfig.build.json && chmod +x dist/bin.js && cp -r templates dist/templates && node scripts/copy-viewer.mjs",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run"
   },
@@ -14,6 +14,10 @@
     "@zettelgeist/core": "workspace:*",
     "@zettelgeist/fs-adapters": "workspace:*",
     "gray-matter": "^4.0.3",
+    "js-yaml": "^3.14.2",
     "marked": "^14.0.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9"
   }
 }

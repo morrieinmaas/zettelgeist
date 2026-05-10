@@ -29,9 +29,16 @@ importers:
       gray-matter:
         specifier: ^4.0.3
         version: 4.0.3
+      js-yaml:
+        specifier: ^3.14.2
+        version: 3.14.2
       marked:
         specifier: ^14.0.0
         version: 14.1.4
+    devDependencies:
+      '@types/js-yaml':
+        specifier: ^4.0.9
+        version: 4.0.9
 
   packages/core:
     dependencies:
