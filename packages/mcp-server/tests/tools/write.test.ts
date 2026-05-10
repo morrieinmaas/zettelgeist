@@ -4,6 +4,7 @@ import { promises as fs } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { promisify } from 'node:util';
+import matter from 'gray-matter';
 import {
   writeSpecFileTool, writeHandoffTool,
   tickTaskTool, untickTaskTool, setStatusTool,
@@ -102,5 +103,66 @@ describe('writeTools', () => {
     const after2 = await fs.readFile(path.join(tmp, 'specs', 'foo', 'requirements.md'), 'utf8');
     expect(after2).not.toContain('status:');
     expect(after2).not.toContain('blocked_by:');
+  });
+});
+
+describe('setStatusTool YAML preservation', () => {
+  it('preserves existing depends_on and other fields when setting status', async () => {
+    await fs.mkdir(path.join(tmp, 'specs', 'multi'), { recursive: true });
+    await fs.writeFile(
+      path.join(tmp, 'specs', 'multi', 'requirements.md'),
+      '---\ndepends_on: [a, b]\npart_of: foo\n---\n# Multi\n',
+    );
+    await execFileP('git', ['add', '.'], { cwd: tmp });
+    await execFileP('git', ['commit', '-q', '-m', 'add multi'], { cwd: tmp });
+
+    await setStatusTool.handler(
+      { name: 'multi', status: 'blocked', reason: 'IDP creds' },
+      { cwd: tmp },
+    );
+
+    const reqs = await fs.readFile(path.join(tmp, 'specs', 'multi', 'requirements.md'), 'utf8');
+    expect(reqs).toContain('depends_on');
+    expect(reqs).toContain('part_of: foo');
+    expect(reqs).toContain('status: blocked');
+    expect(reqs).toContain('blocked_by: IDP creds');
+  });
+
+  it('handles reasons with special YAML characters (colons, quotes)', async () => {
+    await setStatusTool.handler(
+      { name: 'foo', status: 'blocked', reason: 'waiting on user: "sign off"' },
+      { cwd: tmp },
+    );
+    const reqs = await fs.readFile(path.join(tmp, 'specs', 'foo', 'requirements.md'), 'utf8');
+    const parsed = matter(reqs, {});
+    expect(parsed.data.blocked_by).toBe('waiting on user: "sign off"');
+    expect(parsed.data.status).toBe('blocked');
+  });
+
+  it('handles multi-line reasons', async () => {
+    const multilineReason = 'Line one.\nLine two.\nLine three.';
+    await setStatusTool.handler(
+      { name: 'foo', status: 'blocked', reason: multilineReason },
+      { cwd: tmp },
+    );
+    const reqs = await fs.readFile(path.join(tmp, 'specs', 'foo', 'requirements.md'), 'utf8');
+    const parsed = matter(reqs, {});
+    expect(parsed.data.blocked_by).toBe(multilineReason);
+  });
+
+  it('clearing status (status: null) leaves other frontmatter fields intact', async () => {
+    await fs.writeFile(
+      path.join(tmp, 'specs', 'foo', 'requirements.md'),
+      '---\nstatus: blocked\nblocked_by: reason\ndepends_on: [a]\n---\n# Foo\n',
+    );
+    await execFileP('git', ['add', '.'], { cwd: tmp });
+    await execFileP('git', ['commit', '-q', '-m', 'pre'], { cwd: tmp });
+
+    await setStatusTool.handler({ name: 'foo', status: null }, { cwd: tmp });
+    const reqs = await fs.readFile(path.join(tmp, 'specs', 'foo', 'requirements.md'), 'utf8');
+    const parsed = matter(reqs, {});
+    expect(parsed.data.status).toBeUndefined();
+    expect(parsed.data.blocked_by).toBeUndefined();
+    expect(parsed.data.depends_on).toEqual(['a']);
   });
 });
