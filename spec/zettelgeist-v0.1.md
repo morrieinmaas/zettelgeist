@@ -30,6 +30,7 @@ Optional fields:
 
 - `specs_dir` (string, default `"specs"`) — relative path to the directory containing spec folders.
 - `default_branch` (string, default detected from git) — the branch on which merged work counts as `done`.
+- `viewer_theme` (string, one of `"light"` / `"dark"` / `"system"`, default `"system"`) — non-normative hint for tools that render an HTML view of the repo. Implementations that don't render HTML MUST ignore this field.
 
 Unknown top-level fields MUST be preserved but MAY be ignored.
 
@@ -147,7 +148,23 @@ Implementations MUST emit validation errors using these machine codes. Human-rea
 
 Conditions not enumerated above (nested `lenses/` directories, folder names that don't match the spec-name pattern, unknown `format_version`) are non-errors at the format level. Implementations MAY surface them as warnings.
 
-## 11. Conformance
+## 11. Reserved paths
+
+The path `.zettelgeist/` at the repo root is reserved for Zettelgeist tools. Implementations and surfaces SHOULD use this directory for tool-managed state and user-managed customization, separated by subdirectory:
+
+| Path | Purpose | Lifecycle |
+|---|---|---|
+| `.zettelgeist/render-templates/` | User-managed customization for HTML rendering surfaces (themes, CSS overrides, full template overrides). | Committed by the user. |
+| `.zettelgeist/regen-cache.json` | Tool-managed content-addressed cache for `INDEX.md` regeneration, keyed by the git tree SHA of `<specs_dir>`. | Tool-managed; MUST be gitignored. |
+| `.zettelgeist/exports/` | Tool-managed: HTML or other artifacts produced by export commands for external sharing. | Tool-managed; MUST be gitignored. |
+
+Implementations MUST NOT store tool-managed state under `.zettelgeist/render-templates/` (reserved for user content). Implementations MUST NOT commit files under `.zettelgeist/regen-cache.json` or `.zettelgeist/exports/`.
+
+Other paths under `.zettelgeist/` are reserved for future use. The path `.claim` inside any spec folder remains reserved per §7 (status derivation) and is also gitignored.
+
+The HTML rendering produced by tools (the local viewer, export artifacts) is **non-normative**. The format spec does not specify HTML output, and conformance fixtures only test the markdown-to-derived-state pipeline.
+
+## 12. Conformance
 
 A conformance fixture is a directory under `spec/conformance/fixtures/` containing two subdirectories:
 
@@ -166,7 +183,7 @@ An implementation MUST, for every fixture, produce output that compares equal to
 
 Conformance is asserted by passing every fixture in the suite.
 
-## 12. Versioning
+## 13. Versioning
 
 The format itself is versioned with semver. The current version is `0.1`.
 
@@ -176,7 +193,7 @@ The format itself is versioned with semver. The current version is `0.1`.
 
 Implementations MUST declare the format versions they support. Encountering a `.zettelgeist.yaml` with a `format_version` outside the declared support set SHOULD produce a warning and MAY continue best-effort processing.
 
-## 13. Future work (non-normative)
+## 14. Future work (non-normative)
 
 The following are reserved for future versions of this spec and are explicitly out of scope for v0.1:
 

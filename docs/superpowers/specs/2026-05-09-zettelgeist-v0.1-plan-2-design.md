@@ -1,261 +1,260 @@
-# Zettelgeist v0.1 — Plan 2 Design
+# Zettelgeist v0.1 — Plan 2 Design (viewer-first rewrite)
 
 - **Status:** Draft
-- **Date:** 2026-05-09
+- **Date:** 2026-05-09 (rewritten 2026-05-10)
 - **Author:** Mo
-- **Topic:** MCP server + CLI binary + pre-commit hook + CI workflow
+- **Topic:** The non-coder click surface, MCP server, minimal CLI, hook + CI
 - **Builds on:** Plan 1 (format core + spec doc + conformance fixtures, complete)
+- **Supersedes:** the original 2026-05-09 design at the same path; previous git history retained for context
 
 ## 1. Summary
 
-Plan 2 ships the two surface artifacts that turn Plan 1's format core into something users can actually run: a Node CLI (`zettelgeist`) for human-and-script-driven operations, and an MCP server (`zettelgeist-mcp`) for agent-driven operations. Both surfaces share `@zettelgeist/core` and use the same disk-backed `FsReader`. A pre-commit hook installer keeps `INDEX.md` fresh on every commit. A GitHub Actions workflow gates merges on type checks, tests, conformance, and a `regen --check` against the repo.
+Plan 2 ships the surface artifacts that turn Plan 1's format core into a usable product for the audience the README's pitch is written for: **non-tech team members**. Solo devs and agents are already fine with markdown; everyone else isn't. The thesis from Anthropic's Claude Code team — *agents produce more documents than humans read; markdown drives lossy improvisation; HTML lets the agent draw the actual chart and humans actually click around* — applies to Zettelgeist's interaction layer, not its storage layer.
 
-Plan 2 also locks in the architectural shape of HTML rendering — a tool-bundled viewer, opt-in customization, content-as-data — without implementing it. That work lands in Plan 2.5.
+So Plan 2 ships:
+
+1. **The viewer** — an HTML/CSS/JS bundle that renders the markdown content as a rich, mobile-responsive web app. Board view, spec detail, dependency graph, inline edits, drag-to-blocked. The non-coder click surface the README has been promising for two design iterations.
+2. **A minimal CLI** — `regen`, `validate`, `install-hook`, `serve`, `export-doc`. That's it. Power users get tick/claim/etc. via MCP, not via shell verbs.
+3. **An MCP server** with the full 13-tool surface for agents.
+4. **Pre-commit hook + CI** so `INDEX.md` stays current and conformance is enforced on PR.
+5. **A pluggable backend abstraction** so the same viewer bundle works against `zettelgeist serve` (REST), VSCode extension (postMessage), or future hosted views (WebSocket/HTTP).
+
+Plan 2 also locks the customization architecture (layered, opt-in, lives in `.zettelgeist/render-templates/`) and the principle that **storage stays markdown, interaction is HTML**.
 
 ## 2. Goals (in scope for Plan 2)
 
-- **`packages/fs-adapters/`** — shared package exporting `makeDiskFsReader` and `makeMemFsReader`. Replaces ad-hoc duplications in tests and conformance harness.
-- **`packages/cli/`** — npm package `zettelgeist` with a `bin` entry. Commands: `regen`, `validate`, `new`, `tick`, `untick`, `claim`, `release`, `status`, `install-hook`, plus a stub `serve`. Uses Node's built-in `parseArgs` plus a small subcommand router; no external CLI library dependency.
-- **`packages/mcp-server/`** — npm package `zettelgeist-mcp` with a `bin` entry. Stdio-only MCP transport. Tool surface as defined in Plan 1's design §6.2. Uses `@modelcontextprotocol/sdk`.
-- **`SKILL.md`** at `packages/mcp-server/SKILL.md` — agent-readable manifest in the CLI-Anything pattern. YAML frontmatter (`name`, `description`) + standard sections (Purpose, Requirements, Agent Guidance, Tools, Examples). Bundled in the published package.
-- **Pre-commit hook installer** — implemented in `packages/cli/`, invoked via `zettelgeist install-hook`. Smart-merge with `# >>> zettelgeist >>>` / `# <<< zettelgeist <<<` markers. Idempotent; refuses to clobber non-marker hooks unless `--force`.
-- **Husky template** — committed at `.husky/pre-commit` for users who already use husky. NOT auto-installed via `package.json` prepare script.
-- **CI workflow** at `.github/workflows/ci.yml` — `pnpm install` → `pnpm -r typecheck` → `pnpm -r test` → `pnpm conformance` → `node packages/cli/dist/bin.js regen --check`. Triggers on push to main and on pull_request.
-- **`--json` output flag** on every CLI command, with a documented envelope shape: `{ok: true, data: T} | {ok: false, error: {message, detail?}}`. Without `--json`, output is human-readable.
+- **`packages/fs-adapters/`** — shared `makeDiskFsReader` and `makeMemFsReader`. Replaces ad-hoc duplications.
+- **`packages/viewer/`** — the local web app. Vanilla HTML+CSS+JS (no framework). Talks only to a `window.zettelgeistBackend` injected by the host. Self-contained bundle that ships in the CLI's npm package and is reusable by future hosts (VSCode extension, Tauri, etc.).
+- **`packages/cli/`** — the `zettelgeist` Node CLI. Five commands: `regen [--check]`, `validate`, `install-hook [--force]`, `serve`, `export-doc <path> [--template <path>]`. Plus `--json` envelope on every command. Uses Node's built-in `parseArgs`.
+- **`packages/mcp-server/`** — full 13-tool MCP surface as specified in the previous plan's §9. Plus two new tools: `prepare_synthesis_context(scope)` and `write_artifact(name, html)` for agent-driven HTML report generation without our process making LLM calls.
+- **`SKILL.md`** at `packages/mcp-server/SKILL.md` — agent-readable manifest in the CLI-Anything pattern.
+- **Pre-commit hook installer** with smart-merge markers (`# >>> zettelgeist >>>`).
+- **Husky template** at `.husky/pre-commit` for users who already use husky.
+- **CI workflow** at `.github/workflows/ci.yml`.
+- **Customization**: Layers 0, 1, 2 of the four-layer model (bundled defaults, theme selection via `viewer_theme`, CSS overrides at `.zettelgeist/render-templates/{viewer,export}.css`). Layer 3 (full template override) ships for export only; viewer Layer 3 is deferred to v0.2.
+- **Format spec update** committing `.zettelgeist/render-templates/`, `regen-cache.json`, `exports/` paths (already done in this iteration).
 
-## 3. Non-goals (deferred to v0.2+)
+## 3. Non-goals (deferred)
 
-- VSCode extension (Plans 3–4).
-- HTTP/SSE MCP transports.
-- Stateful REPL mode (`zettelgeist repl`) — defer to v0.3; subcommands cover the same surface.
-- Agent loop orchestration (per Plan 1's design).
+- VSCode extension (Plan 4 — now smaller because it reuses the viewer bundle).
+- HTTP/SSE MCP transports (stdio only).
+- `zettelgeist repl` interactive mode.
+- Agent loop orchestration / our own LLM API calls.
 - Events / webhooks.
 - Suggestion-branch contribution flow.
 - Multi-repo specs.
-- **HTML rendering / viewer** — `zettelgeist serve` ships in Plan 2 as a stub only. Full viewer is Plan 2.5.
-- **Rust port of the CLI** — possible v0.2/v0.3, conformance fixtures will be the contract.
+- CLI commands `tick`, `untick`, `claim`, `release`, `new`, `status`, `report`, `explain`. **All available via MCP** to power-user agents. The viewer covers the GUI need. Adding them as CLI commands is duplicative scripting glue we can add in v0.2 if there's demand.
+- Layer 3 viewer template override (full SPA replacement). Defer to v0.2.
+- JS-based plugin templates (`.zettelgeist/render-templates/viewer-plugin.js`) — needs sandboxing. Defer.
+- Authentication / multi-user. Viewer serves localhost only.
+- Real-time collaboration / CRDT. v0.3+.
+- Rust port. v0.2+ if demand. Conformance fixtures are the contract.
 
 ## 4. Architecture
 
-Three new workspace packages, all sharing `@zettelgeist/core` as their dependency. Same pnpm monorepo, same toolchain.
+The big shift from the previous design: **the viewer is one bundle, multiple hosts.** Same UI code, swappable backend transport.
 
 ```
-+-----------------------+   +-----------------------+
-| packages/cli/         |   | packages/mcp-server/  |
-| `zettelgeist` bin     |   | `zettelgeist-mcp` bin |
-+----------+------------+   +-----------+-----------+
-           |                            |
-           | imports core               | imports core
-           +-------------+ +------------+
-                         | |
-                  +------v-v------+
-                  | @zettelgeist/ |
-                  |     core      |  (unchanged)
-                  +-------+-------+
-                          |
-                          v
-                   filesystem (specs/)
-
-  Pre-commit hook  →  `zettelgeist regen --check`        (subprocess of git)
-  CI workflow      →  pnpm install + typecheck + tests
-                       + `zettelgeist regen --check`     (subprocess of GHA)
-  MCP client       →  `zettelgeist-mcp`                  (subprocess of agent host)
+   packages/viewer/  (HTML/CSS/JS bundle — written ONCE)
+                |
+                | abstract: window.zettelgeistBackend = { listSpecs, tickTask, ... }
+                |
+        +-------+--------+--------+
+        |                |        |
+   [REST/HTTP]    [postMessage]   [future: WebSocket / hosted]
+        |                |
+   [Node http]      [VSCode ext host]
+        |                |
+        v                v
+   @zettelgeist/core (same library both sides)
 ```
 
-**Key invariants:**
+**Plan 2 ships only the REST host (`zettelgeist serve`).** The viewer bundle is built such that VSCode (Plan 4) and future surfaces can adopt it by implementing a different backend transport.
 
-- `core` stays unchanged from Plan 1. No I/O, pure functions, injected `FsReader`.
-- Both new surface packages call `core` for all derivation. No status logic anywhere else.
-- Both use the disk-backed `FsReader` from the shared `fs-adapters` package.
-- Every code path that calls regen (CLI mutating commands, MCP mutating tools, pre-commit hook in `--check` mode) calls **the same regen function** in `core`. The CLI mutating commands and MCP mutating tools also produce git commits with a uniform message format (`[zg] <op>: <spec>`). The pre-commit hook never writes — it only reads via `--check` and either approves or blocks the user's commit (see §7).
-- The MCP server is **stateless across calls**. Each tool invocation reads the filesystem fresh; `.claim` files are the only ephemeral state and live on disk (gitignored).
+### Workspace packages
 
-**Three external surface artifacts** (npm-installable):
+- `@zettelgeist/core` — unchanged from Plan 1. Pure TS, no I/O.
+- `@zettelgeist/fs-adapters` — shared FsReader implementations (disk + memory).
+- `@zettelgeist/viewer` — pure UI bundle. No filesystem/git deps. Talks only to `window.zettelgeistBackend`.
+- `@zettelgeist/cli` — `zettelgeist` Node binary. Bundles the viewer artifacts. Runs the local HTTP server when `serve` is invoked.
+- `@zettelgeist/mcp-server` — `zettelgeist-mcp` stdio MCP server.
 
-1. `zettelgeist` (CLI) — published from `packages/cli/`
-2. `zettelgeist-mcp` (MCP server) — published from `packages/mcp-server/`
-3. (still) the existing internal `@zettelgeist/core` — not published; bundled into the above
+### Key invariants
 
-For v0.1 we don't actually publish to npm yet (that's v0.2+ when format stabilizes). The bin entries work via `pnpm link`, `pnpm dlx`, or installation from a tarball.
+- **Storage stays markdown.** Every UI mutation is a markdown file edit + git commit.
+- **Single source of truth for derivation logic.** Both `serve`'s REST endpoints and the MCP tools call the same `core` functions.
+- **Stateless surfaces.** The MCP server and `serve`'s HTTP server are stateless across requests; they read fresh from disk on every call. `.claim` files are the only ephemeral state, and they live on disk (gitignored).
+- **The viewer bundle is host-agnostic.** It assumes only that `window.zettelgeistBackend` is injected and implements the documented interface.
+- **Mobile responsive.** Viewer CSS uses fluid layouts, semantic HTML, sane defaults via Pico.css (or equivalent classless framework).
 
-## 5. Repo layout updates
+## 5. Repo layout
 
 ```
 zettelgeist/
 ├── packages/
-│   ├── core/                    (unchanged)
-│   ├── fs-adapters/             ← NEW
+│   ├── core/                     # unchanged
+│   ├── fs-adapters/              # NEW: makeDiskFsReader, makeMemFsReader
+│   ├── viewer/                   # NEW: pure HTML/CSS/JS bundle
 │   │   ├── package.json
 │   │   ├── tsconfig.json
 │   │   ├── tsconfig.build.json
 │   │   ├── src/
-│   │   │   ├── index.ts         # exports makeDiskFsReader, makeMemFsReader
-│   │   │   ├── disk.ts
-│   │   │   └── mem.ts           # extracted from current test helpers (DRY)
+│   │   │   ├── index.html        # entry HTML page
+│   │   │   ├── main.ts           # bootstrap; reads window.zettelgeistBackend
+│   │   │   ├── views/            # board.ts, detail.ts, graph.ts
+│   │   │   ├── components/       # cards, modals, edit forms
+│   │   │   ├── styles/           # base.css, light.css, dark.css
+│   │   │   └── backend.ts        # backend interface + types (no impl)
 │   │   └── tests/
-│   │       └── disk.test.ts     # uses node:fs/promises against a tmpdir
-│   ├── cli/                     ← NEW
-│   │   ├── package.json         # has "bin": { "zettelgeist": "./dist/bin.js" }
+│   │       └── *.test.ts         # DOM + integration tests via jsdom + happy-dom
+│   ├── cli/                      # NEW
+│   │   ├── package.json          # "bin": { "zettelgeist": "./dist/bin.js" }
 │   │   ├── tsconfig.json
 │   │   ├── tsconfig.build.json
 │   │   ├── src/
-│   │   │   ├── bin.ts           # shebang entry; parses argv, dispatches
-│   │   │   ├── router.ts        # subcommand routing on top of parseArgs
-│   │   │   ├── output.ts        # --json envelope helpers
-│   │   │   ├── git.ts           # git subprocess helpers (commit, hook install)
+│   │   │   ├── bin.ts
+│   │   │   ├── router.ts
+│   │   │   ├── output.ts
+│   │   │   ├── git.ts
+│   │   │   ├── server.ts         # the localhost HTTP server for `serve`
+│   │   │   ├── render.ts         # markdown→HTML for export-doc
 │   │   │   └── commands/
 │   │   │       ├── regen.ts
 │   │   │       ├── validate.ts
-│   │   │       ├── new.ts
-│   │   │       ├── tick.ts
-│   │   │       ├── untick.ts
-│   │   │       ├── claim.ts
-│   │   │       ├── release.ts
-│   │   │       ├── status.ts
 │   │   │       ├── install-hook.ts
-│   │   │       └── serve.ts     # stub for v0.1; real viewer in Plan 2.5
+│   │   │       ├── serve.ts
+│   │   │       └── export-doc.ts
+│   │   ├── viewer-bundle/        # populated at build time from ../viewer/dist/
+│   │   ├── templates/            # default export.html, default CSS
 │   │   └── tests/
-│   │       ├── output.test.ts
-│   │       ├── install-hook.test.ts
-│   │       └── e2e.test.ts      # spawns the bin against tmpdir repos
-│   └── mcp-server/              ← NEW
-│       ├── package.json         # "bin": { "zettelgeist-mcp": "./dist/bin.js" }
-│       ├── tsconfig.json
-│       ├── tsconfig.build.json
-│       ├── SKILL.md             # agent-readable manifest
+│   └── mcp-server/               # NEW
+│       ├── SKILL.md
 │       ├── src/
-│       │   ├── bin.ts           # shebang entry; spawns server on stdio
-│       │   ├── server.ts        # MCP server setup, tool registration
-│       │   └── tools/
-│       │       ├── list-specs.ts
-│       │       ├── read-spec.ts
-│       │       ├── read-spec-file.ts
-│       │       ├── write-spec-file.ts
-│       │       ├── tick-task.ts
-│       │       ├── untick-task.ts
-│       │       ├── set-status.ts
-│       │       ├── claim-spec.ts
-│       │       ├── release-spec.ts
-│       │       ├── write-handoff.ts
-│       │       ├── regenerate-index.ts
-│       │       ├── validate-repo.ts
-│       │       └── install-git-hook.ts
+│       │   ├── bin.ts
+│       │   ├── server.ts
+│       │   └── tools/            # 15 tools (13 from Plan 1 design + 2 new context tools)
 │       └── tests/
-│           ├── tools/*.test.ts  # in-process unit tests per tool
-│           └── e2e.test.ts      # subprocess + real stdio JSON-RPC
-├── spec/conformance/harness/    (consumes @zettelgeist/fs-adapters)
-├── .github/workflows/
-│   └── ci.yml                   ← NEW
-├── .husky/                      ← NEW (template, not auto-installed)
-│   └── pre-commit               # contains: pnpm dlx zettelgeist regen --check
-└── (rest unchanged)
+├── spec/conformance/harness/     # consumes @zettelgeist/fs-adapters
+├── spec/zettelgeist-v0.1.md      # updated with §11 reserved paths
+├── .github/workflows/ci.yml      # NEW
+├── .husky/pre-commit             # NEW (template, not auto-installed)
+├── .zettelgeist/                 # NEW dot-folder, see §11 of format spec
+│   ├── render-templates/         # user-managed, committed
+│   │   ├── viewer.css            # optional CSS override (Layer 2)
+│   │   └── export.css            # optional CSS override for export-doc
+│   ├── regen-cache.json          # tool-managed, gitignored
+│   └── exports/                  # tool-managed, gitignored
+└── (unchanged)
 ```
 
 ## 6. Components
 
 ### 6.1 `packages/fs-adapters/`
 
-Smallest of the three; lands first.
+Smallest of the three new packages. Lands first.
 
 ```ts
-// disk.ts
-import { promises as fs } from 'node:fs';
-import * as path from 'node:path';
-import type { FsReader } from '@zettelgeist/core';
-
-export function makeDiskFsReader(rootDir: string): FsReader {
-  const resolve = (p: string) => path.join(rootDir, p);
-  return {
-    async readDir(p) {
-      const entries = await fs.readdir(resolve(p), { withFileTypes: true });
-      return entries.map((e) => ({ name: e.name, isDir: e.isDirectory() }));
-    },
-    async readFile(p) { return fs.readFile(resolve(p), 'utf8'); },
-    async exists(p) {
-      try { await fs.stat(resolve(p)); return true; } catch { return false; }
-    },
-  };
-}
-
-// mem.ts — extracted from loader.test.ts/validate.test.ts duplication
+export function makeDiskFsReader(rootDir: string): FsReader { /* ... */ }
 export function makeMemFsReader(files: Record<string, string>): FsReader { /* ... */ }
 ```
 
-The `core` package's existing `loader.test.ts` and `validate.test.ts` then import `makeMemFsReader` instead of duplicating it. The conformance harness's `src/run.ts` becomes a one-liner re-export.
+Replaces duplicated test helpers in `packages/core/tests/{loader,validate}.test.ts` and `spec/conformance/harness/src/run.ts`.
 
-### 6.2 `packages/cli/`
+### 6.2 `packages/viewer/` — the centerpiece
 
-- **`bin.ts`** — node shebang, calls `parseArgs` from `node:util`, dispatches to commands. ~80 LOC including the small router we hand-roll.
-- **`router.ts`** — maps argv to commands. Generates `--help` text from a static command registry. Maps unknown commands to `cli/unknown-command` errors.
-- **`output.ts`** — JSON envelope:
-  ```ts
-  type Envelope<T> =
-    | { ok: true;  data: T }
-    | { ok: false; error: { message: string; detail?: unknown } };
+A vanilla HTML/CSS/JS web app. **Zero filesystem/git deps in source.** Bootstraps off a global `window.zettelgeistBackend` that the host injects.
 
-  function emit<T>(json: boolean, env: Envelope<T>, humanRender: () => string): void;
-  ```
-  `--json` is a global flag inherited by subcommands. Without `--json`, output is human-readable.
-- **`git.ts`** — wraps `child_process.execFile('git', ...)`. Exposes `gitCommit(message, files)`, `gitDefaultBranch()`, `gitMergedSpecs(specsDir)`, `installPreCommitHook(content, force)`.
-- **`commands/`** — one module per command. Each exports a handler `(args, fs, opts) => Promise<Envelope<T>>`. Handlers don't print directly; they return envelopes; `bin.ts` does the emission.
+**The backend interface** (the contract every host implements):
 
-### 6.3 `packages/mcp-server/`
-
-Uses `@modelcontextprotocol/sdk` (the official TypeScript SDK).
-
-- **`bin.ts`** — shebang entry. Imports `Server` from MCP SDK, creates one with name `zettelgeist`, registers tools, connects to `StdioServerTransport`.
-- **`server.ts`** — tool registration. Each tool's input schema is a Zod schema (the SDK's expected format).
-- **`tools/`** — one file per tool. Pure handler functions: `(args, ctx) => Promise<result>`. `ctx` includes the `FsReader` (disk-backed) and a `gitWriter` for the commit step.
-
-Every mutating tool produces exactly one git commit. The tool handler atomically writes the file → calls `regenerateIndex` → `git add` both → `git commit -m "[zg] <op>: <spec>"`.
-
-### 6.4 `SKILL.md`
-
-Lives at `packages/mcp-server/SKILL.md`, gets bundled into the npm package via `files` field. Structure (CLI-Anything pattern):
-
-```markdown
----
-name: zettelgeist
-description: Stateful agent surface for Zettelgeist — markdown-based spec-driven project management. Lists, reads, mutates specs in any Zettelgeist repo via standard MCP tools.
----
-
-# zettelgeist MCP server
-
-## When to use
-You're operating in a repository that contains a `.zettelgeist.yaml` file. Specs are folders under the configured `specs_dir` (default `specs/`). Use these tools to read state and make commits to spec files.
-
-## Requirements
-- Node 20+, the `zettelgeist-mcp` binary installed.
-- The repo has been initialized as a Zettelgeist repo (commit `.zettelgeist.yaml` manually).
-
-## Agent guidance
-- **Prefer `list_specs` first** to understand what's in the repo before reading individual specs.
-- **Always claim before mutating**: `claim_spec` writes a `.claim` file; release on completion.
-- **Never edit `INDEX.md` directly**: it's regenerated. Edit `requirements.md`, `tasks.md`, etc., and the next regen picks up changes.
-- **Use machine-readable error codes**: `E_CYCLE`, `E_INVALID_FRONTMATTER`, `E_EMPTY_SPEC` are the v0.1 codes. Check `validate_repo` before assuming a write succeeded.
-
-## Tools
-| Tool | Args | Returns |
-|---|---|---|
-| `list_specs` | — | array of `{name, status, progress, blockedBy}` |
-| `read_spec` | `{name}` | full spec contents (all files) |
-| `read_spec_file` | `{name, relpath}` | one file's content |
-| `write_spec_file` | `{name, relpath, content}` | new commit SHA |
-| `tick_task` | `{name, n}` | new commit SHA |
-| `untick_task` | `{name, n}` | new commit SHA |
-| `set_status` | `{name, status, reason?}` | new commit SHA |
-| `claim_spec` | `{name, agent_id}` | acknowledged |
-| `release_spec` | `{name}` | acknowledged |
-| `write_handoff` | `{name, content}` | new commit SHA |
-| `regenerate_index` | — | new commit SHA (or null if no change) |
-| `validate_repo` | — | array of validation errors |
-| `install_git_hook` | `{force?}` | acknowledged |
-
-## Examples
-[short, concrete walkthroughs — agent claims a spec, ticks 3 boxes, releases]
+```ts
+export interface ZettelgeistBackend {
+  listSpecs(): Promise<SpecSummary[]>;
+  readSpec(name: string): Promise<SpecDetail>;
+  readSpecFile(name: string, relpath: string): Promise<{ content: string }>;
+  writeSpecFile(name: string, relpath: string, content: string): Promise<{ commit: string }>;
+  tickTask(name: string, n: number): Promise<{ commit: string }>;
+  untickTask(name: string, n: number): Promise<{ commit: string }>;
+  setStatus(name: string, status: 'blocked' | 'cancelled' | null, reason?: string): Promise<{ commit: string }>;
+  claimSpec(name: string, agentId?: string): Promise<{ acknowledged: true }>;
+  releaseSpec(name: string): Promise<{ acknowledged: true }>;
+  writeHandoff(name: string, content: string): Promise<{ commit: string }>;
+  regenerateIndex(): Promise<{ commit: string | null }>;
+  validateRepo(): Promise<{ errors: ValidationError[] }>;
+  // For doc rendering (read-only, viewer-only):
+  listDocs(): Promise<DocEntry[]>;          // markdown files under docs/
+  readDoc(path: string): Promise<{ rendered: string; metadata: DocMetadata }>;
+}
 ```
 
-### 6.5 GitHub Actions CI
+**Views shipped in v0.1:**
+
+1. **Board view** — Kanban columns: Draft / Planned / In Progress / In Review / Done / Blocked / Cancelled. Cards show name, progress, blocked-by. Mobile: stacks vertically with column headers as accordion sections.
+2. **Spec detail view** — clicked from a card. Tabs for: Requirements, Tasks, Handoff, Lenses (if any). Mermaid graph subset showing this spec + its `depends_on` neighbors. Inline edit forms for frontmatter (status override, blocked_by, depends_on). Click-to-tick on tasks.
+3. **Graph view** — full repo dependency graph rendered via Mermaid. Node click → spec detail.
+4. **Docs view** — read-only rendered markdown of any file under `docs/` and the format spec. Useful for sharing design narratives via the same surface.
+
+**Drag and drop:**
+
+- Cards in `Draft / Planned / In Progress / In Review / Done` are read-only by drag — these statuses are derived; you change them by ticking tasks.
+- Cards can be dragged INTO `Blocked` or `Cancelled` columns — opens a modal asking for reason; on confirm, writes frontmatter and commits.
+- Cards can be dragged OUT of `Blocked` / `Cancelled` back to "auto" — clears the override; status snaps back to derived.
+
+**Mermaid handling:**
+
+- Lazy-loaded from CDN on the Graph tab (no upfront cost on board view).
+- Renders the same edge data the format spec describes (`depends_on` only; `part_of` clusters via subgraph).
+
+**Markdown rendering:**
+
+- `marked.js` (small, well-known, MIT). Bundled into the viewer.
+- Code blocks get syntax highlighting via `highlight.js` (also bundled, common languages only).
+
+### 6.3 `packages/cli/` — minimal
+
+Five commands. Uses Node `util.parseArgs` plus a small router. Bundles the viewer artifacts at build time.
+
+```
+zettelgeist regen [path] [--check] [--json]       # regenerate INDEX.md (--check exits 1 on stale)
+zettelgeist validate [path] [--json]              # run validateRepo
+zettelgeist install-hook [--force] [--json]       # install pre-commit hook
+zettelgeist serve [path] [--port N] [--no-open]   # launch local HTTP server + open browser
+zettelgeist export-doc <path> [--template P] [--json]  # markdown → standalone HTML at .zettelgeist/exports/
+```
+
+**`zettelgeist serve` details:**
+- Default port 7681 (uncommon, avoids common conflicts). User-configurable via `--port`.
+- Default behavior: open `$BROWSER` (or `xdg-open` / `open` / `start` per platform) to `http://localhost:<port>/`.
+- HTTP server serves:
+  - `/` → viewer's `index.html`
+  - `/static/*` → viewer assets (CSS, JS, fonts)
+  - `/api/*` → JSON REST endpoints implementing the `ZettelgeistBackend` interface
+  - `/docs/*` → rendered markdown from `docs/`
+- Graceful shutdown on SIGINT.
+- Stays in foreground; logs requests at `--verbose`.
+
+**`zettelgeist export-doc` details:**
+- Reads a markdown file (anywhere in the repo).
+- Renders to a single self-contained HTML file at `.zettelgeist/exports/<filename>.html`.
+- Default template uses bundled CSS, plus marked.js + highlight.js + mermaid (inlined).
+- `--template <path>` overrides with a user-provided HTML file with mustache placeholders.
+- Templates are static text substitution — no JS execution, no sandboxing concern.
+- Available placeholders: `{{content}}`, `{{title}}`, `{{frontmatter.<key>}}`, `{{generated_at}}`, `{{tool_version}}`.
+- Strict placeholder validation: typos in `{{xxx}}` produce a clear error listing valid keys.
+
+### 6.4 `packages/mcp-server/`
+
+Same 13 tools from the original Plan 2 design §9, plus:
+
+- **`prepare_synthesis_context(scope)`** → returns shaped context (markdown bundle + JSON state + suggested HTML structure stub) the calling agent can use to write a report. The MCP doesn't make LLM calls; the agent does.
+- **`write_artifact(name, html)`** → writes a generated HTML artifact under `.zettelgeist/exports/<name>.html` (or commits it under a non-gitignored path if specified, with a flag). Provides the storage half of the agent-driven report flow.
+
+Agents call these in pairs to produce HTML reports/explainers without our process owning any LLM orchestration.
+
+### 6.5 `SKILL.md`
+
+Same as the original Plan 2 design §6.4. YAML frontmatter (`name: zettelgeist`, `description: ...`) + Purpose / Requirements / Agent Guidance / Tools / Examples sections. Bundled in the npm package.
+
+### 6.6 GitHub Actions CI
 
 `.github/workflows/ci.yml`:
 
@@ -264,6 +263,7 @@ name: CI
 on:
   push: { branches: [main] }
   pull_request:
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -280,223 +280,159 @@ jobs:
       - run: node packages/cli/dist/bin.js regen --check
 ```
 
-Last step builds the CLI binary then invokes it directly — avoids needing to publish/install during CI. If `INDEX.md` is stale, regen --check exits 1 and the workflow fails.
-
-### 6.6 Husky template
+### 6.7 Husky template
 
 `.husky/pre-commit`:
-
 ```bash
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
-
 pnpm dlx zettelgeist regen --check
 ```
 
-Committed to the repo as a template, NOT installed via `package.json`'s prepare script (would force husky on every contributor). Users opt in by `pnpm add -D husky && pnpm husky init`.
+Committed as a template. Not auto-installed.
 
 ## 7. Data flow
 
 | Trigger | Path |
 |---|---|
-| **User runs `zettelgeist regen`** | CLI builds disk `FsReader` for cwd → `core.runConformance(fs)` → writes `${specsDir}/INDEX.md` if changed → exit 0 |
-| **User runs `zettelgeist regen --check`** | Same as above but instead of writing, compares against on-disk content. Exit 0 if identical, exit 1 with diff if stale. |
-| **User runs `zettelgeist tick user-auth 3`** | CLI parses → reads `tasks.md` → flips checkbox at index 3 → atomic write → regen → `git add tasks.md INDEX.md` → `git commit -m '[zg] tick: user-auth#3'` → print result (or `{ok: true, data: {commit: <sha>}}` with `--json`) |
-| **User runs `zettelgeist new payment-flow`** | CLI scaffolds `specs/payment-flow/{requirements.md,tasks.md,handoff.md}` with stub headings → regen → `git add` all four files → `git commit -m '[zg] new: payment-flow'` |
-| **User runs `zettelgeist install-hook`** | CLI reads `.git/hooks/pre-commit` (if exists) → checks for `# >>> zettelgeist >>>` markers → if present, replace block (idempotent); if not present and file empty/missing, write the marker block; if file exists with non-marker content, refuse with instruction → set executable bit (chmod 0755) |
-| **User runs `git commit`** | Pre-commit hook executes `zettelgeist regen --check`. Exit 1 → commit aborts. Exit 0 → commit proceeds. The hook does NOT auto-write; users get a clear error and re-run regen explicitly. |
-| **Agent calls `tick_task` via MCP** | MCP server reads → flip → atomic write → regen → commit (same path as CLI's tick). Returns `{commit: <sha>}` to caller. |
-| **Agent calls `claim_spec` via MCP** | MCP server writes `specs/<name>/.claim` (gitignored). No commit. Returns acknowledgment. |
-| **CI runs on PR** | `pnpm install --frozen-lockfile` → `pnpm -r typecheck` → `pnpm -r test` → `pnpm conformance` → build CLI → `regen --check`. Any non-zero exit fails. |
-| **Cycle introduced via `depends_on` in a PR** | `regen --check` calls validateRepo, which returns `E_CYCLE`; CLI exits 1 with the cycle path. PR fails CI. |
-| **User runs `zettelgeist serve`** | Prints "viewer ships in v0.2; tracking issue: <link>" and exits 0. Real implementation in Plan 2.5. |
+| User runs `zettelgeist serve` | CLI starts Node http server, opens browser → viewer loads → calls `/api/specs` → server reads disk via `core` → returns JSON. |
+| User clicks a checkbox in the viewer | viewer calls `backend.tickTask(name, n)` → `POST /api/specs/<name>/tasks/<n>` → server flips checkbox in `tasks.md`, regen, commit, returns commit SHA. Viewer re-fetches and re-renders. |
+| User edits frontmatter via webview form | viewer calls `backend.writeSpecFile(name, 'requirements.md', content)` → POST → server writes, regen, commit. |
+| User drags a card to "Blocked" | viewer opens reason modal → on confirm calls `backend.setStatus(name, 'blocked', reason)` → POST → server mutates frontmatter, commits. |
+| User runs `zettelgeist regen` from terminal | reads disk via `core`, computes INDEX.md, writes if changed (uses regen cache via git tree SHA — see §9). |
+| User runs `git commit` | pre-commit hook executes `zettelgeist regen --check`. Exit 1 → commit blocks with "INDEX.md is stale, run `zettelgeist regen`". |
+| Agent calls MCP `tick_task` | same path as the viewer's tick — both go through `core` and produce a `[zg] tick: <spec>#<n>` commit. |
+| Agent calls `prepare_synthesis_context` then synthesizes HTML and calls `write_artifact` | MCP returns shaped data, agent uses its own context window to render HTML, MCP receives the HTML and writes it under `.zettelgeist/exports/`. No LLM call from our process. |
+| User runs `zettelgeist export-doc docs/foo.md` | reads markdown, applies template (default or `--template`), writes `.zettelgeist/exports/foo.html`. Self-contained, shareable via S3. |
+| CI runs on PR | typecheck → test → conformance → CLI build → `regen --check`. Any non-zero exit fails. |
 
-**Two invariants worth pinning explicitly:**
+**Two invariants:**
 
-1. **The pre-commit hook never writes.** It only reads (via `regen --check`). If `INDEX.md` is stale, the user's commit is blocked with a message: "INDEX.md is stale. Run `zettelgeist regen` and re-stage." This avoids hooks silently mutating staged files (which surprises users badly).
-2. **Every CLI mutating command produces exactly one commit.** No silent batching. A bash loop ticking 5 tasks produces 5 commits. Same as the MCP tool semantics.
+1. **The pre-commit hook never writes.** It only checks. Users debug by re-running `regen` and re-staging.
+2. **Every UI/MCP mutation produces exactly one commit.** No silent batching.
 
-## 8. CLI command surface
+## 8. Customization (the four-layer model)
 
-All commands accept `--json` (boolean, default false). Without `--json`, output is human-readable.
-
-| Command | Args | Flags | Effect |
+| Layer | Where | What | v0.1? |
 |---|---|---|---|
-| `regen` | `[path]` (default cwd) | `--check` | Regenerate INDEX.md. With `--check`, exit 1 on stale instead of writing. |
-| `validate` | `[path]` | — | Run `validateRepo`, print errors. Exit 0 if no errors, 1 otherwise. |
-| `new` | `<name>` | `--no-tasks`, `--no-handoff` | Scaffold a spec folder. Default creates all three files. |
-| `tick` | `<spec> <n>` | — | Tick task n in spec's tasks.md. |
-| `untick` | `<spec> <n>` | — | Untick task n. |
-| `claim` | `<spec> [agent_id]` | — | Write `.claim` (defaults agent_id to `${USER}@${HOSTNAME}`). |
-| `release` | `<spec>` | — | Remove `.claim`. |
-| `status` | `[spec]` | `--all` | No spec → board summary. With spec → spec detail. `--all` shows all 7 columns. |
-| `install-hook` | — | `--force` | Install pre-commit hook with smart-merge. `--force` replaces a non-marker hook (with backup at `pre-commit.before-zettelgeist`). |
-| `serve` | — | — | **Stub for v0.1.** Prints viewer-coming-in-v0.2 message and exits. Real implementation lands in Plan 2.5. |
+| **0. Defaults** | `packages/cli/dist/viewer-bundle/`, `packages/cli/dist/templates/` | Bundled HTML/CSS/JS for viewer; default `export.html` template | **Yes** |
+| **1. Theme** | `viewer_theme: light \| dark \| system` in `.zettelgeist.yaml` | Selects between two bundled themes; system follows OS preference | **Yes** |
+| **2. CSS override** | `.zettelgeist/render-templates/{viewer,export}.css` | Appended after bundled CSS — overrides via cascade | **Yes** |
+| **3. Full template override** | `.zettelgeist/render-templates/{viewer/, export.html}` | Replaces bundled defaults entirely | **Export only** in v0.1 (mustache HTML file). Viewer Layer 3 deferred — full SPA replacement is a v0.2+ ask. |
 
-**JSON envelope** (every command, when `--json` passed):
+**Strict placeholder validation** for export templates: unknown `{{xxx}}` tokens produce a build-time error listing the valid set (`content`, `title`, `frontmatter.*`, `generated_at`, `tool_version`).
+
+**Theme bundle** ships:
+
+- `light.css` — neutral defaults, white background, dark text
+- `dark.css` — dark background, soft white text
+- `system` (default) — `prefers-color-scheme` media query selects between them
+
+**No JS plugins in v0.1.** A user-supplied `.js` file running inside our tool is a sandboxing concern; defer to v0.2+.
+
+## 9. The regen cache (using git as a Merkle tree)
+
+`zettelgeist regen` and `zettelgeist regen --check` both consult a content-addressed cache before walking specs:
+
+- Cache lives at `.zettelgeist/regen-cache.json` (gitignored).
+- Keyed by the git tree SHA of `<specs_dir>/`, obtained via `git rev-parse HEAD:<specs_dir>`.
+- Cache hit → return cached generated INDEX.md content. No walk.
+- Cache miss → walk via `core.runConformance`, write cache.
+- Non-git directories or pre-first-commit state: cache layer is a no-op; regen always walks.
+
+This uses git's existing Merkle structure rather than building one of our own. ~30 LOC of integration. Useful at any scale, mandatory at thousand-spec scale.
+
+## 10. CLI command surface (final)
+
+```
+zettelgeist regen [path] [--check] [--json]
+zettelgeist validate [path] [--json]
+zettelgeist install-hook [--force] [--json]
+zettelgeist serve [path] [--port N] [--no-open] [--json]
+zettelgeist export-doc <path> [--template P] [--json]
+```
+
+That's all. Five commands. Power-user operations (tick, claim, status, etc.) are MCP-driven. The viewer is the GUI.
+
+**JSON envelope** per command, when `--json` passed:
 
 ```ts
 type Envelope<T> =
-  | { ok: true;  data: T }
+  | { ok: true; data: T }
   | { ok: false; error: { message: string; detail?: unknown } };
 ```
 
-Concrete examples:
-- `zettelgeist regen --json` → `{"ok":true,"data":{"changed":true,"path":"specs/INDEX.md"}}`
-- `zettelgeist regen --check --json` (stale) → `{"ok":false,"error":{"message":"INDEX.md is stale","detail":{...diff...}}}` and exit 1
-- `zettelgeist tick user-auth 3 --json` → `{"ok":true,"data":{"commit":"a1b2c3d","spec":"user-auth","index":3}}`
-- `zettelgeist validate --json` (errors) → `{"ok":false,"error":{"message":"3 validation errors","detail":{"errors":[...]}}}`
-- `zettelgeist status --json` → `{"ok":true,"data":{"specs":[{"name":"user-auth","status":"in-progress","progress":"3/5"},...]}}`
+No CLI-surface error codes; format-layer error codes (`E_CYCLE`, `E_INVALID_FRONTMATTER`, `E_EMPTY_SPEC`) appear inside `error.detail.errors[]` as appropriate.
 
-**Error code policy.** Format-layer errors (`E_CYCLE`, `E_INVALID_FRONTMATTER`, `E_EMPTY_SPEC`) keep their codes — they're spec-normative. CLI-surface errors (stale INDEX, missing repo, hook conflict) **do not** carry stable codes; they're human-readable messages only. Agents reading `--json` output should switch on `error.detail.code` (when present) for format-layer errors; they should treat surface-level failures by exit code + message.
+## 11. MCP tool surface
 
-## 9. MCP tool surface
+The 13 tools from the original Plan 2 design §9 (`list_specs`, `read_spec`, `read_spec_file`, `write_spec_file`, `tick_task`, `untick_task`, `set_status`, `claim_spec`, `release_spec`, `write_handoff`, `regenerate_index`, `validate_repo`, `install_git_hook`).
 
-Each tool's input/output schemas are Zod. Format-layer errors propagate as MCP errors with the `E_*` code in the message + structured `data` field carrying the original `ValidationError`.
+Plus two new tools for agent-driven HTML synthesis:
 
 ```ts
-// list_specs
-input:  z.object({})
-output: z.array(z.object({
-  name: z.string(),
-  status: z.enum(['draft','planned','in-progress','in-review','done','blocked','cancelled']),
-  progress: z.string(),                      // e.g. "3/5"
-  blockedBy: z.string().nullable(),
-}))
-
-// read_spec
-input:  z.object({ name: z.string() })
-output: z.object({
-  name: z.string(),
-  frontmatter: z.record(z.unknown()),
-  requirements: z.string().nullable(),
-  tasks: z.array(z.object({
-    index: z.number(), checked: z.boolean(), text: z.string(),
-    tags: z.array(z.enum(['#human-only','#agent-only','#skip'])),
-  })),
-  handoff: z.string().nullable(),
-  lenses: z.record(z.string()),              // {lensName: content}
-})
-
-// read_spec_file
-input:  z.object({ name: z.string(), relpath: z.string() })
-output: z.object({ content: z.string() })
-
-// write_spec_file
-input:  z.object({ name: z.string(), relpath: z.string(), content: z.string() })
-output: z.object({ commit: z.string() })
-
-// tick_task / untick_task
-input:  z.object({ name: z.string(), n: z.number().int().positive() })
-output: z.object({ commit: z.string() })
-
-// set_status
+// prepare_synthesis_context
 input:  z.object({
-  name: z.string(),
-  status: z.enum(['blocked','cancelled']).nullable(),  // null clears the override
-  reason: z.string().optional(),
+  scope: z.union([
+    z.object({ kind: z.literal('all') }),
+    z.object({ kind: z.literal('spec'), name: z.string() }),
+    z.object({ kind: z.literal('recent'), days: z.number().int().positive() }),
+  ]),
 })
-output: z.object({ commit: z.string() })
-
-// claim_spec / release_spec
-input:  z.object({ name: z.string(), agent_id: z.string().optional() })  // claim
-        z.object({ name: z.string() })                                   // release
-output: z.object({ acknowledged: z.literal(true) })
-
-// write_handoff
-input:  z.object({ name: z.string(), content: z.string() })
-output: z.object({ commit: z.string() })
-
-// regenerate_index
-input:  z.object({})
-output: z.object({ commit: z.string().nullable() })  // null if no change
-
-// validate_repo
-input:  z.object({})
 output: z.object({
-  errors: z.array(z.discriminatedUnion('code', [
-    z.object({ code: z.literal('E_CYCLE'),               path: z.array(z.string()) }),
-    z.object({ code: z.literal('E_INVALID_FRONTMATTER'), path: z.string(), detail: z.string() }),
-    z.object({ code: z.literal('E_EMPTY_SPEC'),          path: z.string() }),
-  ])),
+  markdown_bundle: z.string(),     // concatenated markdown of all relevant specs + handoffs
+  derived_state: z.unknown(),      // JSON of statuses, graph, recent commits
+  template_hint: z.string(),       // suggested HTML structure (mustache-friendly)
+  available_artifacts: z.array(z.string()),  // existing exports/ files for cross-reference
 })
 
-// install_git_hook
-input:  z.object({ force: z.boolean().optional() })
-output: z.object({ acknowledged: z.literal(true) })
+// write_artifact
+input:  z.object({
+  name: z.string(),               // e.g. "weekly-report-2026-05-09"
+  html: z.string(),               // full HTML content
+  commit: z.boolean().optional(), // default false: gitignored under exports/.
+                                  // true: commits to a non-gitignored docs/exports/ — for archival
+})
+output: z.object({ path: z.string(), committed: z.boolean(), commit_sha: z.string().nullable() })
 ```
 
-## 10. Viewer placeholder
+The agent calls these in pairs: `prepare_synthesis_context` to get data, synthesize HTML in its own context window, then `write_artifact` to store. The MCP server makes no LLM calls.
 
-This section locks in the architecture for HTML rendering, even though Plan 2 only ships a stub.
+## 12. Testing strategy
 
-**Principle: viewer-as-code, content-as-data.**
+- **`fs-adapters/`** — ~12 unit tests (mem + disk against tmpdir).
+- **`viewer/`** — DOM tests via jsdom for components, integration tests for full board view rendering. Mocked `window.zettelgeistBackend`.
+- **`cli/`** — unit tests for `output`, `router`, `git`, `render`. E2E test that spawns the bin and exercises `regen → validate → serve → export-doc` against a tmpdir repo.
+- **`mcp-server/`** — in-process unit tests per tool via `Server.connect(InMemoryTransport)`. One stdio e2e.
+- **Workspace-level**: `pnpm -r test`, `pnpm conformance`, `pnpm -r typecheck`, plus a Playwright e2e that spawns `zettelgeist serve` and drives the viewer end-to-end (board view loads, click a card, edit a checkbox, verify commit).
 
-- **Storage stays markdown.** Always. The repo is the database.
-- **One canonical HTML viewer ships with the `zettelgeist` tool**, versioned with the format. Format v0.1 = viewer v0.1. No drift.
-- **Repos do not contain viewer files by default.** A vanilla `zettelgeist new` adds zero HTML/CSS to the repo. The viewer lives inside the npm package.
-- **Customization is opt-in and lives in the user's repo only when they choose.** Four progressive layers:
+Total new tests: ~70-80 across all packages.
 
-  | Layer | Where | When you'd use it |
-  |---|---|---|
-  | **0. Bundled defaults** | `packages/cli/dist/viewer/` ships with the npm package | Zero config — most users |
-  | **1. Theme selection** | `viewer_theme: <name>` in `.zettelgeist.yaml` | Pick from bundled themes |
-  | **2. CSS override** | Optional `.zettelgeist/viewer.css` in the repo | Tweak colors/spacing without forking the template |
-  | **3. Full template override** | Optional `.zettelgeist/viewer/` directory | Power users (v0.3+) |
+## 13. Open questions
 
-- **`zettelgeist serve` works on any Zettelgeist repo, even ones that have never heard of the viewer.**
+- **MCP SDK version.** Pin a specific version; track for breaking changes.
+- **Viewer base CSS framework.** Recommendation: Pico.css (~10KB classless, mobile-friendly defaults) + custom layer for Zettelgeist-specific components. Alternative: hand-rolled CSS, smaller but more work. **Decision before viewer build: Pico.css.**
+- **Markdown renderer choice.** marked.js — well-known, MIT, ~30KB. Confirmed.
+- **Graph rendering library.** Mermaid — already used by INDEX.md. CDN-loaded for the Graph tab to avoid upfront bundle cost. Confirmed.
+- **Auth on `serve`.** v0.1: localhost only, no auth. The Node server binds 127.0.0.1, refuses external connections. Same approach as `vite dev`, `next dev`, etc.
+- **Concurrent backend writes.** Two viewers, two clicks at once → both go through git which serializes. Last-write-wins on `tasks.md` race; the rare conflict surfaces as a 409 from the server which the viewer handles by re-fetching. Better than v0.1 needs.
+- **Hook installation on Windows.** `chmod 0755` is a no-op on Windows; Git for Windows handles the executable bit. Test on macOS/Linux only.
 
-**For Plan 2 (this plan):**
+## 14. What this design does NOT commit to
 
-- The `serve` subcommand exists in the CLI's command registry.
-- Running `zettelgeist serve` (without `--json`) prints `viewer ships in v0.2 (Plan 2.5); tracking: <link>` to stderr and exits 1.
-- With `--json`, returns `{ok: false, error: {message: "viewer not yet implemented"}}` and exits 1.
-- No viewer files ship with the package yet.
-- The non-zero exit signals to scripts that this isn't a working command yet — clearer than a fake-success stub.
+- That the viewer's UI is final. v0.1 ships a usable surface; v0.2+ refines based on real usage.
+- That the MCP tool surface is final. Adding tools is non-breaking; renaming or removing requires a major-version bump.
+- That HTML is always tool-bundled. The principle holds for v0.1 (and beyond, by default), but a future version may revisit if there's strong demand for a "viewer in the repo" pattern. High bar — would compromise "clone the repo and you have it."
+- That the viewer must be vanilla JS forever. v0.2+ may pick up a small framework (Solid, Lit, Preact) if the hand-rolled approach becomes painful. The `window.zettelgeistBackend` interface stays stable across that transition.
+- That `serve` always serves localhost. v0.2+ may add a `--host 0.0.0.0` flag for LAN access (with auth, see open questions).
+- That CI runs only on GitHub Actions. The same `regen --check` invocation works on any forge; we just ship one config in v0.1.
 
-**For Plan 2.5 (next):**
+## 15. Why this scope
 
-- Ship the bundled viewer (layer 0) — single HTML page that fetches markdown files and renders board + graph + spec detail.
-- Implement theme selection (layer 1) — config field `viewer_theme: <name>`, bundled themes (start with one default + dark).
-- Wire `serve` to a tiny Node `http` server that serves the viewer + reads cwd files on demand.
-- Layers 2 and 3 deferred to v0.3.
+The previous (28+1-task) Plan 2 design was correct but too cautious. It over-invested in CLI commands the user can already do via MCP, and stubbed the viewer to a placeholder. That deferred the centerpiece — the non-coder click surface that the README's whole pitch is built on — to a hypothetical "Plan 2.5."
 
-## 11. Testing strategy
+This rewrite reverses the priorities. The viewer ships first-class. The CLI shrinks to operational glue. MCP stays full because agents need it. Pre-commit hook + CI are still the dev hygiene layer.
 
-**Per package:**
+The thesis from Anthropic's Claude Code team is the lever: humans don't read walls of markdown; they click around HTML. Specs + storage stay markdown because that's the right format for edit-over-time, agent-mutable, git-diffable, prose-heavy content. But the moment a human opens Zettelgeist to look at the project, they see HTML.
 
-- **`fs-adapters/`** — Unit tests for `makeDiskFsReader` against a tmpdir; unit tests for `makeMemFsReader` using the existing `core` test cases. ~10 tests.
-- **`cli/`**:
-  - Unit tests for `output.ts` (envelope shape) and `git.ts` (commit message format).
-  - Unit tests for `install-hook.ts`'s smart-merge logic against a fake `.git/hooks/` directory in a tmpdir.
-  - **One e2e test** that spawns the built bin (`node dist/bin.js`) against a tmpdir-with-real-repo, exercises `regen` + `tick` + `validate`, asserts on stdout/stderr/exit code. Catches packaging issues (shebang, exports, ESM/CJS surprises).
-- **`mcp-server/`**:
-  - Unit tests per tool, in-process, using `Server.connect(InMemoryTransport)` from the MCP SDK. Each tool: input → handler → output assertion. ~13 tests.
-  - **One e2e test** that spawns the built bin and exchanges JSON-RPC frames over stdio. Verifies the binary actually runs as an MCP server.
-
-**Workspace-level:**
-- `pnpm -r test` runs all package tests
-- `pnpm conformance` continues to run against fixtures
-- CI runs typecheck + test + conformance + `regen --check`
-
-**Explicitly NOT tested in v0.1:**
-- Cross-tool ordering (e.g. claim → tick → release as a sequence). Each tool tested in isolation; the sequence is implicit.
-- Network/HTTP transport — out of scope.
-- Hook execution under real git invocation — the smart-merge logic is unit-tested, but we don't actually `git commit` in the hook test. Spawn-the-bin e2e covers the integration partially.
-
-## 12. Open questions / risks
-
-- **MCP SDK version churn.** `@modelcontextprotocol/sdk` is itself young. Pin a version, document it, plan to track.
-- **`zettelgeist new` defaults.** What goes in the stub `requirements.md`? Lean toward simple `# <name>\n\n(write requirements here)\n` plus a frontmatter block with empty `depends_on: []`.
-- **Hook installation on Windows.** `chmod 0755` is a no-op on Windows; `.git/hooks/pre-commit` works without it on Git for Windows. Test on macOS/Linux only for v0.1.
-- **`zettelgeist status` rendering.** Without `--json`, board view should fit in a terminal. Use a simple ASCII-table approach (no fancy box-drawing for v0.1). Truncation behavior for long blocked-by strings — punt to "trust the user's terminal" for v0.1.
-- **Rust port (lever for later).** Conformance fixtures are language-neutral; a future Rust CLI/core can target them as the contract. Worth noting in the format spec as a v0.2+ option.
-- **MCP server multi-client.** Spec says single client at a time. If the user runs the MCP server twice in parallel against the same repo, both processes will compete on git operations. The OS-level git lock prevents corruption but might confuse agents. Punt to v0.2.
-- **Viewer architecture commitment.** §10 locks in the viewer-as-code principle. Plan 2.5 must follow this without drift; Plan 4 (VSCode webviews) should align.
-
-## 13. What this design does NOT commit to
-
-- That the CLI command surface is final. Plan 2.5 may add `serve` flags; v0.2+ may add more commands. Adding is non-breaking; renaming or removing is a major-version change.
-- That the MCP tool surface is final. Same rule.
-- That HTML rendering will always be tool-bundled. The principle holds for v0.1; future versions may revisit if there's demand for repo-bundled viewers (which would compromise the "clone and read" property — high bar).
-- That CI runs only on GitHub Actions. Other forges (GitLab, Forgejo, Gitea) should be able to consume the same `regen --check` invocation; we're just not writing config for them in v0.1.
+The viewer makes good on the README's promise: "a clickable surface non-coders can contribute to without ever leaving the repo."

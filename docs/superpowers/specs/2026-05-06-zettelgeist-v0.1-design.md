@@ -292,12 +292,21 @@ The detailed plan lands in a separate writing-plans document. High-level order:
 - That the MCP tool surface is final. Adding tools is non-breaking; renaming or removing them is a breaking change worth a major version bump.
 - That orchestration will never be in scope. v0.2 may add a "click to run agent" path with explicit LLM ownership. v0.1 just doesn't include it.
 
-## 15. Note: HTML rendering is non-normative
+## 15. Note: storage is markdown; interaction is HTML
 
-Storage is markdown. Always. The repo is the database.
+**Storage**: markdown. Always. The repo is the database. Specs (`requirements.md`, `tasks.md`, `handoff.md`, lenses) and metadata (`.zettelgeist.yaml`, `INDEX.md`) all live as markdown/YAML committed to git. This is the only layer the format spec describes.
 
-HTML rendering is a tool concern, not a format concern. Tools may render the same markdown content however they like — into a board view, a Kanban, an SVG graph, an interactive editor. The format spec does not specify any HTML output. Conformance fixtures only test the markdown-to-derived-state pipeline.
+**Interaction**: HTML, when humans are involved. The thesis from [Anthropic's Claude Code team's HTML-effectiveness post](https://thariqs.github.io/html-effectiveness/) applies: agents synthesize richer documents in HTML than in markdown (charts, diagrams, interactive playgrounds), and humans actually read HTML where they skim markdown. So tools render the markdown to HTML on demand for any human-facing surface — board view, Kanban, spec detail, status report, sharable PR-explainer artifact.
 
-The reference rendering surface is shipped by the `zettelgeist` CLI as a bundled viewer (Plan 2.5) — versioned with the format, never committed to user repos by default. This keeps the "clone the repo and you have the entire board" property intact: cloning a Zettelgeist repo never adds viewer code.
+**Two-way street**: any UI mutation (tick a checkbox, edit frontmatter, mark blocked) translates to a markdown edit + git commit. The viewer/extension is one of N possible UIs. Restart any UI; the state is unchanged because it never lived in the UI.
 
-Other rendering surfaces (VSCode webviews, IDE plugins, hosted forge views, mobile apps) are encouraged. They share only the format spec + conformance fixtures as their contract — never the reference viewer's HTML/CSS.
+**The reference rendering surface** is the local viewer shipped by the `zettelgeist` CLI (Plan 2 §10) — a single HTML/CSS/JS bundle bundled into the npm package, served by `zettelgeist serve` against any Zettelgeist repo. Never committed to user repos by default. Customizable via `.zettelgeist/render-templates/` — per Plan 2 §10's four-layer model:
+
+- Layer 0 (bundled defaults) — ships with the tool
+- Layer 1 (theme name in `.zettelgeist.yaml`) — `viewer_theme: light | dark | system`
+- Layer 2 (CSS override at `.zettelgeist/render-templates/viewer.css`) — additive to bundled CSS
+- Layer 3 (full template override at `.zettelgeist/render-templates/viewer/`) — replaces the bundled viewer entirely (deferred to v0.2+)
+
+This keeps the "clone the repo and you have the entire board" property intact: cloning a vanilla Zettelgeist repo never adds viewer code.
+
+**Other rendering surfaces** (VSCode webviews, IDE plugins, hosted forge views, mobile apps, Tauri desktop apps) are encouraged and may even reuse the same viewer bundle by injecting their own backend transport. They share only the format spec + conformance fixtures as their contract — never the reference viewer's HTML/CSS.
