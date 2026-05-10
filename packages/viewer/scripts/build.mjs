@@ -10,12 +10,13 @@ const dist = path.join(root, 'dist');
 await fs.rm(dist, { recursive: true, force: true });
 await fs.mkdir(dist, { recursive: true });
 
-// Bundle main.ts → dist/main.js
+// Bundle main.ts → dist/main.js (+ chunks for dynamic imports like mermaid)
 await esbuild.build({
   entryPoints: [path.join(root, 'src/main.ts')],
   bundle: true,
   format: 'esm',
-  outfile: path.join(dist, 'main.js'),
+  outdir: dist,
+  splitting: true,
   target: 'es2022',
   sourcemap: 'linked',
   minify: false,

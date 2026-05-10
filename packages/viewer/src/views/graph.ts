@@ -6,26 +6,25 @@ interface GraphData {
   edges: Array<{ from: string; to: string }>;
 }
 
-let mermaidLoaded = false;
+interface MermaidApi {
+  render: (id: string, src: string) => Promise<{ svg: string }>;
+}
 
-async function loadMermaid(): Promise<void> {
-  if (mermaidLoaded) return;
-  // Mermaid is loaded via a <script> tag because their ESM CDN is volatile.
-  // We import from a stable CDN at runtime; if it fails, render a graceful fallback.
-  await new Promise<void>((resolve, reject) => {
-    const script = document.createElement('script');
-    script.type = 'module';
-    script.textContent = `
-      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
-      window.mermaid = mermaid;
-      mermaid.initialize({ startOnLoad: false, theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default' });
-      window.dispatchEvent(new Event('mermaid-ready'));
-    `;
-    window.addEventListener('mermaid-ready', () => resolve(), { once: true });
-    setTimeout(() => reject(new Error('mermaid load timed out')), 10000);
-    document.head.appendChild(script);
+let mermaidApi: MermaidApi | null = null;
+
+async function loadMermaid(): Promise<MermaidApi> {
+  if (mermaidApi) return mermaidApi;
+  // Lazy-imported so the Mermaid bundle (~hundreds of KB) is only fetched
+  // when the graph view is opened. esbuild emits this as a separate chunk.
+  const mod = await import('mermaid');
+  const mermaid = mod.default;
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default',
+    securityLevel: 'strict',
   });
-  mermaidLoaded = true;
+  mermaidApi = mermaid as unknown as MermaidApi;
+  return mermaidApi;
 }
 
 export async function renderGraph(): Promise<void> {
@@ -83,9 +82,7 @@ export async function renderGraph(): Promise<void> {
   app.appendChild(wrapper);
 
   try {
-    await loadMermaid();
-    const mermaid = (window as Window & { mermaid?: { render: (id: string, src: string) => Promise<{ svg: string }> } }).mermaid;
-    if (!mermaid) throw new Error('mermaid not loaded');
+    const mermaid = await loadMermaid();
     const { svg } = await mermaid.render('zg-graph-svg', mermaidSrc);
     container.innerHTML = sanitizeHtml(svg);
 

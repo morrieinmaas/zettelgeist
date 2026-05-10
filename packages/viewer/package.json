@@ -14,7 +14,8 @@
   "dependencies": {
     "dompurify": "^3.2.0",
     "highlight.js": "^11.10.0",
-    "marked": "^14.0.0"
+    "marked": "^14.0.0",
+    "mermaid": "^11.0.0"
   },
   "devDependencies": {
     "@picocss/pico": "^2.0.0",
