@@ -1,0 +1,21 @@
+{
+  "name": "@zettelgeist/viewer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "files": ["dist"],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "marked": "^14.0.0",
+    "highlight.js": "^11.10.0"
+  },
+  "devDependencies": {
+    "@picocss/pico": "^2.0.0",
+    "esbuild": "^0.24.0",
+    "happy-dom": "^15.0.0"
+  }
+}

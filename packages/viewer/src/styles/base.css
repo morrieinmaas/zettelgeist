@@ -1,0 +1,19 @@
+:root {
+  --zg-spacing: 1rem;
+  --zg-color-blocked: #c0392b;
+  --zg-color-cancelled: #7f8c8d;
+}
+
+#app {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--zg-spacing);
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+}

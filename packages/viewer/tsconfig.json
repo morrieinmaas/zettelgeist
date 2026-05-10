@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "moduleResolution": "Bundler",
+    "module": "ESNext",
+    "baseUrl": ".",
+    "paths": {
+      "@zettelgeist/core": ["../core/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*", "tests/**/*", "vitest.config.ts", "scripts/**/*"]
+}
