@@ -87,6 +87,69 @@ describe('specs routes', () => {
   });
 });
 
+describe('error paths', () => {
+  it('PUT body without content field returns 400', async () => {
+    await setupRepo();
+    server = await startServer({ cwd: tmp, port: 0, viewerBundlePath: viewerBundle });
+    const r = await fetch(`${server.url}/api/specs/foo/files/requirements.md`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    expect(r.status).toBe(400);
+  });
+
+  it('POST set_status with invalid status returns 400', async () => {
+    await setupRepo();
+    server = await startServer({ cwd: tmp, port: 0, viewerBundlePath: viewerBundle });
+    const r = await fetch(`${server.url}/api/specs/foo/status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'made-up-status' }),
+    });
+    expect(r.status).toBe(400);
+  });
+
+  it('non-JSON body on a POST endpoint is treated as null and rejected', async () => {
+    await setupRepo();
+    server = await startServer({ cwd: tmp, port: 0, viewerBundlePath: viewerBundle });
+    const r = await fetch(`${server.url}/api/specs/foo/status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: 'not json',
+    });
+    expect(r.status).toBe(400);
+  });
+
+  it('DELETE on /api/specs returns 404', async () => {
+    await setupRepo();
+    server = await startServer({ cwd: tmp, port: 0, viewerBundlePath: viewerBundle });
+    const r = await fetch(`${server.url}/api/specs`, { method: 'DELETE' });
+    expect(r.status).toBe(404);
+  });
+
+  it('GET /api/specs/<name>/files/<path> for missing file returns 404', async () => {
+    await setupRepo();
+    server = await startServer({ cwd: tmp, port: 0, viewerBundlePath: viewerBundle });
+    const r = await fetch(`${server.url}/api/specs/foo/files/no-such-file.md`);
+    expect(r.status).toBe(404);
+  });
+
+  it('tick on a missing spec returns 404', async () => {
+    await setupRepo();
+    server = await startServer({ cwd: tmp, port: 0, viewerBundlePath: viewerBundle });
+    const r = await fetch(`${server.url}/api/specs/ghost/tasks/1/tick`, { method: 'POST' });
+    expect(r.status).toBe(404);
+  });
+
+  it('tick with out-of-range index returns 400', async () => {
+    await setupRepo();
+    server = await startServer({ cwd: tmp, port: 0, viewerBundlePath: viewerBundle });
+    const r = await fetch(`${server.url}/api/specs/foo/tasks/99/tick`, { method: 'POST' });
+    expect(r.status).toBe(400);
+  });
+});
+
 describe('path traversal', () => {
   it('rejects readSpecFile with .. in relpath', async () => {
     await setupRepo();
