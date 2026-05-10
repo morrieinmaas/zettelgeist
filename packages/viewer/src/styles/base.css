@@ -17,3 +17,28 @@
 [data-theme='light'] {
   color-scheme: light;
 }
+
+.zg-nav {
+  display: flex;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
+  background: var(--pico-card-background-color, #f5f5f5);
+  border-bottom: 1px solid var(--pico-muted-border-color, #ddd);
+}
+.zg-nav a {
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.zg-graph-container {
+  margin: 1rem 0;
+  text-align: center;
+}
+
+.zg-graph-fallback {
+  background: var(--pico-card-background-color, #f5f5f5);
+  padding: 1rem;
+  border-radius: 0.375rem;
+  text-align: left;
+  overflow-x: auto;
+}

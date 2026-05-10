@@ -2,6 +2,7 @@ import type { ZettelgeistBackend, ZettelgeistConfig } from './backend.js';
 import { Router } from './router.js';
 import { renderBoard } from './views/board.js';
 import { renderDetail } from './views/detail.js';
+import { renderGraph } from './views/graph.js';
 
 function applyTheme(config: ZettelgeistConfig | undefined): void {
   const requested = config?.theme ?? 'system';
@@ -28,6 +29,7 @@ async function bootstrap(): Promise<void> {
   const router = new Router();
   router.add('/', renderBoard);
   router.add('/spec/:name', renderDetail);
+  router.add('/graph', renderGraph);
   router.start();
 }
 
