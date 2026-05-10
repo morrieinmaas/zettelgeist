@@ -1,0 +1,25 @@
+{
+  "name": "@zettelgeist/mcp-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": { "zettelgeist-mcp": "./dist/bin.js" },
+  "files": ["dist", "SKILL.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && chmod +x dist/bin.js",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@zettelgeist/core": "workspace:*",
+    "@zettelgeist/fs-adapters": "workspace:*",
+    "gray-matter": "^4.0.3",
+    "js-yaml": "^3.14.2",
+    "zod": "^3.23.0",
+    "zod-to-json-schema": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9"
+  }
+}
