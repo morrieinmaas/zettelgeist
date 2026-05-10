@@ -7,8 +7,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   resolve: {
     alias: {
-      '@zettelgeist/core': path.resolve(here, '../../../packages/core/src/index.ts'),
-      '@zettelgeist/fs-adapters': path.resolve(here, '../../../packages/fs-adapters/src/index.ts'),
+      '@zettelgeist/fs-adapters': path.resolve(here, '../fs-adapters/src/index.ts'),
     },
   },
 });

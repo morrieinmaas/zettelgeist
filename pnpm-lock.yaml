@@ -30,6 +30,9 @@ importers:
       '@types/js-yaml':
         specifier: ^4.0.9
         version: 4.0.9
+      '@zettelgeist/fs-adapters':
+        specifier: workspace:*
+        version: link:../fs-adapters
 
   packages/fs-adapters:
     dependencies:
@@ -42,6 +45,9 @@ importers:
       '@zettelgeist/core':
         specifier: workspace:*
         version: link:../../../packages/core
+      '@zettelgeist/fs-adapters':
+        specifier: workspace:*
+        version: link:../../../packages/fs-adapters
     devDependencies:
       '@types/node':
         specifier: ^20.0.0
