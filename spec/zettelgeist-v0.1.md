@@ -4,6 +4,8 @@
 - **Format version:** 0.1
 - **Date:** 2026-05-06
 
+> **Reference implementation**: this format is implemented by [`@zettelgeist/core`](../packages/core/) (TypeScript). Other implementations are encouraged — pass [the conformance fixture suite](conformance/fixtures/) to be conformant.
+
 ## 1. Abstract
 
 Zettelgeist is a portable file format for spec-driven, agent-friendly project management. A repository opts into the format by committing a `.zettelgeist.yaml` file at the repo root. Spec folders under `specs/` carry markdown files (`requirements.md`, `tasks.md`, `handoff.md`, optional `lenses/*.md`) whose contents and YAML frontmatter define the project's work, status, and graph relationships. Status is derived from file contents on each read; it is never stored independently.
