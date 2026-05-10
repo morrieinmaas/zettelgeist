@@ -6,12 +6,14 @@
   "bin": { "zettelgeist": "./dist/bin.js" },
   "files": ["dist"],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && chmod +x dist/bin.js",
+    "build": "tsc -p tsconfig.build.json && chmod +x dist/bin.js && cp -r templates dist/templates",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run"
   },
   "dependencies": {
     "@zettelgeist/core": "workspace:*",
-    "@zettelgeist/fs-adapters": "workspace:*"
+    "@zettelgeist/fs-adapters": "workspace:*",
+    "gray-matter": "^4.0.3",
+    "marked": "^14.0.0"
   }
 }

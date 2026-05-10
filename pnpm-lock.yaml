@@ -26,6 +26,12 @@ importers:
       '@zettelgeist/fs-adapters':
         specifier: workspace:*
         version: link:../fs-adapters
+      gray-matter:
+        specifier: ^4.0.3
+        version: 4.0.3
+      marked:
+        specifier: ^14.0.0
+        version: 14.1.4
 
   packages/core:
     dependencies:
