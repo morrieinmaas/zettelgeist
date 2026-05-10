@@ -1,4 +1,6 @@
 import type { ZettelgeistBackend, ZettelgeistConfig } from './backend.js';
+import { Router } from './router.js';
+import { renderBoard } from './views/board.js';
 
 function applyTheme(config: ZettelgeistConfig | undefined): void {
   const requested = config?.theme ?? 'system';
@@ -22,10 +24,10 @@ async function bootstrap(): Promise<void> {
 
   applyTheme(window.zettelgeistConfig);
 
-  const app = document.getElementById('app')!;
-  app.innerHTML = '<p>Viewer ready. Board, detail, graph, and docs views land in subsequent tasks.</p>';
-
-  // Subsequent tasks will replace this with router + view rendering.
+  const router = new Router();
+  router.add('/', renderBoard);
+  // Detail view added in Task 11
+  router.start();
 }
 
 bootstrap().catch((err) => {

@@ -1,0 +1,95 @@
+.zg-board {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(180px, 1fr));
+  gap: 1rem;
+  overflow-x: auto;
+  padding-bottom: 1rem;
+}
+
+.zg-column {
+  background: var(--pico-card-background-color, #f5f5f5);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 100px;
+}
+
+.zg-column-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0;
+  border-bottom: 1px solid var(--pico-muted-border-color, #ddd);
+  padding-bottom: 0.5rem;
+}
+
+.zg-column-header h3 {
+  font-size: 0.875rem;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.zg-column-count {
+  font-size: 0.75rem;
+  background: var(--pico-muted-color, #999);
+  color: white;
+  padding: 0.125rem 0.5rem;
+  border-radius: 1rem;
+  min-width: 1.5rem;
+  text-align: center;
+}
+
+.zg-column-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.zg-card {
+  background: var(--pico-background-color, white);
+  border: 1px solid var(--pico-muted-border-color, #ddd);
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  transition: box-shadow 0.15s;
+}
+
+.zg-card:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.zg-card-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 0 0 0.25rem 0;
+}
+
+.zg-card-meta {
+  font-size: 0.75rem;
+  color: var(--pico-muted-color, #666);
+}
+
+.zg-card-blocked {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--zg-color-blocked, #c0392b);
+  margin-top: 0.25rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.zg-error {
+  color: var(--zg-color-blocked, #c0392b);
+  padding: 1rem;
+}
+
+@media (max-width: 768px) {
+  .zg-board {
+    grid-template-columns: 1fr;
+    overflow-x: visible;
+  }
+}
