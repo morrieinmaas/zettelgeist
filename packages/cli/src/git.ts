@@ -7,9 +7,19 @@ const execFileP = promisify(execFile);
 
 export const HOOK_MARKER_BEGIN = '# >>> zettelgeist >>>';
 export const HOOK_MARKER_END = '# <<< zettelgeist <<<';
+// Resolve the zettelgeist binary at hook execution time. Pre-commit hooks
+// run with the user's login PATH, which won't include ./node_modules/.bin —
+// so we fall back to the workspace-local binary if PATH lookup misses.
 export const HOOK_BLOCK =
   HOOK_MARKER_BEGIN + '\n' +
-  'zettelgeist regen --check\n' +
+  'if command -v zettelgeist >/dev/null 2>&1; then\n' +
+  '  zettelgeist regen --check\n' +
+  'elif [ -x ./node_modules/.bin/zettelgeist ]; then\n' +
+  '  ./node_modules/.bin/zettelgeist regen --check\n' +
+  'else\n' +
+  '  echo "zettelgeist: not on PATH and not in ./node_modules/.bin — install it or remove this hook" >&2\n' +
+  '  exit 1\n' +
+  'fi\n' +
   HOOK_MARKER_END;
 
 const SHEBANG_RE = /^#!\s*\/[^\n]*\n/;

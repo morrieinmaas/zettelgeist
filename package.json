@@ -10,9 +10,10 @@
     "conformance": "pnpm --filter @zettelgeist/conformance-harness test"
   },
   "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@zettelgeist/cli": "workspace:*",
     "typescript": "^5.6.0",
-    "vitest": "^2.1.0",
-    "@types/node": "^20.0.0"
+    "vitest": "^2.1.0"
   },
   "packageManager": "pnpm@9.12.0"
 }
