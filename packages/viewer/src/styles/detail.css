@@ -1,0 +1,120 @@
+.zg-detail {
+  max-width: 900px;
+}
+
+.zg-detail-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.zg-back-link {
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+
+.zg-detail-header h2 {
+  margin: 0;
+}
+
+.zg-tabs {
+  border: 1px solid var(--pico-muted-border-color, #ddd);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.zg-tab-nav {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--pico-muted-border-color, #ddd);
+  background: var(--pico-card-background-color, #f5f5f5);
+  flex-wrap: wrap;
+}
+
+.zg-tab-nav button {
+  background: transparent;
+  border: none;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: inherit;
+}
+
+.zg-tab-nav button.active {
+  background: var(--pico-background-color, white);
+  font-weight: 600;
+  border-bottom: 2px solid var(--pico-primary, #1095c1);
+}
+
+.zg-tab-content {
+  padding: 1rem;
+}
+
+.zg-task-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.zg-task {
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--pico-muted-border-color, #eee);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.zg-task label {
+  flex: 1;
+  cursor: pointer;
+}
+
+.zg-task-tags {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.zg-tag {
+  font-size: 0.7rem;
+  padding: 0.125rem 0.375rem;
+  background: var(--pico-muted-color, #999);
+  color: white;
+  border-radius: 0.25rem;
+}
+
+.zg-frontmatter {
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  background: var(--pico-card-background-color, #f5f5f5);
+  border-radius: 0.375rem;
+}
+
+.zg-markdown h1, .zg-markdown h2, .zg-markdown h3 {
+  margin-top: 1rem;
+}
+
+.zg-markdown code {
+  background: var(--pico-card-background-color, #f5f5f5);
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.zg-markdown pre {
+  background: var(--pico-card-background-color, #f5f5f5);
+  padding: 0.75rem;
+  border-radius: 0.375rem;
+  overflow-x: auto;
+}
+
+@media (max-width: 768px) {
+  .zg-tab-nav {
+    overflow-x: auto;
+  }
+  .zg-tab-nav button {
+    flex-shrink: 0;
+  }
+}
