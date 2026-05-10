@@ -1,0 +1,21 @@
+Zettelgeist
+Copyright 2026 Mo (motechnix@gmail.com)
+
+This product includes software developed by the Zettelgeist project
+(https://github.com/morrieinmaas/zettelgeist).
+
+Bundles or uses the following open-source software:
+- gray-matter (MIT)
+- js-yaml (MIT)
+- marked (MIT)
+- highlight.js (BSD-3-Clause)
+- mermaid (MIT)
+- @picocss/pico (MIT)
+- @modelcontextprotocol/sdk (MIT)
+- zod (MIT)
+- zod-to-json-schema (ISC)
+- esbuild (MIT)
+- vitest (MIT)
+- happy-dom (MIT)
+- dompurify (MPL-2.0 OR Apache-2.0)
+- @playwright/test (Apache-2.0)

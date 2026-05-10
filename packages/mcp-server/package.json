@@ -1,7 +1,20 @@
 {
   "name": "@zettelgeist/mcp-server",
   "version": "0.1.0",
-  "private": true,
+  "license": "Apache-2.0",
+  "author": "Mo <motechnix@gmail.com>",
+  "description": "Zettelgeist MCP server: 15 tools for agents to operate on Zettelgeist repositories.",
+  "keywords": ["zettelgeist", "spec-driven-development", "markdown", "project-management", "mcp", "model-context-protocol"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/morrieinmaas/zettelgeist.git",
+    "directory": "packages/mcp-server"
+  },
+  "bugs": "https://github.com/morrieinmaas/zettelgeist/issues",
+  "homepage": "https://github.com/morrieinmaas/zettelgeist#readme",
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "bin": { "zettelgeist-mcp": "./dist/bin.js" },
   "files": ["dist", "SKILL.md"],

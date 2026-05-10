@@ -3,6 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "license": "Apache-2.0",
+  "author": "Mo <motechnix@gmail.com>",
+  "description": "Portable markdown-based file format and contributor protocol for spec-driven, agent-friendly project management.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/morrieinmaas/zettelgeist.git"
+  },
+  "bugs": "https://github.com/morrieinmaas/zettelgeist/issues",
+  "homepage": "https://github.com/morrieinmaas/zettelgeist",
   "scripts": {
     "build": "pnpm -r build",
     "test": "pnpm -r test",
