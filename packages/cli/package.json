@@ -27,6 +27,7 @@
   "dependencies": {
     "@zettelgeist/core": "workspace:*",
     "@zettelgeist/fs-adapters": "workspace:*",
+    "@zettelgeist/git-hook": "workspace:*",
     "gray-matter": "^4.0.3",
     "js-yaml": "^3.14.2",
     "marked": "^14.0.0"

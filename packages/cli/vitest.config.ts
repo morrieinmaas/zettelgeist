@@ -9,6 +9,7 @@ export default defineConfig({
     alias: {
       '@zettelgeist/core': path.resolve(here, '../core/src/index.ts'),
       '@zettelgeist/fs-adapters': path.resolve(here, '../fs-adapters/src/index.ts'),
+      '@zettelgeist/git-hook': path.resolve(here, '../git-hook/src/index.ts'),
     },
   },
   test: {

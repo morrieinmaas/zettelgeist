@@ -5,6 +5,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { runConformance, loadConfig } from '@zettelgeist/core';
 import { makeDiskFsReader } from '@zettelgeist/fs-adapters';
+import { installPreCommitHook } from '@zettelgeist/git-hook';
 import type { ToolDef } from '../server.js';
 import { safeJoin } from '../util/safe-join.js';
 
@@ -80,8 +81,6 @@ export const regenerateIndexTool: ToolDef<Record<string, never>, { commit: strin
   },
 };
 
-const HOOK_BLOCK = '# >>> zettelgeist >>>\nzettelgeist regen --check\n# <<< zettelgeist <<<';
-
 const installHookInput = z.object({ force: z.boolean().optional() });
 
 export const installGitHookTool: ToolDef<z.infer<typeof installHookInput>, { acknowledged: true }> = {
@@ -91,26 +90,7 @@ export const installGitHookTool: ToolDef<z.infer<typeof installHookInput>, { ack
   async handler(args, ctx) {
     const { stdout } = await execFileP('git', ['rev-parse', '--show-toplevel'], { cwd: ctx.cwd });
     const repoRoot = stdout.trim();
-    const hookDir = path.join(repoRoot, '.git', 'hooks');
-    await fs.mkdir(hookDir, { recursive: true });
-    const hookPath = path.join(hookDir, 'pre-commit');
-    let existing: string | null = null;
-    try {
-      existing = await fs.readFile(hookPath, 'utf8');
-    } catch {
-      existing = null;
-    }
-    if (existing === null || existing.trim() === '') {
-      await fs.writeFile(hookPath, HOOK_BLOCK + '\n', 'utf8');
-    } else if (existing.includes('# >>> zettelgeist >>>') && existing.includes('# <<< zettelgeist <<<')) {
-      // already installed; idempotent — no-op
-    } else if (args.force) {
-      await fs.writeFile(`${hookPath}.before-zettelgeist`, existing, 'utf8');
-      await fs.writeFile(hookPath, HOOK_BLOCK + '\n', 'utf8');
-    } else {
-      throw new Error('pre-commit hook contains non-marker content; pass force: true to overwrite');
-    }
-    await fs.chmod(hookPath, 0o755);
+    await installPreCommitHook(repoRoot, args.force !== undefined ? { force: args.force } : {});
     return { acknowledged: true };
   },
 };

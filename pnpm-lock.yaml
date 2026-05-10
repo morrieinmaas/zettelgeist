@@ -29,6 +29,9 @@ importers:
       '@zettelgeist/fs-adapters':
         specifier: workspace:*
         version: link:../fs-adapters
+      '@zettelgeist/git-hook':
+        specifier: workspace:*
+        version: link:../git-hook
       gray-matter:
         specifier: ^4.0.3
         version: 4.0.3
@@ -71,6 +74,8 @@ importers:
         specifier: workspace:*
         version: link:../core
 
+  packages/git-hook: {}
+
   packages/mcp-server:
     dependencies:
       '@modelcontextprotocol/sdk':
@@ -82,6 +87,9 @@ importers:
       '@zettelgeist/fs-adapters':
         specifier: workspace:*
         version: link:../fs-adapters
+      '@zettelgeist/git-hook':
+        specifier: workspace:*
+        version: link:../git-hook
       gray-matter:
         specifier: ^4.0.3
         version: 4.0.3

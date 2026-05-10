@@ -5,7 +5,8 @@
     "baseUrl": ".",
     "paths": {
       "@zettelgeist/core": ["../core/src/index.ts"],
-      "@zettelgeist/fs-adapters": ["../fs-adapters/src/index.ts"]
+      "@zettelgeist/fs-adapters": ["../fs-adapters/src/index.ts"],
+      "@zettelgeist/git-hook": ["../git-hook/src/index.ts"]
     }
   },
   "include": ["src/**/*", "tests/**/*", "vitest.config.ts"]
