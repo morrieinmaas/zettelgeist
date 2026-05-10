@@ -79,7 +79,7 @@ describe('specs routes', () => {
     const r = await fetch(`${server.url}/api/specs/foo/claim`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ agentId: 'alice@laptop' }),
+      body: JSON.stringify({ agent_id: 'alice@laptop' }),
     });
     expect(r.status).toBe(200);
     const claim = await fs.readFile(path.join(tmp, 'specs', 'foo', '.claim'), 'utf8');

@@ -252,8 +252,8 @@ async function setStatus(req: IncomingMessage, res: ServerResponse, ctx: SpecsRo
 }
 
 async function claimSpec(req: IncomingMessage, res: ServerResponse, ctx: SpecsRouteContext, name: string): Promise<void> {
-  const body = await readBody(req) as { agentId?: string } | null;
-  const agentId = body?.agentId ?? 'agent';
+  const body = await readBody(req) as { agent_id?: string } | null;
+  const agentId = body?.agent_id ?? 'agent';
   const dir = safeJoin(path.resolve(ctx.cwd, ctx.specsDir), name);
   await fs.mkdir(dir, { recursive: true });
   await fs.writeFile(safeJoin(dir, '.claim'), `${agentId}\n${new Date().toISOString()}\n`, 'utf8');

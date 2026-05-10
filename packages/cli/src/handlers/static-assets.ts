@@ -34,7 +34,7 @@ const REST_BACKEND_SHIM = `
     setStatus: (name, status, reason) => post(\`/api/specs/\${enc(name)}/status\`, { status, reason }),
     writeHandoff: (name, content) => put(\`/api/specs/\${enc(name)}/handoff\`, { content }),
     regenerateIndex: () => post('/api/regenerate'),
-    claimSpec: (name, agentId) => post(\`/api/specs/\${enc(name)}/claim\`, { agentId }),
+    claimSpec: (name, agentId) => post(\`/api/specs/\${enc(name)}/claim\`, { agent_id: agentId }),
     releaseSpec: (name) => post(\`/api/specs/\${enc(name)}/release\`),
   };
 })();
