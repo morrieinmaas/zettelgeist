@@ -17,7 +17,7 @@
   },
   "type": "module",
   "bin": { "zettelgeist": "./dist/bin.js" },
-  "files": ["dist"],
+  "files": ["dist", "README.md"],
   "scripts": {
     "build": "node scripts/bundle.mjs && chmod +x dist/bin.js && cp -r templates dist/templates && node scripts/copy-viewer.mjs",
     "typecheck": "tsc -p tsconfig.json",

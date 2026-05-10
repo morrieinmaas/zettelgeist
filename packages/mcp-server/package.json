@@ -17,7 +17,7 @@
   },
   "type": "module",
   "bin": { "zettelgeist-mcp": "./dist/bin.js" },
-  "files": ["dist", "SKILL.md"],
+  "files": ["dist", "README.md", "SKILL.md"],
   "scripts": {
     "build": "node scripts/bundle.mjs && chmod +x dist/bin.js",
     "typecheck": "tsc -p tsconfig.json",
