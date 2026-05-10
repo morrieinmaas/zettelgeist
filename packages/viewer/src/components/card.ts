@@ -30,5 +30,11 @@ export function renderCard(spec: SpecSummary): HTMLElement {
     window.location.hash = `#/spec/${encodeURIComponent(spec.name)}`;
   });
 
+  card.addEventListener('dragstart', (e) => {
+    if (!e.dataTransfer) return;
+    e.dataTransfer.setData('text/plain', spec.name);
+    e.dataTransfer.effectAllowed = 'move';
+  });
+
   return card;
 }

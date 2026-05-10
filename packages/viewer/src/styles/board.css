@@ -93,3 +93,87 @@
     overflow-x: visible;
   }
 }
+
+.zg-column-drop-target {
+  outline: 3px dashed var(--pico-primary, #1095c1);
+  outline-offset: -3px;
+}
+
+.zg-card[draggable='true'] {
+  cursor: grab;
+}
+
+.zg-card[draggable='true']:active {
+  cursor: grabbing;
+}
+
+.zg-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.zg-modal {
+  background: var(--pico-background-color, white);
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.zg-modal h3 {
+  margin: 0 0 0.5rem 0;
+}
+
+.zg-modal-label {
+  display: block;
+  margin: 1rem 0 0.5rem 0;
+}
+
+.zg-modal-textarea {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--pico-muted-border-color, #ddd);
+  border-radius: 0.375rem;
+  font-family: inherit;
+  font-size: 0.9rem;
+  resize: vertical;
+}
+
+.zg-modal-error {
+  color: var(--zg-color-blocked, #c0392b);
+  font-size: 0.875rem;
+  margin: 0.5rem 0 0 0;
+}
+
+.zg-modal-buttons {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.zg-modal-cancel,
+.zg-modal-confirm {
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.zg-modal-cancel {
+  background: var(--pico-muted-color, #999);
+  color: white;
+  border: none;
+}
+
+.zg-modal-confirm {
+  background: var(--pico-primary, #1095c1);
+  color: white;
+  border: none;
+}

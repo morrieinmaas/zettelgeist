@@ -62,8 +62,53 @@ export async function renderBoard(): Promise<void> {
 
     column.appendChild(header);
     column.appendChild(cards);
+    attachDropHandlers(column, status);
     board.appendChild(column);
   }
 
   app.appendChild(board);
+}
+
+// v0.1 simplification: only support drag INTO Blocked/Cancelled. Clearing the
+// override (back to a derived status) happens via the spec detail view.
+function attachDropHandlers(column: HTMLElement, status: Status): void {
+  const isOverride = status === 'blocked' || status === 'cancelled';
+
+  column.addEventListener('dragover', (e) => {
+    if (!isOverride) {
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'none';
+      return;
+    }
+    e.preventDefault();
+    column.classList.add('zg-column-drop-target');
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+  });
+
+  column.addEventListener('dragleave', () => {
+    column.classList.remove('zg-column-drop-target');
+  });
+
+  column.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    column.classList.remove('zg-column-drop-target');
+    if (!isOverride) return;
+    const specName = e.dataTransfer?.getData('text/plain');
+    if (!specName) return;
+
+    const { showReasonModal } = await import('../components/reason-modal.js');
+    const reason = await showReasonModal({
+      title: status === 'blocked' ? 'Mark as Blocked' : 'Mark as Cancelled',
+      message: `Mark "${specName}" as ${status}.`,
+      reasonRequired: status === 'blocked',
+      reasonLabel: status === 'blocked' ? "What's blocking it?" : 'Reason (optional):',
+      confirmLabel: status === 'blocked' ? 'Mark Blocked' : 'Mark Cancelled',
+    });
+    if (reason === null) return;
+    try {
+      await window.zettelgeistBackend.setStatus(specName, status, reason || undefined);
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+    } catch (err) {
+      alert((err as Error).message);
+    }
+  });
 }

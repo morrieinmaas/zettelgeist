@@ -80,4 +80,40 @@ describe('renderBoard', () => {
     card.click();
     expect(window.location.hash).toBe('#/spec/user-auth');
   });
+
+  // happy-dom supports DataTransfer + DragEvent constructors but does not
+  // propagate `dataTransfer` from the DragEventInit. We attach it manually via
+  // defineProperty so the event handlers in board.ts / card.ts see it.
+  // The Playwright e2e in Task 27 covers the real user-level interaction.
+  function dragEvent(type: string, dt: DataTransfer): DragEvent {
+    const e = new DragEvent(type, { bubbles: true, cancelable: true });
+    Object.defineProperty(e, 'dataTransfer', { value: dt, configurable: true });
+    return e;
+  }
+
+  it('marks Blocked column as drop target on dragover', async () => {
+    await renderBoard();
+    const blockedColumn = document.querySelector(
+      '[data-status="blocked"]',
+    ) as HTMLElement;
+    blockedColumn.dispatchEvent(dragEvent('dragover', new DataTransfer()));
+    expect(blockedColumn.classList.contains('zg-column-drop-target')).toBe(true);
+  });
+
+  it('does not mark non-override columns as drop target', async () => {
+    await renderBoard();
+    const plannedColumn = document.querySelector(
+      '[data-status="planned"]',
+    ) as HTMLElement;
+    plannedColumn.dispatchEvent(dragEvent('dragover', new DataTransfer()));
+    expect(plannedColumn.classList.contains('zg-column-drop-target')).toBe(false);
+  });
+
+  it('card dragstart sets text/plain to spec name', async () => {
+    await renderBoard();
+    const card = document.querySelector('[data-spec="user-auth"]') as HTMLElement;
+    const dt = new DataTransfer();
+    card.dispatchEvent(dragEvent('dragstart', dt));
+    expect(dt.getData('text/plain')).toBe('user-auth');
+  });
 });
