@@ -6,7 +6,7 @@
   "bin": { "zettelgeist-mcp": "./dist/bin.js" },
   "files": ["dist", "SKILL.md"],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && chmod +x dist/bin.js",
+    "build": "node scripts/bundle.mjs && chmod +x dist/bin.js",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run"
   },
@@ -20,6 +20,7 @@
     "zod-to-json-schema": "^3.23.0"
   },
   "devDependencies": {
-    "@types/js-yaml": "^4.0.9"
+    "@types/js-yaml": "^4.0.9",
+    "esbuild": "^0.24.0"
   }
 }
