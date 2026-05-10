@@ -3,6 +3,7 @@ import { renderTabs } from '../components/tabs.js';
 import { renderTaskList } from '../components/task-list.js';
 import { renderFrontmatterForm } from '../components/frontmatter-form.js';
 import { marked } from 'marked';
+import { sanitizeHtml, escapeHtml } from '../util/sanitize.js';
 
 export async function renderDetail(params: Record<string, string>): Promise<void> {
   const app = document.getElementById('app')!;
@@ -19,7 +20,7 @@ export async function renderDetail(params: Record<string, string>): Promise<void
   try {
     spec = await backend.readSpec(name);
   } catch (err) {
-    app.innerHTML = `<p class="zg-error">Failed to load spec "${name}": ${(err as Error).message}</p>`;
+    app.innerHTML = `<p class="zg-error">Failed to load spec "${escapeHtml(name)}": ${escapeHtml((err as Error).message)}</p>`;
     return;
   }
 
@@ -58,7 +59,7 @@ function renderRequirementsTab(spec: SpecDetail): HTMLElement {
   const body = document.createElement('div');
   body.className = 'zg-markdown';
   if (spec.requirements) {
-    body.innerHTML = marked.parse(spec.requirements) as string;
+    body.innerHTML = sanitizeHtml(marked.parse(spec.requirements) as string);
   } else {
     body.innerHTML = '<p><em>No requirements.md yet.</em></p>';
   }
@@ -74,7 +75,7 @@ function renderHandoffTab(spec: SpecDetail): HTMLElement {
   const container = document.createElement('div');
   container.className = 'zg-markdown';
   if (spec.handoff) {
-    container.innerHTML = marked.parse(spec.handoff) as string;
+    container.innerHTML = sanitizeHtml(marked.parse(spec.handoff) as string);
   } else {
     container.innerHTML = '<p><em>No handoff.md yet.</em></p>';
   }
@@ -89,7 +90,7 @@ function renderLensesTab(spec: SpecDetail): HTMLElement {
     container.appendChild(heading);
     const body = document.createElement('div');
     body.className = 'zg-markdown';
-    body.innerHTML = marked.parse(content) as string;
+    body.innerHTML = sanitizeHtml(marked.parse(content) as string);
     container.appendChild(body);
   }
   return container;

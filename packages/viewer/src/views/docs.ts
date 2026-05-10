@@ -1,4 +1,5 @@
 import type { DocEntry } from '../backend.js';
+import { sanitizeHtml, escapeHtml } from '../util/sanitize.js';
 
 export async function renderDocs(params: Record<string, string>): Promise<void> {
   const app = document.getElementById('app')!;
@@ -9,7 +10,7 @@ export async function renderDocs(params: Record<string, string>): Promise<void> 
   try {
     entries = await backend.listDocs();
   } catch (err) {
-    app.innerHTML = `<p class="zg-error">Failed to list docs: ${(err as Error).message}</p>`;
+    app.innerHTML = `<p class="zg-error">Failed to list docs: ${escapeHtml((err as Error).message)}</p>`;
     return;
   }
 
@@ -55,11 +56,11 @@ export async function renderDocs(params: Record<string, string>): Promise<void> 
       heading.textContent = doc.metadata.title || selectedPath;
       const body = document.createElement('div');
       body.className = 'zg-markdown';
-      body.innerHTML = doc.rendered;
+      body.innerHTML = sanitizeHtml(doc.rendered);
       main.appendChild(heading);
       main.appendChild(body);
     } catch (err) {
-      main.innerHTML = `<p class="zg-error">Failed to read doc: ${(err as Error).message}</p>`;
+      main.innerHTML = `<p class="zg-error">Failed to read doc: ${escapeHtml((err as Error).message)}</p>`;
     }
   } else {
     const intro = document.createElement('div');

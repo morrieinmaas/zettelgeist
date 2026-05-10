@@ -1,4 +1,5 @@
 import type { SpecSummary } from '../backend.js';
+import { sanitizeHtml, escapeHtml as escapeHtmlSafe } from '../util/sanitize.js';
 
 interface GraphData {
   specs: SpecSummary[];
@@ -36,7 +37,7 @@ export async function renderGraph(): Promise<void> {
   try {
     specs = await backend.listSpecs();
   } catch (err) {
-    app.innerHTML = `<p class="zg-error">Failed to load: ${(err as Error).message}</p>`;
+    app.innerHTML = `<p class="zg-error">Failed to load: ${escapeHtmlSafe((err as Error).message)}</p>`;
     return;
   }
 
@@ -86,7 +87,7 @@ export async function renderGraph(): Promise<void> {
     const mermaid = (window as Window & { mermaid?: { render: (id: string, src: string) => Promise<{ svg: string }> } }).mermaid;
     if (!mermaid) throw new Error('mermaid not loaded');
     const { svg } = await mermaid.render('zg-graph-svg', mermaidSrc);
-    container.innerHTML = svg;
+    container.innerHTML = sanitizeHtml(svg);
 
     container.querySelectorAll<SVGElement>('.node').forEach((node) => {
       const label = node.querySelector('text')?.textContent;

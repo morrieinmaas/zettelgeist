@@ -1,5 +1,6 @@
 import type { Status, SpecSummary } from '../backend.js';
 import { renderCard } from '../components/card.js';
+import { escapeHtml } from '../util/sanitize.js';
 
 const COLUMN_ORDER: Status[] = [
   'draft', 'planned', 'in-progress', 'in-review', 'done', 'blocked', 'cancelled',
@@ -24,7 +25,7 @@ export async function renderBoard(): Promise<void> {
   try {
     specs = await backend.listSpecs();
   } catch (err) {
-    app.innerHTML = `<p class="zg-error">Failed to load specs: ${(err as Error).message}</p>`;
+    app.innerHTML = `<p class="zg-error">Failed to load specs: ${escapeHtml((err as Error).message)}</p>`;
     return;
   }
 

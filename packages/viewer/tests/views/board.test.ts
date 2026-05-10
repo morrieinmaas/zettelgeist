@@ -116,4 +116,14 @@ describe('renderBoard', () => {
     card.dispatchEvent(dragEvent('dragstart', dt));
     expect(dt.getData('text/plain')).toBe('user-auth');
   });
+
+  it('escapes error messages in the error UI', async () => {
+    const backend = mockBackend();
+    backend.listSpecs = async () => { throw new Error('<img src=x onerror=alert(1)>'); };
+    (window as Window & { zettelgeistBackend?: ZettelgeistBackend }).zettelgeistBackend = backend;
+    await renderBoard();
+    const app = document.getElementById('app')!;
+    expect(app.innerHTML).not.toContain('<img src=x');
+    expect(app.innerHTML).toContain('&lt;img');
+  });
 });

@@ -122,4 +122,27 @@ describe('renderDetail', () => {
     expect(tags.length).toBe(1);
     expect(tags[0]?.textContent).toBe('#human-only');
   });
+
+  it('sanitizes script tags out of requirements markdown', async () => {
+    // happy-dom's DOM parser executes inline <script> when DOMPurify constructs
+    // its working tree, which is *not* how real browsers behave (innerHTML never
+    // executes script). So we don't assert on side-effects — we only assert that
+    // the sanitized HTML stamped into the live DOM contains no <script>.
+    const malicious = '# Foo\n\n<script>window.PWNED_DETAIL = true;</script>\n\nNormal content.\n';
+    const backend = mockBackend({ readSpec: async () => ({ ...SAMPLE_SPEC, requirements: malicious }) });
+    (window as Window & { zettelgeistBackend?: ZettelgeistBackend }).zettelgeistBackend = backend;
+    await renderDetail({ name: 'foo' });
+    const tabContent = document.querySelector('.zg-tab-content');
+    expect(tabContent?.innerHTML ?? '').not.toContain('<script>');
+    expect(tabContent?.innerHTML ?? '').not.toContain('PWNED_DETAIL');
+  });
+
+  it('sanitizes onerror attributes out of img tags', async () => {
+    const malicious = '<img src=x onerror="alert(1)">\n';
+    const backend = mockBackend({ readSpec: async () => ({ ...SAMPLE_SPEC, requirements: malicious }) });
+    (window as Window & { zettelgeistBackend?: ZettelgeistBackend }).zettelgeistBackend = backend;
+    await renderDetail({ name: 'foo' });
+    const tabContent = document.querySelector('.zg-tab-content')?.innerHTML ?? '';
+    expect(tabContent).not.toContain('onerror');
+  });
 });
