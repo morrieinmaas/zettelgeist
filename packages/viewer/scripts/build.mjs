@@ -27,7 +27,7 @@ const html = await fs.readFile(path.join(root, 'src/index.html'), 'utf8');
 await fs.writeFile(path.join(dist, 'index.html'), html, 'utf8');
 
 // Copy CSS
-const cssFiles = ['base.css', 'board.css', 'detail.css', 'docs.css'];
+const cssFiles = ['base.css', 'board.css', 'detail.css', 'docs.css', 'light.css', 'dark.css'];
 for (const f of cssFiles) {
   await fs.copyFile(
     path.join(root, 'src/styles', f),

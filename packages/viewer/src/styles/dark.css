@@ -1,0 +1,8 @@
+[data-theme='dark'] {
+  --pico-background-color: #1a1a1a;
+  --pico-color: #f0f0f0;
+  --pico-card-background-color: #2a2a2a;
+  --pico-muted-border-color: #444;
+  --pico-muted-color: #888;
+  --pico-primary: #41bbd9;
+}

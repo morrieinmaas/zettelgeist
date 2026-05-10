@@ -7,13 +7,16 @@ import { renderDocs } from './views/docs.js';
 
 function applyTheme(config: ZettelgeistConfig | undefined): void {
   const requested = config?.theme ?? 'system';
-  let resolved: 'light' | 'dark';
+  const apply = (resolved: 'light' | 'dark'): void => {
+    document.documentElement.setAttribute('data-theme', resolved);
+  };
   if (requested === 'system') {
-    resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    apply(mq.matches ? 'dark' : 'light');
+    mq.addEventListener('change', (e) => apply(e.matches ? 'dark' : 'light'));
   } else {
-    resolved = requested;
+    apply(requested);
   }
-  document.documentElement.setAttribute('data-theme', resolved);
 }
 
 async function bootstrap(): Promise<void> {
