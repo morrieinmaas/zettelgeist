@@ -3,3 +3,5 @@ dist/
 *.tsbuildinfo
 .DS_Store
 .claim
+.zettelgeist/regen-cache.json
+.zettelgeist/exports/
