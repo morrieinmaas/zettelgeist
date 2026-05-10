@@ -16,9 +16,10 @@ export class Router {
     const paramNames: string[] = [];
     const regexStr = pattern
       .replace(/\//g, '\\/')
-      .replace(/:([a-zA-Z]+)/g, (_, name) => {
+      .replace(/:([a-zA-Z]+)|\*([a-zA-Z]+)/g, (_, name1, name2) => {
+        const name = (name1 ?? name2) as string;
         paramNames.push(name);
-        return '([^/]+)';
+        return name1 ? '([^/]+)' : '(.+)';
       });
     this.routes.push({ pattern: new RegExp('^' + regexStr + '$'), paramNames, handler });
   }
