@@ -67,4 +67,19 @@ describe('readTools', () => {
     const result = await validateRepoTool.handler({}, { cwd: tmp });
     expect(result.errors.some((e) => e.code === 'E_EMPTY_SPEC')).toBe(true);
   });
+
+  it('readSpecFileTool rejects relpath with traversal', async () => {
+    await fs.writeFile(path.join(tmp, 'sentinel.txt'), 'do-not-leak');
+    await expect(readSpecFileTool.handler(
+      { name: 'foo', relpath: '../../sentinel.txt' },
+      { cwd: tmp },
+    )).rejects.toThrow();
+  });
+
+  it('readSpecFileTool rejects spec name with traversal', async () => {
+    await expect(readSpecFileTool.handler(
+      { name: '../../etc', relpath: 'passwd' },
+      { cwd: tmp },
+    )).rejects.toThrow();
+  });
 });

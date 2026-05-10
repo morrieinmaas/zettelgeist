@@ -8,6 +8,7 @@ import {
 } from '@zettelgeist/core';
 import { makeDiskFsReader } from '@zettelgeist/fs-adapters';
 import type { ToolDef } from '../server.js';
+import { safeJoin } from '../util/safe-join.js';
 
 const execFileP = promisify(execFile);
 
@@ -128,7 +129,7 @@ export const writeArtifactTool: ToolDef<z.infer<typeof writeArtifactInput>, {
       ? path.join(ctx.cwd, 'docs', 'exports')
       : path.join(ctx.cwd, '.zettelgeist', 'exports');
     await fs.mkdir(targetDir, { recursive: true });
-    const targetPath = path.join(targetDir, fileName);
+    const targetPath = safeJoin(targetDir, fileName);
     const tmp = `${targetPath}.tmp`;
     await fs.writeFile(tmp, args.html, 'utf8');
     await fs.rename(tmp, targetPath);

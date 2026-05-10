@@ -7,6 +7,7 @@ import {
 } from '@zettelgeist/core';
 import { makeDiskFsReader } from '@zettelgeist/fs-adapters';
 import type { ToolDef } from '../server.js';
+import { safeJoin } from '../util/safe-join.js';
 
 const emptyInput = z.object({});
 
@@ -72,7 +73,9 @@ export const readSpecFileTool: ToolDef<{ name: string; relpath: string }, { cont
   async handler(args, ctx) {
     const reader = makeDiskFsReader(ctx.cwd);
     const cfg = await loadConfig(reader);
-    const filepath = path.join(ctx.cwd, cfg.config.specsDir, args.name, args.relpath);
+    const specsRoot = path.resolve(ctx.cwd, cfg.config.specsDir);
+    const specDir = safeJoin(specsRoot, args.name);
+    const filepath = safeJoin(specDir, args.relpath);
     const content = await fs.readFile(filepath, 'utf8');
     return { content };
   },

@@ -9,7 +9,9 @@ import {
 import { makeDiskFsReader } from '@zettelgeist/fs-adapters';
 import yaml from 'js-yaml';
 import matter from 'gray-matter';
-import { sendJson, sendNotFound, readBody } from './util.js';
+import {
+  sendJson, sendNotFound, readBody, safeJoin, PathTraversalError,
+} from './util.js';
 
 const execFileP = promisify(execFile);
 
@@ -30,6 +32,23 @@ export async function handleSpecsRoute(
   cwd: string,
   pathname: string,
 ): Promise<void> {
+  try {
+    return await dispatchSpecsRoute(req, res, cwd, pathname);
+  } catch (err) {
+    if (err instanceof PathTraversalError) {
+      sendJson(res, 403, { error: 'forbidden' });
+      return;
+    }
+    throw err;
+  }
+}
+
+async function dispatchSpecsRoute(
+  req: IncomingMessage,
+  res: ServerResponse,
+  cwd: string,
+  pathname: string,
+): Promise<void> {
   const ctx = await getContext(cwd);
 
   // Listing: GET /api/specs
@@ -42,6 +61,11 @@ export async function handleSpecsRoute(
   if (!m) return sendNotFound(res);
   const name = decodeURIComponent(m[1]!);
   const rest = m[2] ?? '';
+
+  // Validate `name` doesn't escape specsDir (covers `name = '../../etc'`).
+  // Throws PathTraversalError, caught by handleSpecsRoute → 403.
+  const specsRoot = path.resolve(ctx.cwd, ctx.specsDir);
+  safeJoin(specsRoot, name);
 
   // GET /api/specs/<name>
   if (rest === '' && req.method === 'GET') {
@@ -128,7 +152,8 @@ async function readSpecDetail(res: ServerResponse, ctx: SpecsRouteContext, name:
 }
 
 async function readSpecFile(res: ServerResponse, ctx: SpecsRouteContext, name: string, relpath: string): Promise<void> {
-  const filepath = path.join(ctx.cwd, ctx.specsDir, name, relpath);
+  const specDir = safeJoin(path.resolve(ctx.cwd, ctx.specsDir), name);
+  const filepath = safeJoin(specDir, relpath);
   try {
     const content = await fs.readFile(filepath, 'utf8');
     sendJson(res, 200, { content });
@@ -146,8 +171,9 @@ async function writeSpecFile(
     sendJson(res, 400, { error: 'body must be {content: string}' });
     return;
   }
-  const fileRel = path.posix.join(ctx.specsDir, name, relpath);
-  const fileAbs = path.join(ctx.cwd, fileRel);
+  const specDir = safeJoin(path.resolve(ctx.cwd, ctx.specsDir), name);
+  const fileAbs = safeJoin(specDir, relpath);
+  const fileRel = path.relative(ctx.cwd, fileAbs).split(path.sep).join('/');
   await fs.mkdir(path.dirname(fileAbs), { recursive: true });
   const tmp = `${fileAbs}.tmp`;
   await fs.writeFile(tmp, body.content, 'utf8');
@@ -161,8 +187,9 @@ async function writeSpecFile(
 async function tickTask(
   res: ServerResponse, ctx: SpecsRouteContext, name: string, n: number, checked: boolean,
 ): Promise<void> {
-  const tasksRel = path.posix.join(ctx.specsDir, name, 'tasks.md');
-  const tasksAbs = path.join(ctx.cwd, tasksRel);
+  const specDir = safeJoin(path.resolve(ctx.cwd, ctx.specsDir), name);
+  const tasksAbs = safeJoin(specDir, 'tasks.md');
+  const tasksRel = path.relative(ctx.cwd, tasksAbs).split(path.sep).join('/');
   let body: string;
   try {
     body = await fs.readFile(tasksAbs, 'utf8');
@@ -201,8 +228,9 @@ async function setStatus(req: IncomingMessage, res: ServerResponse, ctx: SpecsRo
     sendJson(res, 400, { error: 'body.status must be "blocked", "cancelled", or null' });
     return;
   }
-  const reqRel = path.posix.join(ctx.specsDir, name, 'requirements.md');
-  const reqAbs = path.join(ctx.cwd, reqRel);
+  const specDir = safeJoin(path.resolve(ctx.cwd, ctx.specsDir), name);
+  const reqAbs = safeJoin(specDir, 'requirements.md');
+  const reqRel = path.relative(ctx.cwd, reqAbs).split(path.sep).join('/');
   const raw = await fs.readFile(reqAbs, 'utf8').catch(() => '');
   const parsed = matter(raw, {});
   const data = { ...(parsed.data ?? {}) } as Record<string, unknown>;
@@ -226,14 +254,15 @@ async function setStatus(req: IncomingMessage, res: ServerResponse, ctx: SpecsRo
 async function claimSpec(req: IncomingMessage, res: ServerResponse, ctx: SpecsRouteContext, name: string): Promise<void> {
   const body = await readBody(req) as { agentId?: string } | null;
   const agentId = body?.agentId ?? 'agent';
-  const dir = path.join(ctx.cwd, ctx.specsDir, name);
+  const dir = safeJoin(path.resolve(ctx.cwd, ctx.specsDir), name);
   await fs.mkdir(dir, { recursive: true });
-  await fs.writeFile(path.join(dir, '.claim'), `${agentId}\n${new Date().toISOString()}\n`, 'utf8');
+  await fs.writeFile(safeJoin(dir, '.claim'), `${agentId}\n${new Date().toISOString()}\n`, 'utf8');
   sendJson(res, 200, { acknowledged: true });
 }
 
 async function releaseSpec(res: ServerResponse, ctx: SpecsRouteContext, name: string): Promise<void> {
-  const claimPath = path.join(ctx.cwd, ctx.specsDir, name, '.claim');
+  const specDir = safeJoin(path.resolve(ctx.cwd, ctx.specsDir), name);
+  const claimPath = safeJoin(specDir, '.claim');
   await fs.unlink(claimPath).catch((err) => {
     if (err.code !== 'ENOENT') throw err;
   });
@@ -246,8 +275,9 @@ async function writeHandoff(req: IncomingMessage, res: ServerResponse, ctx: Spec
     sendJson(res, 400, { error: 'body must be {content: string}' });
     return;
   }
-  const handoffRel = path.posix.join(ctx.specsDir, name, 'handoff.md');
-  const handoffAbs = path.join(ctx.cwd, handoffRel);
+  const specDir = safeJoin(path.resolve(ctx.cwd, ctx.specsDir), name);
+  const handoffAbs = safeJoin(specDir, 'handoff.md');
+  const handoffRel = path.relative(ctx.cwd, handoffAbs).split(path.sep).join('/');
   await fs.mkdir(path.dirname(handoffAbs), { recursive: true });
   const tmp = `${handoffAbs}.tmp`;
   await fs.writeFile(tmp, body.content, 'utf8');

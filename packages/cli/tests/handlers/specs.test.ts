@@ -86,3 +86,35 @@ describe('specs routes', () => {
     expect(claim).toContain('alice@laptop');
   });
 });
+
+describe('path traversal', () => {
+  it('rejects readSpecFile with .. in relpath', async () => {
+    await setupRepo();
+    server = await startServer({ cwd: tmp, port: 0, viewerBundlePath: viewerBundle });
+    // create a sentinel file outside specsDir
+    await fs.writeFile(path.join(tmp, 'SENTINEL'), 'do-not-leak');
+    const r = await fetch(`${server.url}/api/specs/foo/files/..%2F..%2FSENTINEL`);
+    expect(r.status).toBe(403);
+  });
+
+  it('rejects writeSpecFile with .. in relpath', async () => {
+    await setupRepo();
+    server = await startServer({ cwd: tmp, port: 0, viewerBundlePath: viewerBundle });
+    const r = await fetch(`${server.url}/api/specs/foo/files/..%2F..%2Fevil.txt`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: 'pwn' }),
+    });
+    expect(r.status).toBe(403);
+    const exists = await fs.access(path.join(tmp, '..', 'evil.txt')).then(() => true).catch(() => false);
+    expect(exists).toBe(false);
+  });
+
+  it('rejects spec name with .. (tasks endpoint)', async () => {
+    await setupRepo();
+    server = await startServer({ cwd: tmp, port: 0, viewerBundlePath: viewerBundle });
+    const r = await fetch(`${server.url}/api/specs/..%2F..%2Fevil/tasks/1/tick`, { method: 'POST' });
+    // Either 403 or 404 — both acceptable; 200 with action would be a bug
+    expect([403, 404]).toContain(r.status);
+  });
+});

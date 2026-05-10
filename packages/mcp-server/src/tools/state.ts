@@ -6,6 +6,7 @@ import { promisify } from 'node:util';
 import { runConformance, loadConfig } from '@zettelgeist/core';
 import { makeDiskFsReader } from '@zettelgeist/fs-adapters';
 import type { ToolDef } from '../server.js';
+import { safeJoin } from '../util/safe-join.js';
 
 const execFileP = promisify(execFile);
 
@@ -18,11 +19,12 @@ export const claimSpecTool: ToolDef<z.infer<typeof claimInput>, { acknowledged: 
   async handler(args, ctx) {
     const reader = makeDiskFsReader(ctx.cwd);
     const cfg = await loadConfig(reader);
-    const dir = path.join(ctx.cwd, cfg.config.specsDir, args.name);
+    const specsRoot = path.resolve(ctx.cwd, cfg.config.specsDir);
+    const dir = safeJoin(specsRoot, args.name);
     await fs.mkdir(dir, { recursive: true });
     const agentId = args.agent_id ?? 'agent';
     const ts = new Date().toISOString();
-    await fs.writeFile(path.join(dir, '.claim'), `${agentId}\n${ts}\n`, 'utf8');
+    await fs.writeFile(safeJoin(dir, '.claim'), `${agentId}\n${ts}\n`, 'utf8');
     return { acknowledged: true };
   },
 };
@@ -36,7 +38,9 @@ export const releaseSpecTool: ToolDef<z.infer<typeof releaseInput>, { acknowledg
   async handler(args, ctx) {
     const reader = makeDiskFsReader(ctx.cwd);
     const cfg = await loadConfig(reader);
-    const claimPath = path.join(ctx.cwd, cfg.config.specsDir, args.name, '.claim');
+    const specsRoot = path.resolve(ctx.cwd, cfg.config.specsDir);
+    const specDir = safeJoin(specsRoot, args.name);
+    const claimPath = safeJoin(specDir, '.claim');
     await fs.unlink(claimPath).catch((err: NodeJS.ErrnoException) => {
       if (err.code !== 'ENOENT') throw err;
     });

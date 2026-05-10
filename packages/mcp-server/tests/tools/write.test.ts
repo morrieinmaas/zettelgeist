@@ -68,6 +68,22 @@ describe('writeTools', () => {
     expect(after.startsWith('- [ ] one')).toBe(true);
   });
 
+  it('writeSpecFileTool rejects relpath with traversal', async () => {
+    await expect(writeSpecFileTool.handler(
+      { name: 'foo', relpath: '../../evil.txt', content: 'pwn' },
+      { cwd: tmp },
+    )).rejects.toThrow();
+    const exists = await fs.access(path.join(tmp, '..', 'evil.txt')).then(() => true).catch(() => false);
+    expect(exists).toBe(false);
+  });
+
+  it('writeSpecFileTool rejects spec name with traversal', async () => {
+    await expect(writeSpecFileTool.handler(
+      { name: '../../etc', relpath: 'passwd', content: 'pwn' },
+      { cwd: tmp },
+    )).rejects.toThrow();
+  });
+
   it('set_status writes frontmatter and clears it on null', async () => {
     const set = await setStatusTool.handler(
       { name: 'foo', status: 'blocked', reason: 'waiting on creds' },

@@ -6,6 +6,7 @@ import matter from 'gray-matter';
 import { loadConfig } from '@zettelgeist/core';
 import { makeDiskFsReader } from '@zettelgeist/fs-adapters';
 import { writeFileAndCommit } from '../util/write-and-commit.js';
+import { safeJoin } from '../util/safe-join.js';
 import type { ToolDef } from '../server.js';
 
 const writeSpecFileInput = z.object({
@@ -21,7 +22,10 @@ export const writeSpecFileTool: ToolDef<z.infer<typeof writeSpecFileInput>, { co
   async handler(args, ctx) {
     const reader = makeDiskFsReader(ctx.cwd);
     const cfg = await loadConfig(reader);
-    const fileRel = path.posix.join(cfg.config.specsDir, args.name, args.relpath);
+    const specsRoot = path.resolve(ctx.cwd, cfg.config.specsDir);
+    const specDir = safeJoin(specsRoot, args.name);
+    const fileAbs = safeJoin(specDir, args.relpath);
+    const fileRel = path.relative(ctx.cwd, fileAbs).split(path.sep).join('/');
     return writeFileAndCommit(ctx.cwd, fileRel, args.content, `[zg] write: ${args.name}/${args.relpath}`);
   },
 };
@@ -35,7 +39,10 @@ export const writeHandoffTool: ToolDef<z.infer<typeof writeHandoffInput>, { comm
   async handler(args, ctx) {
     const reader = makeDiskFsReader(ctx.cwd);
     const cfg = await loadConfig(reader);
-    const fileRel = path.posix.join(cfg.config.specsDir, args.name, 'handoff.md');
+    const specsRoot = path.resolve(ctx.cwd, cfg.config.specsDir);
+    const specDir = safeJoin(specsRoot, args.name);
+    const fileAbs = safeJoin(specDir, 'handoff.md');
+    const fileRel = path.relative(ctx.cwd, fileAbs).split(path.sep).join('/');
     return writeFileAndCommit(ctx.cwd, fileRel, args.content, `[zg] handoff: ${args.name}`);
   },
 };
@@ -45,8 +52,10 @@ const TASK_LINE = /^([\s>]*[-*+]\s+\[)([ xX])(\]\s+.*)$/;
 async function tickOrUntick(cwd: string, name: string, n: number, checked: boolean): Promise<{ commit: string }> {
   const reader = makeDiskFsReader(cwd);
   const cfg = await loadConfig(reader);
-  const tasksRel = path.posix.join(cfg.config.specsDir, name, 'tasks.md');
-  const tasksAbs = path.join(cwd, tasksRel);
+  const specsRoot = path.resolve(cwd, cfg.config.specsDir);
+  const specDir = safeJoin(specsRoot, name);
+  const tasksAbs = safeJoin(specDir, 'tasks.md');
+  const tasksRel = path.relative(cwd, tasksAbs).split(path.sep).join('/');
   const body = await fs.readFile(tasksAbs, 'utf8');
   const lines = body.split('\n');
   let count = 0;
@@ -95,8 +104,10 @@ export const setStatusTool: ToolDef<z.infer<typeof setStatusInput>, { commit: st
   async handler(args, ctx) {
     const reader = makeDiskFsReader(ctx.cwd);
     const cfg = await loadConfig(reader);
-    const reqRel = path.posix.join(cfg.config.specsDir, args.name, 'requirements.md');
-    const reqAbs = path.join(ctx.cwd, reqRel);
+    const specsRoot = path.resolve(ctx.cwd, cfg.config.specsDir);
+    const specDir = safeJoin(specsRoot, args.name);
+    const reqAbs = safeJoin(specDir, 'requirements.md');
+    const reqRel = path.relative(ctx.cwd, reqAbs).split(path.sep).join('/');
     const raw = await fs.readFile(reqAbs, 'utf8').catch(() => '');
     const parsed = matter(raw, {});
     const data = { ...(parsed.data ?? {}) } as Record<string, unknown>;
