@@ -5,6 +5,12 @@
       "label": "zettelgeist: build extension",
       "type": "shell",
       "command": "pnpm --filter @zettelgeist/viewer build && pnpm --filter @zettelgeist/vscode-extension build",
+      "options": {
+        "shell": {
+          "executable": "/bin/zsh",
+          "args": ["-l"]
+        }
+      },
       "problemMatcher": [],
       "presentation": {
         "reveal": "silent",
