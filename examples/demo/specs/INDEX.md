@@ -4,7 +4,7 @@
 
 | Spec | Status | Progress | Blocked by |
 |------|--------|----------|------------|
-| admin-dashboard | in-progress | 1/8 | — |
+| admin-dashboard | in-progress | 2/8 | — |
 | billing-ui | planned | 0/0 | — |
 | email-notifications | cancelled | 0/0 | Superseded by `webhooks`. Customers consistently asked for a structured event stream they could route themselves rather than another email firehose. See the `webhooks` spec for the replacement. |
 | oauth-providers | draft | 0/4 | — |
