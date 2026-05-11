@@ -1,14 +1,17 @@
 # v0.2+ backlog
 
-Items deferred from Plan 1 + Plan 2 + Sprint reviews. Not commitments — a tracking surface.
+Items deferred from Plan 1 + Plan 2 + Sprint reviews. Not commitments — a tracking surface. Several have graduated to actual `specs/<name>/` entries in this repo, which is where the canonical state lives.
 
 ## Format
 
-- Events catalogue (webhooks + MCP event stream) — frozen payload shapes, fixture coverage.
+- **Wiki-style links between specs** — inline `[[spec-name]]` references in prose, collected by the parser, navigable in the viewer. Inspired by Rowboat / Obsidian / the zettelkasten model the project name invokes. ([specs/wiki-links/](../specs/wiki-links/))
+- **Saved views** — config-defined live queries over the spec set: "blockers I own", "stale > 30d", "everything in `payments`". Rendered as additional sections in `INDEX.md` and as filter chips in the viewer. ([specs/saved-views/](../specs/saved-views/))
+- **Events catalogue** (webhooks + MCP event stream) — frozen payload shapes, fixture coverage. ([specs/events-catalogue/](../specs/events-catalogue/))
 - `auto_merge: true` triggering automated merge behavior.
 - Suggestion-branch contribution flow (per-user draft branches for non-coders).
 - Multi-repo specs with cross-repo identifiers.
 - Richer non-text content in `requirements.md` (image embeds, decision tables).
+- `.claim` file actually flips derived status — today the CLI/viewer's `claimedSpecs` is hardcoded to empty; should scan the spec folder for non-stale `.claim` files at status-derivation time.
 
 ## Tools
 
