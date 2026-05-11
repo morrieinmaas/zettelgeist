@@ -40,6 +40,10 @@ function mockBackend(overrides: Partial<ZettelgeistBackend> = {}): ZettelgeistBa
 describe('renderDetail', () => {
   beforeEach(() => {
     document.body.innerHTML = '<main id="app"></main>';
+    // Detail view now persists the active tab across re-renders via
+    // sessionStorage. Clear between tests so each one starts fresh on
+    // the Requirements tab.
+    try { sessionStorage.clear(); } catch { /* ignore */ }
     (window as Window & { zettelgeistBackend?: ZettelgeistBackend }).zettelgeistBackend = mockBackend();
   });
 
@@ -281,6 +285,29 @@ describe('renderDetail', () => {
     await new Promise((r) => setTimeout(r, 10));
 
     expect(captured).toBe('New handoff notes.\n');
+  });
+
+  it('persists the active tab across re-renders (so ticking a task does not snap to Requirements)', async () => {
+    await renderDetail({ name: 'user-auth' });
+
+    // Open Tasks tab.
+    const tasksBtn = Array.from(document.querySelectorAll('.zg-tab-nav button'))
+      .find((b) => b.textContent?.startsWith('Tasks')) as HTMLButtonElement;
+    tasksBtn.click();
+    expect(tasksBtn.classList.contains('active')).toBe(true);
+
+    // Re-render the view (what tickTask does via hashchange).
+    await renderDetail({ name: 'user-auth' });
+
+    // Tasks tab should still be the active one.
+    const tasksBtnAfter = Array.from(document.querySelectorAll('.zg-tab-nav button'))
+      .find((b) => b.textContent?.startsWith('Tasks')) as HTMLButtonElement;
+    expect(tasksBtnAfter.classList.contains('active')).toBe(true);
+
+    // And the Requirements tab is NOT active.
+    const reqBtnAfter = Array.from(document.querySelectorAll('.zg-tab-nav button'))
+      .find((b) => b.textContent === 'Requirements') as HTMLButtonElement;
+    expect(reqBtnAfter.classList.contains('active')).toBe(false);
   });
 
   it('shows error message when readSpec fails', async () => {

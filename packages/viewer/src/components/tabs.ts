@@ -4,7 +4,18 @@ export interface Tab {
   render: () => HTMLElement;
 }
 
-export function renderTabs(tabs: Tab[]): HTMLElement {
+export interface RenderTabsOptions {
+  /**
+   * Tab id to start on. If unset (or unknown), defaults to the first tab.
+   * Callers that want sticky-tab UX pass the last-active id (e.g., from
+   * sessionStorage).
+   */
+  initialTabId?: string;
+  /** Called every time a tab becomes active. Used to persist the choice. */
+  onActivate?: (id: string) => void;
+}
+
+export function renderTabs(tabs: Tab[], opts: RenderTabsOptions = {}): HTMLElement {
   const wrapper = document.createElement('div');
   wrapper.className = 'zg-tabs';
 
@@ -22,6 +33,7 @@ export function renderTabs(tabs: Tab[]): HTMLElement {
     });
     content.innerHTML = '';
     content.appendChild(tab.render());
+    opts.onActivate?.(id);
   }
 
   for (const tab of tabs) {
@@ -36,7 +48,12 @@ export function renderTabs(tabs: Tab[]): HTMLElement {
   wrapper.appendChild(nav);
   wrapper.appendChild(content);
 
-  if (tabs.length > 0) activate(tabs[0]!.id);
+  if (tabs.length > 0) {
+    const initial = opts.initialTabId && tabs.some((t) => t.id === opts.initialTabId)
+      ? opts.initialTabId
+      : tabs[0]!.id;
+    activate(initial);
+  }
 
   return wrapper;
 }

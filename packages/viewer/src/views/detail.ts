@@ -14,7 +14,13 @@ export async function renderDetail(params: Record<string, string>): Promise<void
     return;
   }
 
-  app.innerHTML = '<p>Loading…</p>';
+  // Show a Loading state ONLY on the first render — on subsequent
+  // re-renders (e.g., triggered by tickTask's hashchange dispatch) the
+  // previous content stays visible until the new one is ready, so the
+  // user doesn't see a flash of empty content.
+  if (app.children.length === 0 || app.querySelector('.zg-detail') === null) {
+    app.innerHTML = '<p>Loading…</p>';
+  }
 
   const backend = window.zettelgeistBackend;
   let spec: SpecDetail;
@@ -39,7 +45,6 @@ export async function renderDetail(params: Record<string, string>): Promise<void
   const resolver = makeWikiLinkResolver(specNames, docPaths);
   const enrich = (root: HTMLElement): void => processWikiLinks(root, resolver);
 
-  app.innerHTML = '';
   const wrapper = document.createElement('article');
   wrapper.className = 'zg-detail';
 
@@ -54,8 +59,25 @@ export async function renderDetail(params: Record<string, string>): Promise<void
     tabs.push({ id: 'lenses', label: 'Lenses', render: () => renderLensesTab(spec, enrich) });
   }
 
-  wrapper.appendChild(renderTabs(tabs));
-  app.appendChild(wrapper);
+  // Persist the active tab per-spec across re-renders. tickTask /
+  // writeSpecFile / save handlers dispatch hashchange to refresh derived
+  // state, which previously snapped the user back to the Requirements tab
+  // every time. Now the last-active tab survives the re-render.
+  const tabKey = `zg:tab:${spec.name}`;
+  const stored = (() => {
+    try { return sessionStorage.getItem(tabKey); } catch { return null; }
+  })();
+  const tabsOpts: { initialTabId?: string; onActivate?: (id: string) => void } = {
+    onActivate: (id) => {
+      try { sessionStorage.setItem(tabKey, id); } catch { /* ignore */ }
+    },
+  };
+  if (stored) tabsOpts.initialTabId = stored;
+
+  wrapper.appendChild(renderTabs(tabs, tabsOpts));
+  // Atomic swap — replaces "Loading…" OR the previous detail view in one
+  // DOM mutation. No transient empty state, no flicker on tick / save.
+  app.replaceChildren(wrapper);
 }
 
 function renderHeader(spec: SpecDetail, summary: SpecSummary | null): HTMLElement {

@@ -132,15 +132,24 @@ function startInlineEdit(specName: string, task: Task, item: HTMLLIElement): voi
   const label = item.querySelector('.zg-task-label') as HTMLLabelElement;
   if (!label) return;
 
-  const original = task.text;
+  // Pre-fill with text + tags so existing tags are visible AND editable.
+  // The user can type new tags, remove old ones, or rewrite the text —
+  // it all round-trips back to the markdown line.
+  const tagsSuffix = task.tags.length > 0 ? ' ' + task.tags.join(' ') : '';
+  const original = task.text + tagsSuffix;
+
   const input = document.createElement('input');
   input.type = 'text';
   input.className = 'zg-task-edit-input';
   input.value = original;
+  input.placeholder = 'task text  #human-only / #agent-only / #skip';
 
   label.style.display = 'none';
   const actions = item.querySelector('.zg-task-actions') as HTMLElement;
   if (actions) actions.style.display = 'none';
+  // Also hide the tag badges while editing — they're now part of the input value.
+  const tagsEl = item.querySelector('.zg-task-tags') as HTMLElement | null;
+  if (tagsEl) tagsEl.style.display = 'none';
   item.insertBefore(input, label);
   input.focus();
   input.select();
@@ -150,6 +159,7 @@ function startInlineEdit(specName: string, task: Task, item: HTMLLIElement): voi
     input.remove();
     label.style.display = '';
     if (actions) actions.style.display = '';
+    if (tagsEl) tagsEl.style.display = '';
 
     if (!commit || !next || next === original) return;
     try {
