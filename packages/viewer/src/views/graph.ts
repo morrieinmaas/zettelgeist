@@ -82,9 +82,9 @@ export async function renderGraph(): Promise<void> {
   const sub = document.createElement('p');
   sub.className = 'zg-graph-subtitle';
   sub.textContent =
-    'Each box is a spec. Color shows its status; the number underneath is task progress. ' +
-    'Arrows point from a spec to the spec it depends on. Click any box to open the detail view. ' +
-    'Boxes are grouped by their `part_of` frontmatter field.';
+    'Each box is a spec — its color is the status, the number underneath is task progress. ' +
+    'Arrows point from a spec to a spec it depends on. Click any box to open it. ' +
+    'Dashed enclosures group specs by their `part_of` field (e.g. an epic or product area).';
   heading.appendChild(sub);
   wrapper.appendChild(heading);
 
@@ -197,11 +197,12 @@ function renderMermaidSource(
   // Ungrouped specs first
   for (const s of ungrouped) lines.push(`  ${emitNode(s)}`);
 
-  // Then one subgraph per part_of
+  // Then one subgraph per part_of. Title is prefixed with a folder glyph so
+  // users immediately read it as a grouping rather than a node.
   let sgIdx = 0;
   for (const [part, members] of groups) {
     const sgId = `sg_${sgIdx++}`;
-    lines.push(`  subgraph ${sgId} ["${escapeForLabel(part)}"]`);
+    lines.push(`  subgraph ${sgId} ["📁 ${escapeForLabel(part)}"]`);
     for (const s of members) lines.push(`    ${emitNode(s)}`);
     lines.push('  end');
   }

@@ -30,6 +30,14 @@ export class Router {
 
   async navigate(): Promise<void> {
     const hash = window.location.hash.slice(1) || '/';
+    // Track the last non-detail route so the detail view can offer a smart
+    // "Back" link. Stored on sessionStorage so it survives micro-reloads but
+    // not a fresh tab. Detail routes (`/spec/...`) intentionally don't update
+    // it — that's the *destination* we want to come back from.
+    if (!hash.startsWith('/spec/')) {
+      try { sessionStorage.setItem('zg:prev-route', `#${hash}`); } catch { /* ignore */ }
+    }
+
     for (const route of this.routes) {
       const match = hash.match(route.pattern);
       if (match) {

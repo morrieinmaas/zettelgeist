@@ -52,9 +52,13 @@ function renderHeader(spec: SpecDetail, summary: SpecSummary | null): HTMLElemen
   const header = document.createElement('header');
   header.className = 'zg-detail-header';
 
+  // Smart back link: return to whichever view referred us (board / graph),
+  // not always the board. Falls back to the board when the user landed here
+  // directly (typed URL, page reload, external link).
+  const referrer = sessionStorage.getItem('zg:prev-route') ?? '#/';
   const back = document.createElement('a');
-  back.href = '#/';
-  back.textContent = '← Back to board';
+  back.href = referrer;
+  back.textContent = referrer === '#/graph' ? '← Back to graph' : '← Back to board';
   back.className = 'zg-back-link';
   header.appendChild(back);
 
