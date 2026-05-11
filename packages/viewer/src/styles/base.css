@@ -107,15 +107,12 @@ button.zg-theme-toggle:focus-visible {
 .zg-legend-swatch.zg-legend-blocked     { background: #fee2e2; border-color: #c0392b; }
 .zg-legend-swatch.zg-legend-cancelled   { background: #f3f4f6; border-color: #7f8c8d; }
 
-/* Subgraph titles (Mermaid emits these as labels at the top of each cluster). */
-.zg-graph-container .cluster rect {
-  fill: rgba(0, 0, 0, 0.02);
-  stroke: var(--pico-muted-border-color, #d0d7de);
-  stroke-dasharray: 4 4;
-}
-.zg-graph-container .cluster-label .nodeLabel {
+/* Subgraph titles. Cluster fill/stroke is driven per-cluster by the Mermaid
+   `style sg_<n>` directives in graph.ts (deterministic palette per part_of). */
+.zg-graph-container .cluster-label .nodeLabel,
+.zg-graph-container .cluster-label text {
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
 }
 
 .zg-graph-fallback {

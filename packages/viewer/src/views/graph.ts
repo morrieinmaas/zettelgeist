@@ -198,13 +198,20 @@ function renderMermaidSource(
   for (const s of ungrouped) lines.push(`  ${emitNode(s)}`);
 
   // Then one subgraph per part_of. Title is prefixed with a folder glyph so
-  // users immediately read it as a grouping rather than a node.
+  // users immediately read it as a grouping rather than a node. Each cluster
+  // also gets a distinct background tint (deterministic from the part_of name)
+  // so multiple clusters are visually separable at a glance.
   let sgIdx = 0;
+  const clusterStyles: string[] = [];
   for (const [part, members] of groups) {
     const sgId = `sg_${sgIdx++}`;
     lines.push(`  subgraph ${sgId} ["📁 ${escapeForLabel(part)}"]`);
     for (const s of members) lines.push(`    ${emitNode(s)}`);
     lines.push('  end');
+    const [fill, stroke] = clusterPalette(part);
+    // Deferred to after edges + node classes so subgraph styles aren't
+    // accidentally clobbered by Mermaid's classDef ordering quirks.
+    clusterStyles.push(`style ${sgId} fill:${fill},stroke:${stroke},stroke-dasharray:4 4`);
   }
 
   // Edges
@@ -237,7 +244,30 @@ function renderMermaidSource(
     lines.push(`class ${ids.join(',')} ${statusClass(status)}`);
   }
 
+  // Apply the deferred cluster styles last so they win over any earlier
+  // classDef rules that might also target the cluster's child nodes.
+  for (const s of clusterStyles) lines.push(s);
+
   return lines.join('\n');
+}
+
+// Distinct, low-saturation cluster backgrounds. Deterministic per name so
+// the same epic keeps the same color across renders. Chosen to be readable
+// against both light and dark themes (alpha-ish tints).
+const CLUSTER_PALETTE: Array<[string, string]> = [
+  ['rgba(96, 165, 250, 0.10)',  'rgba(96, 165, 250, 0.55)'],   // blue
+  ['rgba(245, 158, 11, 0.10)',  'rgba(245, 158, 11, 0.55)'],   // amber
+  ['rgba(139, 92, 246, 0.10)',  'rgba(139, 92, 246, 0.55)'],   // violet
+  ['rgba(16, 185, 129, 0.10)',  'rgba(16, 185, 129, 0.55)'],   // emerald
+  ['rgba(236, 72, 153, 0.10)',  'rgba(236, 72, 153, 0.55)'],   // pink
+  ['rgba(244, 114, 182, 0.10)', 'rgba(244, 114, 182, 0.55)'],  // rose
+  ['rgba(56, 189, 248, 0.10)',  'rgba(56, 189, 248, 0.55)'],   // sky
+];
+function clusterPalette(name: string): [string, string] {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
+  const idx = Math.abs(h) % CLUSTER_PALETTE.length;
+  return CLUSTER_PALETTE[idx]!;
 }
 
 function emitNode(s: SpecSummary): string {

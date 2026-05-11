@@ -156,7 +156,11 @@ function renderRequirementsTab(spec: SpecDetail): HTMLElement {
   container.appendChild(
     renderMarkdownEditor({
       body: spec.requirements,
-      emptyPlaceholder: 'No requirements.md yet.',
+      emptyPlaceholder: `No requirements yet for "${spec.name}"`,
+      emptyHint:
+        'Write what this spec is for, the acceptance criteria, what\'s out of scope, ' +
+        'and any references. Use `- [ ]` checkboxes for each acceptance criterion.',
+      startingTemplate: REQUIREMENTS_TEMPLATE.replace('{NAME}', spec.name),
       // requirements.md has frontmatter we must preserve on body-only edits.
       onSave: async (newBody) => {
         const backend = window.zettelgeistBackend;
@@ -177,12 +181,50 @@ function renderTasksTab(spec: SpecDetail): HTMLElement {
 function renderHandoffTab(spec: SpecDetail): HTMLElement {
   return renderMarkdownEditor({
     body: spec.handoff,
-    emptyPlaceholder: 'No handoff.md yet.',
+    emptyPlaceholder: 'No handoff notes yet',
+    emptyHint:
+      'When you pause work on this spec, leave a note for the next person ' +
+      '(or agent): what you did, what\'s next, and any open questions.',
+    startingTemplate: HANDOFF_TEMPLATE,
     onSave: async (newBody) => {
       await window.zettelgeistBackend.writeHandoff(spec.name, newBody);
     },
   });
 }
+
+const REQUIREMENTS_TEMPLATE = `# {NAME}
+
+## Why
+
+<!-- Why does this spec exist? What problem does it solve, for whom? -->
+
+## Acceptance criteria
+
+- [ ] WHEN <trigger>
+- [ ] THE SYSTEM SHALL <observable behavior>
+- [ ] AND <additional behavior>
+
+## Out of scope
+
+- <thing this spec deliberately doesn't cover>
+
+## References
+
+- <link or note>
+`;
+
+const HANDOFF_TEMPLATE = `## What I did
+
+<!-- Concrete progress: code, decisions, dead ends. -->
+
+## What's next
+
+<!-- The most useful 1–3 things the next session should pick up. -->
+
+## Open questions
+
+<!-- Anything ambiguous that needs a human or another agent to weigh in. -->
+`;
 
 function renderLensesTab(spec: SpecDetail): HTMLElement {
   const container = document.createElement('div');

@@ -1,5 +1,5 @@
 import { marked } from 'marked';
-import { sanitizeHtml, escapeHtml } from '../util/sanitize.js';
+import { sanitizeHtml } from '../util/sanitize.js';
 
 // GFM is the default in marked v10+ but we set it explicitly so task-list
 // items (`- [ ] foo` / `- [x] foo`) render as <input type="checkbox"> rather
@@ -10,8 +10,16 @@ marked.setOptions({ gfm: true });
 export interface MarkdownEditorOptions {
   /** The current markdown body (no frontmatter). Pre-fills the textarea. */
   body: string | null;
-  /** Placeholder shown when body is null/empty in view mode. */
+  /** Title shown in the empty state — e.g. "No requirements.md yet". */
   emptyPlaceholder: string;
+  /** Optional one-line hint under the empty-state title to coach next action. */
+  emptyHint?: string;
+  /**
+   * Optional starter template pre-loaded into the textarea when the user
+   * clicks "Start writing" on the empty state. Gives them headings + prompts
+   * instead of a blank cursor.
+   */
+  startingTemplate?: string;
   /** Save handler — receives the new body string. Throws → error displayed. */
   onSave: (newBody: string) => Promise<void>;
 }
@@ -28,6 +36,10 @@ export function renderMarkdownEditor(opts: MarkdownEditorOptions): HTMLElement {
 
   let currentBody = opts.body ?? '';
   let mode: 'view' | 'edit' = 'view';
+  // Pre-fill the textarea with the starter template when the user enters
+  // edit mode from an empty body. Tracked separately so re-entering edit
+  // after a cancelled save preserves what they typed.
+  let pendingTemplate: string | null = null;
 
   function render(): void {
     container.innerHTML = '';
@@ -38,31 +50,57 @@ export function renderMarkdownEditor(opts: MarkdownEditorOptions): HTMLElement {
     }
   }
 
+  function enterEditMode(template: string | null): void {
+    pendingTemplate = template;
+    mode = 'edit';
+    render();
+  }
+
   function viewMode(): HTMLElement {
     const wrap = document.createElement('div');
     wrap.className = 'zg-md-view';
 
-    const body = document.createElement('div');
-    body.className = 'zg-markdown';
     if (currentBody.trim()) {
+      const body = document.createElement('div');
+      body.className = 'zg-markdown';
       body.innerHTML = sanitizeHtml(marked.parse(currentBody) as string);
-    } else {
-      const em = document.createElement('p');
-      em.innerHTML = `<em>${escapeHtml(opts.emptyPlaceholder)}</em>`;
-      body.appendChild(em);
-    }
-    wrap.appendChild(body);
+      wrap.appendChild(body);
 
-    const editBtn = document.createElement('button');
-    editBtn.type = 'button';
-    editBtn.className = 'zg-md-edit-btn';
-    editBtn.textContent = '✎ Edit';
-    editBtn.addEventListener('click', () => {
-      mode = 'edit';
-      render();
-    });
-    wrap.appendChild(editBtn);
+      const editBtn = document.createElement('button');
+      editBtn.type = 'button';
+      editBtn.className = 'zg-md-edit-btn';
+      editBtn.textContent = '✎ Edit';
+      editBtn.addEventListener('click', () => enterEditMode(null));
+      wrap.appendChild(editBtn);
+    } else {
+      wrap.appendChild(renderEmpty());
+    }
     return wrap;
+  }
+
+  function renderEmpty(): HTMLElement {
+    const empty = document.createElement('div');
+    empty.className = 'zg-md-empty';
+
+    const title = document.createElement('h3');
+    title.textContent = opts.emptyPlaceholder;
+    empty.appendChild(title);
+
+    if (opts.emptyHint) {
+      const hint = document.createElement('p');
+      hint.className = 'zg-md-empty-hint';
+      hint.textContent = opts.emptyHint;
+      empty.appendChild(hint);
+    }
+
+    const startBtn = document.createElement('button');
+    startBtn.type = 'button';
+    startBtn.className = 'zg-md-start-btn';
+    startBtn.textContent = opts.startingTemplate ? '✎ Start writing (with a template)' : '✎ Start writing';
+    startBtn.addEventListener('click', () => enterEditMode(opts.startingTemplate ?? null));
+    empty.appendChild(startBtn);
+
+    return empty;
   }
 
   function editMode(): HTMLElement {
@@ -71,8 +109,12 @@ export function renderMarkdownEditor(opts: MarkdownEditorOptions): HTMLElement {
 
     const textarea = document.createElement('textarea');
     textarea.className = 'zg-md-textarea';
-    textarea.value = currentBody;
-    textarea.rows = Math.max(8, Math.min(30, currentBody.split('\n').length + 2));
+    // Pre-fill from the current body, OR — if entering edit from an empty
+    // view via "Start writing" — from the starter template the caller passed.
+    const initial = currentBody || pendingTemplate || '';
+    pendingTemplate = null;
+    textarea.value = initial;
+    textarea.rows = Math.max(8, Math.min(30, initial.split('\n').length + 2));
     wrap.appendChild(textarea);
 
     const error = document.createElement('p');
