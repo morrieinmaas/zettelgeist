@@ -105,14 +105,10 @@
   line-height: 1;
   padding: 0 0.25rem;
   color: var(--pico-muted-color, #888);
-  opacity: 0;
-  transition: opacity 0.15s;
+  transition: color 0.15s;
 }
-.zg-card:hover .zg-card-edit,
+.zg-card-edit:hover,
 .zg-card-edit:focus-visible {
-  opacity: 1;
-}
-.zg-card-edit:hover {
   color: var(--pico-primary, #1095c1);
 }
 
