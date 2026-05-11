@@ -3,6 +3,7 @@ import { renderTabs } from '../components/tabs.js';
 import { renderTaskList } from '../components/task-list.js';
 import { renderFrontmatterForm } from '../components/frontmatter-form.js';
 import { renderMarkdownEditor, splitFrontmatter } from '../components/markdown-editor.js';
+import { processWikiLinks } from '../util/wiki-links.js';
 import { escapeHtml } from '../util/sanitize.js';
 
 export async function renderDetail(params: Record<string, string>): Promise<void> {
@@ -18,16 +19,22 @@ export async function renderDetail(params: Record<string, string>): Promise<void
   const backend = window.zettelgeistBackend;
   let spec: SpecDetail;
   let summary: SpecSummary | null = null;
+  let knownSpecs: Set<string> = new Set();
   try {
     spec = await backend.readSpec(name);
     // Also pull the SpecSummary so we can display status/progress/PR/branch
     // in the header. Cheap — listSpecs is already O(N).
     const all = await backend.listSpecs();
     summary = all.find((s) => s.name === name) ?? null;
+    knownSpecs = new Set(all.map((s) => s.name));
   } catch (err) {
     app.innerHTML = `<p class="zg-error">Failed to load spec "${escapeHtml(name)}": ${escapeHtml((err as Error).message)}</p>`;
     return;
   }
+
+  // Single shared transform for every rendered markdown body in this view:
+  // turn `[[spec-name]]` into clickable wiki-links, marking missing targets.
+  const enrich = (root: HTMLElement): void => processWikiLinks(root, knownSpecs);
 
   app.innerHTML = '';
   const wrapper = document.createElement('article');
@@ -36,12 +43,12 @@ export async function renderDetail(params: Record<string, string>): Promise<void
   wrapper.appendChild(renderHeader(spec, summary));
 
   const tabs = [
-    { id: 'requirements', label: 'Requirements', render: () => renderRequirementsTab(spec) },
+    { id: 'requirements', label: 'Requirements', render: () => renderRequirementsTab(spec, enrich) },
     { id: 'tasks',        label: `Tasks (${spec.tasks.length})`, render: () => renderTasksTab(spec) },
-    { id: 'handoff',      label: 'Handoff', render: () => renderHandoffTab(spec) },
+    { id: 'handoff',      label: 'Handoff', render: () => renderHandoffTab(spec, enrich) },
   ];
   if (Object.keys(spec.lenses).length > 0) {
-    tabs.push({ id: 'lenses', label: 'Lenses', render: () => renderLensesTab(spec) });
+    tabs.push({ id: 'lenses', label: 'Lenses', render: () => renderLensesTab(spec, enrich) });
   }
 
   wrapper.appendChild(renderTabs(tabs));
@@ -149,7 +156,7 @@ function renderMeta(summary: SpecSummary): HTMLElement {
   return meta;
 }
 
-function renderRequirementsTab(spec: SpecDetail): HTMLElement {
+function renderRequirementsTab(spec: SpecDetail, postRender: (el: HTMLElement) => void): HTMLElement {
   const container = document.createElement('div');
   container.appendChild(renderFrontmatterForm(spec));
 
@@ -161,6 +168,7 @@ function renderRequirementsTab(spec: SpecDetail): HTMLElement {
         'Write what this spec is for, the acceptance criteria, what\'s out of scope, ' +
         'and any references. Use `- [ ]` checkboxes for each acceptance criterion.',
       startingTemplate: REQUIREMENTS_TEMPLATE.replace('{NAME}', spec.name),
+      postRender,
       // requirements.md has frontmatter we must preserve on body-only edits.
       onSave: async (newBody) => {
         const backend = window.zettelgeistBackend;
@@ -178,7 +186,7 @@ function renderTasksTab(spec: SpecDetail): HTMLElement {
   return renderTaskList(spec.name, spec.tasks);
 }
 
-function renderHandoffTab(spec: SpecDetail): HTMLElement {
+function renderHandoffTab(spec: SpecDetail, postRender: (el: HTMLElement) => void): HTMLElement {
   return renderMarkdownEditor({
     body: spec.handoff,
     emptyPlaceholder: 'No handoff notes yet',
@@ -186,6 +194,7 @@ function renderHandoffTab(spec: SpecDetail): HTMLElement {
       'When you pause work on this spec, leave a note for the next person ' +
       '(or agent): what you did, what\'s next, and any open questions.',
     startingTemplate: HANDOFF_TEMPLATE,
+    postRender,
     onSave: async (newBody) => {
       await window.zettelgeistBackend.writeHandoff(spec.name, newBody);
     },
@@ -226,7 +235,7 @@ const HANDOFF_TEMPLATE = `## What I did
 <!-- Anything ambiguous that needs a human or another agent to weigh in. -->
 `;
 
-function renderLensesTab(spec: SpecDetail): HTMLElement {
+function renderLensesTab(spec: SpecDetail, postRender: (el: HTMLElement) => void): HTMLElement {
   const container = document.createElement('div');
   for (const [name, content] of Object.entries(spec.lenses)) {
     const heading = document.createElement('h3');
@@ -236,6 +245,7 @@ function renderLensesTab(spec: SpecDetail): HTMLElement {
       renderMarkdownEditor({
         body: content,
         emptyPlaceholder: '(empty)',
+        postRender,
         onSave: async (newBody) => {
           await window.zettelgeistBackend.writeSpecFile(spec.name, `lenses/${name}.md`, newBody);
         },

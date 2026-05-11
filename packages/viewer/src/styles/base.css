@@ -202,6 +202,27 @@ button.zg-theme-toggle:focus-visible {
   border-radius: 0.2rem;
 }
 
+/* Wiki-style links: [[spec-name]] inside any markdown body. The "exists"
+   variant uses the primary accent — already-clickable to the spec detail.
+   The "missing" variant is amber + a dashed underline so the user can tell
+   the target doesn't exist yet. Clicking still navigates (you can write the
+   spec by visiting its URL). */
+.zg-markdown a.zg-wikilink {
+  color: var(--pico-primary, #1095c1);
+  text-decoration: none;
+  border-bottom: 1px dotted currentColor;
+}
+.zg-markdown a.zg-wikilink:hover {
+  text-decoration: underline;
+}
+.zg-markdown a.zg-wikilink-missing {
+  color: #b45309;
+  border-bottom-style: dashed;
+}
+.zg-markdown a.zg-wikilink-missing:hover {
+  color: #92400e;
+}
+
 /* Markdown GFM task-list rendering: marked v14 emits
      <ul><li><input type="checkbox" disabled> text</li>...</ul>
    without a task-list-item class. We target via :has() instead so the styling

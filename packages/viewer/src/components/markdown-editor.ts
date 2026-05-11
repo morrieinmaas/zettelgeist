@@ -22,6 +22,12 @@ export interface MarkdownEditorOptions {
   startingTemplate?: string;
   /** Save handler — receives the new body string. Throws → error displayed. */
   onSave: (newBody: string) => Promise<void>;
+  /**
+   * Optional post-render hook called after the rendered markdown is mounted.
+   * Used for cross-cutting transforms like turning `[[name]]` into wiki-links
+   * — done in a single place rather than per-tab in detail.ts.
+   */
+  postRender?: (rendered: HTMLElement) => void;
 }
 
 /**
@@ -64,6 +70,7 @@ export function renderMarkdownEditor(opts: MarkdownEditorOptions): HTMLElement {
       const body = document.createElement('div');
       body.className = 'zg-markdown';
       body.innerHTML = sanitizeHtml(marked.parse(currentBody) as string);
+      opts.postRender?.(body);
       wrap.appendChild(body);
 
       const editBtn = document.createElement('button');

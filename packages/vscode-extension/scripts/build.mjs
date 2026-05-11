@@ -14,7 +14,9 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
 
-await esbuild.build({
+const watch = process.argv.includes('--watch');
+
+const buildOptions = {
   entryPoints: [path.join(root, 'src/extension.ts')],
   bundle: true,
   outfile: path.join(root, 'dist/extension.js'),
@@ -24,7 +26,15 @@ await esbuild.build({
   external: ['vscode'],
   sourcemap: true,
   logLevel: 'info',
-});
+};
+
+if (watch) {
+  const ctx = await esbuild.context(buildOptions);
+  await ctx.watch();
+  console.log('vscode-extension: watching for changes…');
+} else {
+  await esbuild.build(buildOptions);
+}
 
 const viewerDist = path.resolve(root, '../viewer/dist');
 const webviewBundle = path.join(root, 'dist/webview-bundle');
