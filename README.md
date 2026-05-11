@@ -1,6 +1,6 @@
 # Zettelgeist
 
-> Spec-driven, agent-friendly project management. Your repo is the database; markdown is the source of truth; HTML is just a surface humans see.
+> **Spec-driven project management where LLM agents and humans collaborate as equals.** Your repo is the database, markdown is the source of truth — agents work via MCP, humans via an HTML viewer or VSCode extension, every action is a git commit.
 
 [![CI](https://github.com/morrieinmaas/zettelgeist/actions/workflows/ci.yml/badge.svg)](https://github.com/morrieinmaas/zettelgeist/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
