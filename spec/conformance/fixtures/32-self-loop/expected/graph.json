@@ -1,0 +1,5 @@
+{
+  "nodes": [{ "name": "narcissus", "partOf": null }],
+  "edges": [{ "from": "narcissus", "to": "narcissus" }],
+  "cycles": [["narcissus"]]
+}

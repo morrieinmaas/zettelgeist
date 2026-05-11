@@ -1,0 +1,9 @@
+{
+  "nodes": [
+    { "name": "feature-a", "partOf": "phase-one" },
+    { "name": "feature-b", "partOf": "phase-one" },
+    { "name": "phase-one", "partOf": null }
+  ],
+  "edges": [],
+  "cycles": []
+}

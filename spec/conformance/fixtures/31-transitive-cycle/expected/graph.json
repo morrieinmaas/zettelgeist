@@ -1,0 +1,13 @@
+{
+  "nodes": [
+    { "name": "a", "partOf": null },
+    { "name": "b", "partOf": null },
+    { "name": "c", "partOf": null }
+  ],
+  "edges": [
+    { "from": "a", "to": "b" },
+    { "from": "b", "to": "c" },
+    { "from": "c", "to": "a" }
+  ],
+  "cycles": [["a", "b", "c"]]
+}
