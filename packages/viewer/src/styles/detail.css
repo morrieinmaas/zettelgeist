@@ -483,6 +483,10 @@ button.zg-fm-add:hover {
   margin: 0;
   font-size: 0.8rem;
   color: var(--pico-muted-color, #666);
+  font-weight: 500;
+}
+.zg-fm-status[data-kind="ok"] {
+  color: #10b981;
 }
 button.zg-fm-save {
   width: auto;

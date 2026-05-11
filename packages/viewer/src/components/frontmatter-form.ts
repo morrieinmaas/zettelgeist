@@ -24,9 +24,10 @@ const ARRAY_KEYS = new Set(['depends_on']);
 export function renderFrontmatterForm(spec: SpecDetail): HTMLElement {
   const container = document.createElement('details');
   container.className = 'zg-frontmatter';
-  // Default to expanded so the editable fields are visible. Users can
-  // collapse it; the toggle state isn't persisted yet — fine for v0.1.
-  container.open = true;
+  // Collapsed by default — the requirements body is the primary content;
+  // frontmatter is a configuration detail you reach for when needed. Click
+  // the summary to expand.
+  container.open = false;
 
   const summary = document.createElement('summary');
   summary.textContent = 'Frontmatter';
@@ -95,17 +96,17 @@ export function renderFrontmatterForm(spec: SpecDetail): HTMLElement {
       }
 
       if (Object.keys(patch).length === 0) {
-        status.textContent = 'Nothing to save.';
-        status.style.display = '';
+        flashStatus(status, 'Nothing to save.', 'info');
         return;
       }
 
       await window.zettelgeistBackend.patchFrontmatter(spec.name, patch);
-      status.textContent = 'Saved.';
-      status.style.display = '';
-      // Trigger a route refresh so the rest of the page (status pill,
-      // wiki-link resolver) picks up changes.
-      window.dispatchEvent(new HashChangeEvent('hashchange'));
+      // Confirm in-place — frontmatter fields (depends_on, part_of, custom)
+      // don't affect the rest of the detail view, so we deliberately skip
+      // the hashchange dispatch that would otherwise re-render the page
+      // and instantly wipe the confirmation. The new values are already in
+      // the inputs the user typed into.
+      flashStatus(status, 'Saved ✓', 'ok');
     } catch (err) {
       void showAlert('Save failed', (err as Error).message);
     } finally {
@@ -131,6 +132,19 @@ interface Row {
   el: HTMLElement;
   getValue: () => unknown;
   focusKey: () => void;
+}
+
+function flashStatus(el: HTMLElement, text: string, kind: 'ok' | 'info'): void {
+  el.textContent = text;
+  el.dataset.kind = kind;
+  el.style.display = '';
+  el.style.opacity = '1';
+  // Fade out after a moment so the inline confirmation doesn't sit there
+  // forever, but stays long enough to actually be read.
+  setTimeout(() => {
+    el.style.transition = 'opacity 0.4s';
+    el.style.opacity = '0';
+  }, 1800);
 }
 
 function renderRow(parent: HTMLElement, initialKey: string, initialValue: unknown): Row {
