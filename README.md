@@ -371,6 +371,8 @@ Contributing guidelines and the workflow checklist live in [CONTRIBUTING.md](CON
 
 ## License and acknowledgments
 
-Apache-2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+Licensed under the **Apache License, Version 2.0**. See [LICENSE](LICENSE) and [NOTICE](NOTICE) for the full text.
+
+> **No warranty.** This software is provided **"AS IS", without warranty of any kind**, express or implied — including, without limitation, any warranties of merchantability, fitness for a particular purpose, correctness, accuracy, or non-infringement. In no event shall the authors or contributors be liable for any claim, damages, or other liability arising from the use of this software. See sections 7 and 8 of the LICENSE file for the operative text.
 
 Zettelgeist converges on conventions established by [Kiro](https://kiro.ai), [spec-kit](https://github.com/github/spec-kit), [EARS](https://www.iaria.org/conferences2013/filesICCGI13/Tutorial%20Mavin.pdf), [Rowboat](https://github.com/rowboatlabs/rowboat), and Anthropic's [Claude Code team's HTML-effectiveness thesis](https://thariqs.github.io/html-effectiveness/). The name is a tip of the hat to Niklas Luhmann's zettelkasten — atomic notes, dense connections, value emerging from the graph rather than the file.
