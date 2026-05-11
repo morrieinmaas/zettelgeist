@@ -1,0 +1,13 @@
+{
+  "nodes": [
+    { "name": "a-draft", "partOf": null },
+    { "name": "b-planned", "partOf": null },
+    { "name": "c-in-progress", "partOf": null },
+    { "name": "d-in-review", "partOf": null },
+    { "name": "e-done", "partOf": null },
+    { "name": "f-blocked", "partOf": null },
+    { "name": "g-cancelled", "partOf": null }
+  ],
+  "edges": [],
+  "cycles": []
+}

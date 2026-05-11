@@ -1,0 +1,8 @@
+{
+  "nodes": [
+    { "name": "alpha", "partOf": null },
+    { "name": "beta", "partOf": null }
+  ],
+  "edges": [],
+  "cycles": []
+}

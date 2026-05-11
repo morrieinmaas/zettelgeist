@@ -1,0 +1,11 @@
+{
+  "specs": {
+    "a-draft": "draft",
+    "b-planned": "planned",
+    "c-in-progress": "in-progress",
+    "d-in-review": "in-review",
+    "e-done": "done",
+    "f-blocked": "blocked",
+    "g-cancelled": "cancelled"
+  }
+}
