@@ -79,6 +79,12 @@
         "title": "Refresh",
         "category": "Zettelgeist",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "zettelgeist.openInBrowser",
+        "title": "Open in Browser",
+        "category": "Zettelgeist",
+        "icon": "$(link-external)"
       }
     ],
     "configuration": {
@@ -89,6 +95,34 @@
           "default": "auto",
           "enum": ["auto", "light", "dark"],
           "description": "Viewer theme. `auto` follows the VSCode color theme."
+        },
+        "zettelgeist.defaultView": {
+          "type": "string",
+          "default": "board",
+          "enum": ["board", "graph", "docs"],
+          "enumDescriptions": [
+            "Open the kanban board first",
+            "Open the dependency graph first",
+            "Open the docs first"
+          ],
+          "description": "Which view the board panel lands on when first opened."
+        },
+        "zettelgeist.autoOpenBoard": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically open the board when a workspace containing .zettelgeist.yaml is loaded."
+        },
+        "zettelgeist.serverPort": {
+          "type": "number",
+          "default": 7681,
+          "minimum": 1024,
+          "maximum": 65535,
+          "description": "Port used by 'Zettelgeist: Open in Browser' when spawning `zettelgeist serve`. Change if 7681 conflicts with another local service."
+        },
+        "zettelgeist.serverHost": {
+          "type": "string",
+          "default": "127.0.0.1",
+          "description": "Host the 'Open in Browser' server binds to. Defaults to localhost-only for safety; set to 0.0.0.0 to share on the LAN."
         }
       }
     }

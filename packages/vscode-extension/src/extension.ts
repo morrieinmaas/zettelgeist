@@ -1,16 +1,34 @@
 import * as vscode from 'vscode';
 import { openBoard } from './webview.js';
-import { runRegen, runInstallHook } from './commands.js';
+import { runRegen, runInstallHook, runOpenInBrowser, stopServer } from './commands.js';
 import { makeBackend } from './backend.js';
 import { SpecTreeProvider } from './tree-provider.js';
 
 export function activate(ctx: vscode.ExtensionContext): void {
+  const cfg = () => vscode.workspace.getConfiguration('zettelgeist');
+
   ctx.subscriptions.push(
-    vscode.commands.registerCommand('zettelgeist.open', () => openBoard(ctx)),
+    vscode.commands.registerCommand('zettelgeist.open', () => {
+      // Use the configured default view when invoked without a route.
+      const view = cfg().get<string>('defaultView', 'board');
+      const route = view === 'board' ? undefined : `/${view}`;
+      return openBoard(ctx, route);
+    }),
     vscode.commands.registerCommand('zettelgeist.openRoute', (route?: string) => openBoard(ctx, route)),
     vscode.commands.registerCommand('zettelgeist.regen', runRegen),
     vscode.commands.registerCommand('zettelgeist.installHook', runInstallHook),
+    vscode.commands.registerCommand('zettelgeist.openInBrowser', runOpenInBrowser),
+    // Cleanup: kill any spawned `zettelgeist serve` child when the extension
+    // host shuts down. Otherwise the port stays bound after VSCode quits.
+    { dispose: () => stopServer() },
   );
+
+  // Auto-open the board on activation when the user has opted in. Activation
+  // already requires a workspace with .zettelgeist.yaml (see activationEvents),
+  // so we don't have to gate on that here.
+  if (cfg().get<boolean>('autoOpenBoard', false)) {
+    void vscode.commands.executeCommand('zettelgeist.open');
+  }
 
   // Activity Bar side panel: lists specs grouped by status. Clicking a spec
   // opens the Board webview. Only register if there's a workspace folder.

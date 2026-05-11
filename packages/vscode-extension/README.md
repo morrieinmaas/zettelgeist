@@ -14,8 +14,9 @@ Open the Zettelgeist Kanban board, dependency graph, and editable spec detail vi
 ## Commands
 
 | Command palette | What it does |
-|---|---|
+| --- | --- |
 | `Zettelgeist: Open Board` | Open the Kanban board in a side panel. |
+| `Zettelgeist: Open in Browser` | Spawn `zettelgeist serve` and open the viewer in your system browser (uses `zettelgeist.serverPort`). |
 | `Zettelgeist: Regenerate INDEX.md` | Rebuild `specs/INDEX.md` from the current spec set. |
 | `Zettelgeist: Install Pre-commit Hook` | Install the pre-commit hook that keeps `INDEX.md` current. |
 
@@ -39,14 +40,17 @@ loads from disk.
 
 ## Configuration
 
-```jsonc
-{
-  // VSCode setting (in your User or Workspace settings):
-  "zettelgeist.theme": "auto"  // "auto" | "light" | "dark"
-}
-```
+All settings live under the `zettelgeist.*` namespace. Open the VSCode Settings UI and filter by "zettelgeist", or edit `settings.json` directly.
 
-`auto` follows the VSCode color theme.
+| Setting | Type | Default | Effect |
+| --- | --- | --- | --- |
+| `zettelgeist.theme` | `auto`, `light`, or `dark` | `auto` | Viewer theme. `auto` follows the VSCode color theme. |
+| `zettelgeist.defaultView` | `board`, `graph`, or `docs` | `board` | Which view the panel lands on when opened. |
+| `zettelgeist.autoOpenBoard` | boolean | `false` | Automatically open the board when a workspace containing `.zettelgeist.yaml` is loaded. |
+| `zettelgeist.serverPort` | number | `7681` | Port used by **Zettelgeist: Open in Browser** when spawning `zettelgeist serve`. Change if 7681 conflicts with another local service. |
+| `zettelgeist.serverHost` | string | `127.0.0.1` | Host the external-browser server binds to. Defaults to localhost-only; set to `0.0.0.0` to share over the LAN. |
+
+The extension's own panel (the webview) doesn't use a port — it loads the viewer bundle directly through VSCode's `vscode-webview://` scheme. The port settings only apply to **Open in Browser**, which spawns the standalone `zettelgeist serve` and opens the URL in your system browser (handy for screen-sharing, dual-monitor setups, or showing a non-VSCode reviewer).
 
 ## Requirements
 
