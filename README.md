@@ -69,6 +69,20 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for setup details.
 
 ---
 
+## CLI commands
+
+| Command | Description |
+|---|---|
+| `zettelgeist regen [--check]` | Regenerate `<specs_dir>/INDEX.md`. `--check` exits 1 on stale or missing. |
+| `zettelgeist validate` | Validate the repo against the format spec; lists errors. |
+| `zettelgeist install-hook [--force]` | Install the pre-commit hook (smart-merge with any existing hook). |
+| `zettelgeist serve [--port N] [--no-open]` | Launch the local viewer on `http://127.0.0.1:7681`. |
+| `zettelgeist export-doc <path> [--template T]` | Render a markdown file to standalone HTML. |
+
+Run `zettelgeist <command> --help` for per-command arguments and flags.
+
+---
+
 ## What's in v0.1
 
 - **Format spec** ([spec/zettelgeist-v0.1.md](spec/zettelgeist-v0.1.md)) — RFC-style, 14 sections + rule-to-fixture map.

@@ -2,6 +2,17 @@ import { validateRepo, loadConfig, type ValidationError } from '@zettelgeist/cor
 import { makeDiskFsReader } from '@zettelgeist/fs-adapters';
 import { okEnvelope, errorEnvelope, type Envelope } from '../output.js';
 
+export const HELP = `zettelgeist validate [--json]
+
+  Validate the current repo against the Zettelgeist format spec.
+
+  Reports a non-zero exit code if any validation errors are found.
+
+  Flags:
+    --json         Emit a machine-readable JSON envelope (with the full
+                   error list under .data.errors).
+`;
+
 export interface ValidateInput { path: string; }
 export interface ValidateOk { errors: ValidationError[]; }
 

@@ -1,5 +1,10 @@
 import { parseInvocation } from './router.js';
 import { emit, realEmitContext } from './output.js';
+import { HELP as REGEN_HELP } from './commands/regen.js';
+import { HELP as VALIDATE_HELP } from './commands/validate.js';
+import { HELP as INSTALL_HOOK_HELP } from './commands/install-hook.js';
+import { HELP as SERVE_HELP } from './commands/serve.js';
+import { HELP as EXPORT_DOC_HELP } from './commands/export-doc.js';
 
 const HELP = `zettelgeist v0.1
 
@@ -16,13 +21,24 @@ Commands:
 Global flags:
   --json     emit machine-readable JSON envelope
   -h, --help show this help
+
+Run \`zettelgeist <command> --help\` for command-specific help.
 `;
+
+const COMMAND_HELP: Record<string, string> = {
+  regen: REGEN_HELP,
+  validate: VALIDATE_HELP,
+  'install-hook': INSTALL_HOOK_HELP,
+  serve: SERVE_HELP,
+  'export-doc': EXPORT_DOC_HELP,
+};
 
 async function main(): Promise<number> {
   const inv = parseInvocation(process.argv.slice(2));
 
   if (inv.kind === 'help') {
-    process.stdout.write(HELP);
+    const text = (inv.topic && COMMAND_HELP[inv.topic]) || HELP;
+    process.stdout.write(text);
     return 0;
   }
   if (inv.kind === 'unknown-command') {

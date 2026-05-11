@@ -5,6 +5,21 @@ import matter from 'gray-matter';
 import { okEnvelope, errorEnvelope, type Envelope } from '../output.js';
 import { renderMarkdownBody, renderTemplate, validateTemplate, type MustacheContext } from '../render.js';
 
+export const HELP = `zettelgeist export-doc <path> [--template T] [--json]
+
+  Render a markdown file to a standalone HTML document using the
+  bundled (or supplied) mustache template.
+
+  Args:
+    <path>         Markdown source path, relative to the current repo.
+
+  Flags:
+    --template T   Use template file T instead of the bundled default.
+    --json         Emit a machine-readable JSON envelope.
+
+  Output is written under .zettelgeist/exports/<basename>.html.
+`;
+
 export interface ExportDocInput {
   cwd: string;             // repo root (or any cwd)
   source: string;          // path (relative to cwd) of markdown to export

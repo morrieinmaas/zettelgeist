@@ -4,6 +4,19 @@ import { spawn } from 'node:child_process';
 import { okEnvelope, errorEnvelope, type Envelope } from '../output.js';
 import { startServer, type ServerHandle } from '../server.js';
 
+export const HELP = `zettelgeist serve [--port N] [--no-open] [--json]
+
+  Launch the local HTML viewer over HTTP. Defaults to
+  http://127.0.0.1:7681 and opens the URL in the system browser.
+
+  The server runs until you press Ctrl+C.
+
+  Flags:
+    --port N       Listen on port N instead of the default 7681.
+    --no-open      Do not open the browser; just print the URL.
+    --json         Emit a machine-readable JSON envelope on shutdown.
+`;
+
 export interface ServeInput {
   path: string;
   port: number;

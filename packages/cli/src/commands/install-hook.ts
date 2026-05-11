@@ -2,6 +2,19 @@ import { makeDiskFsReader } from '@zettelgeist/fs-adapters';
 import { okEnvelope, errorEnvelope, type Envelope } from '../output.js';
 import { installPreCommitHook, gitRepoRoot } from '../git.js';
 
+export const HELP = `zettelgeist install-hook [--force] [--json]
+
+  Install the Zettelgeist pre-commit hook into the current git repo.
+
+  The hook runs \`regen --check\` before each commit so INDEX.md never
+  drifts from the specs on disk. If a pre-existing hook is found it is
+  smart-merged or backed up.
+
+  Flags:
+    --force        Overwrite an existing hook (a backup is still written).
+    --json         Emit a machine-readable JSON envelope.
+`;
+
 export interface InstallHookInput { path: string; force: boolean; }
 export interface InstallHookOk { installed: true; backup?: string; }
 

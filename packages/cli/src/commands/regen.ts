@@ -8,6 +8,18 @@ import { okEnvelope, errorEnvelope, type Envelope } from '../output.js';
 
 const execFileP = promisify(execFile);
 
+export const HELP = `zettelgeist regen [--check] [--json]
+
+  Regenerate <specs_dir>/INDEX.md from the spec content in the current repo.
+
+  Flags:
+    --check        Exit 1 if INDEX.md is stale or missing instead of writing.
+    --json         Emit a machine-readable JSON envelope.
+
+  Caches generated INDEX content keyed by the git tree SHA at
+  .zettelgeist/regen-cache.json so repeat runs are fast.
+`;
+
 export interface RegenInput {
   path: string;
   check: boolean;
