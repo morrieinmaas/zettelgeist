@@ -1,6 +1,9 @@
 ---
-depends_on: [user-auth, billing-ui]
+depends_on:
+  - user-auth
+  - billing-ui
 part_of: internal
+status: in-progress
 ---
 # Internal admin dashboard
 
