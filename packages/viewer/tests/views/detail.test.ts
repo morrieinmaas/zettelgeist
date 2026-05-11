@@ -27,6 +27,7 @@ function mockBackend(overrides: Partial<ZettelgeistBackend> = {}): ZettelgeistBa
     tickTask: async () => ({ commit: 'abc' }),
     untickTask: async () => ({ commit: 'abc' }),
     setStatus: async () => ({ commit: 'abc' }),
+    patchFrontmatter: async () => ({ commit: 'abc' }),
     writeHandoff: async () => ({ commit: 'abc' }),
     regenerateIndex: async () => ({ commit: null }),
     claimSpec: async () => ({ acknowledged: true }),

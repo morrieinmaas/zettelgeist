@@ -20,6 +20,11 @@ const REST_BACKEND_SHIM = `
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
+  const patch = (url, body) => json(url, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
   const enc = encodeURIComponent;
   window.zettelgeistBackend = {
     listSpecs: () => json('/api/specs'),
@@ -32,6 +37,7 @@ const REST_BACKEND_SHIM = `
     tickTask: (name, n) => post(\`/api/specs/\${enc(name)}/tasks/\${n}/tick\`),
     untickTask: (name, n) => post(\`/api/specs/\${enc(name)}/tasks/\${n}/untick\`),
     setStatus: (name, status, reason) => post(\`/api/specs/\${enc(name)}/status\`, { status, reason }),
+    patchFrontmatter: (name, fmPatch) => patch(\`/api/specs/\${enc(name)}/frontmatter\`, { patch: fmPatch }),
     writeHandoff: (name, content) => put(\`/api/specs/\${enc(name)}/handoff\`, { content }),
     regenerateIndex: () => post('/api/regenerate'),
     claimSpec: (name, agentId) => post(\`/api/specs/\${enc(name)}/claim\`, { agent_id: agentId }),

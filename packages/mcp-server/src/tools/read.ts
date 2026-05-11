@@ -13,25 +13,40 @@ const emptyInput = z.object({});
 
 export const listSpecsTool: ToolDef<Record<string, never>, Array<{
   name: string; status: Status; progress: string; blockedBy: string | null;
+  frontmatterStatus: Status | null;
+  pr: string | null; branch: string | null; worktree: string | null;
 }>> = {
   name: 'list_specs',
-  description: 'List all specs in the repo with derived status, progress, and blockedBy.',
+  description: 'List all specs in the repo with derived status, progress, blockedBy, the explicit `status:` override (frontmatterStatus, or null if derived), and any linked PR/branch/worktree from frontmatter.',
   inputSchema: emptyInput,
   async handler(_args, ctx) {
     const reader = makeDiskFsReader(ctx.cwd);
     const cfg = await loadConfig(reader);
     const specs = await loadAllSpecs(reader, cfg.config.specsDir);
     const repoState = { claimedSpecs: new Set<string>(), mergedSpecs: new Set<string>() };
-    return specs.map((s) => {
-      const counted = s.tasks.filter((t) => !t.tags.includes('#skip'));
-      const checked = counted.filter((t) => t.checked).length;
-      const blockedBy = typeof s.frontmatter.blocked_by === 'string' && s.frontmatter.blocked_by.trim() !== ''
-        ? s.frontmatter.blocked_by.trim()
-        : null;
-      return { name: s.name, status: deriveStatus(s, repoState), progress: `${checked}/${counted.length}`, blockedBy };
-    });
+    return specs.map((s) => ({
+      name: s.name,
+      status: deriveStatus(s, repoState),
+      progress: `${s.tasks.filter((t) => !t.tags.includes('#skip') && t.checked).length}/${s.tasks.filter((t) => !t.tags.includes('#skip')).length}`,
+      blockedBy: stringOrNull(s.frontmatter.blocked_by),
+      frontmatterStatus: statusOrNull(s.frontmatter.status),
+      pr: stringOrNull(s.frontmatter.pr),
+      branch: stringOrNull(s.frontmatter.branch),
+      worktree: stringOrNull(s.frontmatter.worktree),
+    }));
   },
 };
+
+function stringOrNull(v: unknown): string | null {
+  return typeof v === 'string' && v.trim() !== '' ? v.trim() : null;
+}
+
+const VALID_STATUSES = new Set<Status>([
+  'draft', 'planned', 'in-progress', 'in-review', 'done', 'blocked', 'cancelled',
+]);
+function statusOrNull(v: unknown): Status | null {
+  return typeof v === 'string' && VALID_STATUSES.has(v as Status) ? (v as Status) : null;
+}
 
 const readSpecInput = z.object({ name: z.string() });
 

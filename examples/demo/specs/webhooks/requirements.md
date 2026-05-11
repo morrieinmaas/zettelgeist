@@ -2,6 +2,8 @@
 depends_on: []
 part_of: integrations
 replaces: email-notifications
+branch: feat/webhooks
+worktree: ../zg-webhooks
 ---
 # Outbound webhooks
 

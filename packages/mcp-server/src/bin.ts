@@ -5,7 +5,7 @@ import {
 } from './tools/read.js';
 import {
   writeSpecFileTool, writeHandoffTool,
-  tickTaskTool, untickTaskTool, setStatusTool,
+  tickTaskTool, untickTaskTool, setStatusTool, patchFrontmatterTool,
 } from './tools/write.js';
 import {
   claimSpecTool, releaseSpecTool, regenerateIndexTool, installGitHookTool,
@@ -17,7 +17,7 @@ import {
 const tools: AnyTool[] = [
   listSpecsTool, readSpecTool, readSpecFileTool, validateRepoTool,
   writeSpecFileTool, writeHandoffTool,
-  tickTaskTool, untickTaskTool, setStatusTool,
+  tickTaskTool, untickTaskTool, setStatusTool, patchFrontmatterTool,
   claimSpecTool, releaseSpecTool, regenerateIndexTool, installGitHookTool,
   prepareSynthesisContextTool, writeArtifactTool,
 ] as AnyTool[];

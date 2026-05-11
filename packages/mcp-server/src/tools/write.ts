@@ -99,6 +99,42 @@ const setStatusInput = z.object({
   reason: z.string().optional(),
 });
 
+const patchFrontmatterInput = z.object({
+  name: z.string(),
+  patch: z.record(z.unknown()),
+});
+
+const PATCH_FORBIDDEN_KEYS = new Set(['status', 'blocked_by']);
+
+export const patchFrontmatterTool: ToolDef<z.infer<typeof patchFrontmatterInput>, { commit: string }> = {
+  name: 'patch_frontmatter',
+  description: 'Merge a frontmatter patch into a spec\'s requirements.md. Keys with value `null` are deleted; everything else is set. `status` and `blocked_by` are forbidden — use set_status instead.',
+  inputSchema: patchFrontmatterInput,
+  async handler(args, ctx) {
+    for (const k of Object.keys(args.patch)) {
+      if (PATCH_FORBIDDEN_KEYS.has(k)) {
+        throw new Error(`${k} cannot be set via patch_frontmatter; use set_status instead`);
+      }
+    }
+    const reader = makeDiskFsReader(ctx.cwd);
+    const cfg = await loadConfig(reader);
+    const specsRoot = path.resolve(ctx.cwd, cfg.config.specsDir);
+    const specDir = safeJoin(specsRoot, args.name);
+    const reqAbs = safeJoin(specDir, 'requirements.md');
+    const reqRel = path.relative(ctx.cwd, reqAbs).split(path.sep).join('/');
+    const raw = await fs.readFile(reqAbs, 'utf8').catch(() => '');
+    const parsed = matter(raw, {});
+    const data = { ...(parsed.data ?? {}) } as Record<string, unknown>;
+    for (const [k, v] of Object.entries(args.patch)) {
+      if (v === null) delete data[k];
+      else data[k] = v;
+    }
+    const newFm = Object.keys(data).length > 0 ? `---\n${yaml.dump(data)}---\n` : '';
+    const newContent = newFm + (parsed.content.startsWith('\n') ? parsed.content.slice(1) : parsed.content);
+    return writeFileAndCommit(ctx.cwd, reqRel, newContent, `[zg] patch-frontmatter: ${args.name}`);
+  },
+};
+
 export const setStatusTool: ToolDef<z.infer<typeof setStatusInput>, { commit: string }> = {
   name: 'set_status',
   description: 'Set the status frontmatter override on a spec (any of draft/planned/in-progress/in-review/done/blocked/cancelled), or clear it (null) to fall back to derived status. `reason` is recorded in `blocked_by` and is required for `blocked`.',

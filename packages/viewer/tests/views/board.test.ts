@@ -3,9 +3,9 @@ import type { ZettelgeistBackend, SpecSummary } from '../../src/backend.js';
 import { renderBoard } from '../../src/views/board.js';
 
 const SAMPLE_SPECS: SpecSummary[] = [
-  { name: 'user-auth', status: 'in-progress', progress: '3/5', blockedBy: null },
-  { name: 'payment',   status: 'blocked',     progress: '2/8', blockedBy: 'IDP creds' },
-  { name: 'reports',   status: 'planned',     progress: '0/3', blockedBy: null },
+  { name: 'user-auth', status: 'in-progress', progress: '3/5', blockedBy: null,        pr: null, branch: null, worktree: null, frontmatterStatus: null },
+  { name: 'payment',   status: 'blocked',     progress: '2/8', blockedBy: 'IDP creds', pr: null, branch: null, worktree: null, frontmatterStatus: null },
+  { name: 'reports',   status: 'planned',     progress: '0/3', blockedBy: null,        pr: null, branch: null, worktree: null, frontmatterStatus: null },
 ];
 
 function mockBackend(): ZettelgeistBackend {
@@ -20,6 +20,7 @@ function mockBackend(): ZettelgeistBackend {
     tickTask: async () => ({ commit: 'abc' }),
     untickTask: async () => ({ commit: 'abc' }),
     setStatus: async () => ({ commit: 'abc' }),
+    patchFrontmatter: async () => ({ commit: 'abc' }),
     writeHandoff: async () => ({ commit: 'abc' }),
     regenerateIndex: async () => ({ commit: null }),
     claimSpec: async () => ({ acknowledged: true }),
@@ -156,6 +157,41 @@ describe('renderBoard', () => {
 
     await new Promise((r) => setTimeout(r, 0));
     expect(called).toBe(false);
+  });
+
+  it('renders a PR badge when spec.pr is set', async () => {
+    const specs: SpecSummary[] = [
+      { ...SAMPLE_SPECS[0]!, pr: 'https://github.com/x/y/pull/42' },
+    ];
+    const backend = mockBackend();
+    backend.listSpecs = async () => specs;
+    (window as Window & { zettelgeistBackend?: ZettelgeistBackend }).zettelgeistBackend = backend;
+    await renderBoard();
+    const badge = document.querySelector('[data-spec="user-auth"] .zg-badge-pr');
+    expect(badge).not.toBeNull();
+    expect(badge!.textContent).toBe('PR #42');
+    expect(badge!.getAttribute('href')).toBe('https://github.com/x/y/pull/42');
+  });
+
+  it('renders a branch badge when spec.branch is set', async () => {
+    const specs: SpecSummary[] = [
+      { ...SAMPLE_SPECS[0]!, branch: 'feat/x' },
+    ];
+    const backend = mockBackend();
+    backend.listSpecs = async () => specs;
+    (window as Window & { zettelgeistBackend?: ZettelgeistBackend }).zettelgeistBackend = backend;
+    await renderBoard();
+    const badge = document.querySelector('[data-spec="user-auth"] .zg-badge-branch');
+    expect(badge?.textContent).toBe('feat/x');
+  });
+
+  it('clicking the card pencil button does not navigate', async () => {
+    const initialHash = window.location.hash;
+    await renderBoard();
+    const editBtn = document.querySelector<HTMLButtonElement>('[data-spec="user-auth"] .zg-card-edit')!;
+    expect(editBtn).not.toBeNull();
+    editBtn.click();
+    expect(window.location.hash).toBe(initialHash);
   });
 
   it('escapes error messages in the error UI', async () => {

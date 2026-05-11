@@ -18,6 +18,7 @@ function mockBackend(specs: SpecSummary[], details: Record<string, Partial<SpecD
     tickTask: async () => ({ commit: 'abc' }),
     untickTask: async () => ({ commit: 'abc' }),
     setStatus: async () => ({ commit: 'abc' }),
+    patchFrontmatter: async () => ({ commit: 'abc' }),
     writeHandoff: async () => ({ commit: 'abc' }),
     regenerateIndex: async () => ({ commit: null }),
     claimSpec: async () => ({ acknowledged: true }),
@@ -38,7 +39,7 @@ describe('renderGraph', () => {
 
   it('shows a Dependency Graph heading when specs exist', async () => {
     (window as Window & { zettelgeistBackend?: ZettelgeistBackend }).zettelgeistBackend = mockBackend([
-      { name: 'a', status: 'draft', progress: '0/0', blockedBy: null },
+      { name: 'a', status: 'draft', progress: '0/0', blockedBy: null, pr: null, branch: null, worktree: null, frontmatterStatus: null },
     ]);
     await renderGraph();
     expect(document.querySelector('.zg-graph h2')?.textContent).toBe('Dependency Graph');
@@ -46,8 +47,8 @@ describe('renderGraph', () => {
 
   it('renders mermaid source as fallback when Mermaid CDN fails', async () => {
     (window as Window & { zettelgeistBackend?: ZettelgeistBackend }).zettelgeistBackend = mockBackend([
-      { name: 'a', status: 'draft', progress: '0/0', blockedBy: null },
-      { name: 'b', status: 'draft', progress: '0/0', blockedBy: null },
+      { name: 'a', status: 'draft', progress: '0/0', blockedBy: null, pr: null, branch: null, worktree: null, frontmatterStatus: null },
+      { name: 'b', status: 'draft', progress: '0/0', blockedBy: null, pr: null, branch: null, worktree: null, frontmatterStatus: null },
     ], { b: { frontmatter: { depends_on: ['a'] } } });
     await renderGraph();
     // happy-dom doesn't load CDN scripts → fallback renders the mermaid source

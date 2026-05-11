@@ -142,6 +142,51 @@ describe('error paths', () => {
     expect(r.status).toBe(404);
   });
 
+  it('PATCH /api/specs/<name>/frontmatter writes patch fields and commits', async () => {
+    await setupRepo();
+    server = await startServer({ cwd: tmp, port: 0, viewerBundlePath: viewerBundle });
+    const r = await fetch(`${server.url}/api/specs/foo/frontmatter`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patch: { pr: 'https://github.com/x/y/pull/1', branch: 'feat/a' } }),
+    });
+    expect(r.status).toBe(200);
+    const body = await r.json();
+    expect(typeof body.commit).toBe('string');
+    const req = await fs.readFile(path.join(tmp, 'specs', 'foo', 'requirements.md'), 'utf8');
+    expect(req).toContain('pr: ');
+    expect(req).toContain('branch: feat/a');
+  });
+
+  it('PATCH /frontmatter with status key returns 400', async () => {
+    await setupRepo();
+    server = await startServer({ cwd: tmp, port: 0, viewerBundlePath: viewerBundle });
+    const r = await fetch(`${server.url}/api/specs/foo/frontmatter`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patch: { status: 'done' } }),
+    });
+    expect(r.status).toBe(400);
+  });
+
+  it('PATCH /frontmatter with null value deletes the key', async () => {
+    await setupRepo();
+    // pre-seed pr in frontmatter
+    await fs.writeFile(
+      path.join(tmp, 'specs', 'foo', 'requirements.md'),
+      '---\npr: https://x/pull/2\n---\n# Foo\n',
+    );
+    server = await startServer({ cwd: tmp, port: 0, viewerBundlePath: viewerBundle });
+    const r = await fetch(`${server.url}/api/specs/foo/frontmatter`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patch: { pr: null } }),
+    });
+    expect(r.status).toBe(200);
+    const req = await fs.readFile(path.join(tmp, 'specs', 'foo', 'requirements.md'), 'utf8');
+    expect(req).not.toContain('pr:');
+  });
+
   it('tick with out-of-range index returns 400', async () => {
     await setupRepo();
     server = await startServer({ cwd: tmp, port: 0, viewerBundlePath: viewerBundle });

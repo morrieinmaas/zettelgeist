@@ -7,7 +7,7 @@ import { promisify } from 'node:util';
 import matter from 'gray-matter';
 import {
   writeSpecFileTool, writeHandoffTool,
-  tickTaskTool, untickTaskTool, setStatusTool,
+  tickTaskTool, untickTaskTool, setStatusTool, patchFrontmatterTool,
 } from '../../src/tools/write.js';
 
 const execFileP = promisify(execFile);
@@ -164,5 +164,44 @@ describe('setStatusTool YAML preservation', () => {
     expect(parsed.data.status).toBeUndefined();
     expect(parsed.data.blocked_by).toBeUndefined();
     expect(parsed.data.depends_on).toEqual(['a']);
+  });
+});
+
+describe('patchFrontmatterTool', () => {
+  it('sets multiple fields and commits', async () => {
+    const result = await patchFrontmatterTool.handler(
+      { name: 'foo', patch: { pr: 'https://x/pull/1', branch: 'feat/a', worktree: '../wt-foo' } },
+      { cwd: tmp },
+    );
+    expect(result.commit).toMatch(/^[0-9a-f]{40}$/);
+    const reqs = await fs.readFile(path.join(tmp, 'specs', 'foo', 'requirements.md'), 'utf8');
+    const parsed = matter(reqs, {});
+    expect(parsed.data.pr).toBe('https://x/pull/1');
+    expect(parsed.data.branch).toBe('feat/a');
+    expect(parsed.data.worktree).toBe('../wt-foo');
+  });
+
+  it('null value deletes the key', async () => {
+    await fs.writeFile(
+      path.join(tmp, 'specs', 'foo', 'requirements.md'),
+      '---\npr: https://x/pull/1\nbranch: feat/a\n---\n# foo\n',
+    );
+    await execFileP('git', ['add', '.'], { cwd: tmp });
+    await execFileP('git', ['commit', '-q', '-m', 'seed'], { cwd: tmp });
+
+    await patchFrontmatterTool.handler({ name: 'foo', patch: { pr: null } }, { cwd: tmp });
+    const reqs = await fs.readFile(path.join(tmp, 'specs', 'foo', 'requirements.md'), 'utf8');
+    const parsed = matter(reqs, {});
+    expect(parsed.data.pr).toBeUndefined();
+    expect(parsed.data.branch).toBe('feat/a');
+  });
+
+  it('rejects status and blocked_by keys', async () => {
+    await expect(
+      patchFrontmatterTool.handler({ name: 'foo', patch: { status: 'done' } }, { cwd: tmp }),
+    ).rejects.toThrow(/status cannot be set/);
+    await expect(
+      patchFrontmatterTool.handler({ name: 'foo', patch: { blocked_by: 'x' } }, { cwd: tmp }),
+    ).rejects.toThrow(/blocked_by cannot be set/);
   });
 });

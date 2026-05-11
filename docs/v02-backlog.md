@@ -4,6 +4,7 @@ Items deferred from Plan 1 + Plan 2 + Sprint reviews. Not commitments — a trac
 
 ## Format
 
+- **PR / branch / worktree linkage** *(shipped 2026-05)* — `pr`, `branch`, `worktree` frontmatter fields. Surfaced as badges on board cards, editable via the per-card edit modal. No spec doc — just frontmatter.
 - **Wiki-style links between specs** — inline `[[spec-name]]` references in prose, collected by the parser, navigable in the viewer. Inspired by Rowboat / Obsidian / the zettelkasten model the project name invokes. ([specs/wiki-links/](../specs/wiki-links/))
 - **Saved views** — config-defined live queries over the spec set: "blockers I own", "stale > 30d", "everything in `payments`". Rendered as additional sections in `INDEX.md` and as filter chips in the viewer. ([specs/saved-views/](../specs/saved-views/))
 - **Events catalogue** (webhooks + MCP event stream) — frozen payload shapes, fixture coverage. ([specs/events-catalogue/](../specs/events-catalogue/))

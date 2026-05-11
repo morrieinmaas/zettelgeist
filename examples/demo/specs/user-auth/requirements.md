@@ -1,6 +1,8 @@
 ---
 depends_on: []
 part_of: identity
+pr: https://github.com/acme/example/pull/142
+branch: feat/user-auth
 ---
 # User authentication
 

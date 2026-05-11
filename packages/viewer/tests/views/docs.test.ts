@@ -19,6 +19,7 @@ function mockBackend(docs: DocEntry[] = SAMPLE_DOCS): ZettelgeistBackend {
     tickTask: async () => ({ commit: 'abc' }),
     untickTask: async () => ({ commit: 'abc' }),
     setStatus: async () => ({ commit: 'abc' }),
+    patchFrontmatter: async () => ({ commit: 'abc' }),
     writeHandoff: async () => ({ commit: 'abc' }),
     regenerateIndex: async () => ({ commit: null }),
     claimSpec: async () => ({ acknowledged: true }),

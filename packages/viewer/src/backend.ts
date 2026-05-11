@@ -15,6 +15,12 @@ export interface SpecSummary {
   status: Status;
   progress: string;     // e.g. "3/5"
   blockedBy: string | null;
+  // The explicit `status:` override in frontmatter, or null if status is
+  // derived. The edit modal uses this to pre-select "(auto)" vs an override.
+  frontmatterStatus: Status | null;
+  pr: string | null;        // PR URL from frontmatter
+  branch: string | null;    // working branch from frontmatter
+  worktree: string | null;  // path to git worktree from frontmatter
 }
 
 export interface Task {
@@ -61,6 +67,13 @@ export interface ZettelgeistBackend {
     name: string,
     status: Status | null,
     reason?: string,
+  ): Promise<{ commit: string }>;
+  // Merge a frontmatter patch into requirements.md. Keys with value `null`
+  // are deleted; everything else is set. Status is intentionally not editable
+  // via this endpoint — use setStatus.
+  patchFrontmatter(
+    name: string,
+    patch: Record<string, unknown>,
   ): Promise<{ commit: string }>;
   writeHandoff(name: string, content: string): Promise<{ commit: string }>;
   regenerateIndex(): Promise<{ commit: string | null }>;

@@ -94,6 +94,11 @@ async function dispatchSpecsRoute(
     return setStatus(req, res, ctx, name);
   }
 
+  // PATCH /api/specs/<name>/frontmatter — merge a frontmatter patch
+  if (rest === '/frontmatter' && req.method === 'PATCH') {
+    return patchFrontmatter(req, res, ctx, name);
+  }
+
   // POST /api/specs/<name>/claim   |  /release
   if (rest === '/claim' && req.method === 'POST') {
     return claimSpec(req, res, ctx, name);
@@ -117,17 +122,30 @@ async function listSpecs(res: ServerResponse, ctx: SpecsRouteContext): Promise<v
   const out = specs.map((s) => {
     const counted = s.tasks.filter((t) => !t.tags.includes('#skip'));
     const checked = counted.filter((t) => t.checked).length;
-    const blockedBy = typeof s.frontmatter.blocked_by === 'string' && s.frontmatter.blocked_by.trim() !== ''
-      ? s.frontmatter.blocked_by.trim()
-      : null;
+    const blockedBy = stringOrNull(s.frontmatter.blocked_by);
     return {
       name: s.name,
       status: deriveStatus(s, repoState),
       progress: `${checked}/${counted.length}`,
       blockedBy,
+      frontmatterStatus: statusOrNull(s.frontmatter.status),
+      pr: stringOrNull(s.frontmatter.pr),
+      branch: stringOrNull(s.frontmatter.branch),
+      worktree: stringOrNull(s.frontmatter.worktree),
     };
   });
   sendJson(res, 200, out);
+}
+
+function stringOrNull(v: unknown): string | null {
+  return typeof v === 'string' && v.trim() !== '' ? v.trim() : null;
+}
+
+const VALID_STATUSES = new Set([
+  'draft', 'planned', 'in-progress', 'in-review', 'done', 'blocked', 'cancelled',
+]);
+function statusOrNull(v: unknown): string | null {
+  return typeof v === 'string' && VALID_STATUSES.has(v) ? v : null;
 }
 
 async function readSpecDetail(res: ServerResponse, ctx: SpecsRouteContext, name: string): Promise<void> {
@@ -254,6 +272,48 @@ async function setStatus(req: IncomingMessage, res: ServerResponse, ctx: SpecsRo
   await fs.writeFile(tmp, content, 'utf8');
   await fs.rename(tmp, reqAbs);
   const commit = await regenAndCommit(ctx, [reqRel], `[zg] set-status: ${name}`);
+  sendJson(res, 200, { commit });
+}
+
+// Fields that are off-limits for generic frontmatter patches. `status` and
+// `blocked_by` have their own dedicated setter (POST /status). Anything else
+// the user puts in frontmatter (pr, branch, worktree, part_of, depends_on,
+// custom fields) can be freely set or cleared here.
+const PATCH_FORBIDDEN_KEYS = new Set(['status', 'blocked_by']);
+
+async function patchFrontmatter(
+  req: IncomingMessage, res: ServerResponse, ctx: SpecsRouteContext, name: string,
+): Promise<void> {
+  const body = await readBody(req) as { patch?: Record<string, unknown> } | null;
+  if (!body || typeof body.patch !== 'object' || body.patch === null || Array.isArray(body.patch)) {
+    sendJson(res, 400, { error: 'body must be {patch: {...}}' });
+    return;
+  }
+  for (const k of Object.keys(body.patch)) {
+    if (PATCH_FORBIDDEN_KEYS.has(k)) {
+      sendJson(res, 400, { error: `${k} cannot be set via frontmatter patch; use POST /status instead` });
+      return;
+    }
+  }
+
+  const specDir = safeJoin(path.resolve(ctx.cwd, ctx.specsDir), name);
+  const reqAbs = safeJoin(specDir, 'requirements.md');
+  const reqRel = path.relative(ctx.cwd, reqAbs).split(path.sep).join('/');
+  const raw = await fs.readFile(reqAbs, 'utf8').catch(() => '');
+  const parsed = matter(raw, {});
+  const data = { ...(parsed.data ?? {}) } as Record<string, unknown>;
+  for (const [k, v] of Object.entries(body.patch)) {
+    if (v === null) delete data[k];
+    else data[k] = v;
+  }
+
+  const newFrontmatter = Object.keys(data).length > 0 ? `---\n${yaml.dump(data)}---\n` : '';
+  const content = newFrontmatter + (parsed.content.startsWith('\n') ? parsed.content.slice(1) : parsed.content);
+  await fs.mkdir(path.dirname(reqAbs), { recursive: true });
+  const tmp = `${reqAbs}.tmp`;
+  await fs.writeFile(tmp, content, 'utf8');
+  await fs.rename(tmp, reqAbs);
+  const commit = await regenAndCommit(ctx, [reqRel], `[zg] patch-frontmatter: ${name}`);
   sendJson(res, 200, { commit });
 }
 
