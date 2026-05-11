@@ -55,7 +55,7 @@ async function sendRequest(p: ChildProcessWithoutNullStreams, request: object): 
 }
 
 describe('mcp-server e2e', () => {
-  it('responds to tools/list with 15 tools', async () => {
+  it('responds to tools/list with 16 tools', async () => {
     // The e2e test requires the bin to be built (`pnpm --filter @zettelgeist/mcp-server build`).
     // Skip cleanly if dist/bin.js is missing — there is a known cross-package
     // tsc rootDir issue affecting this whole monorepo for v0.1; once that's
@@ -87,6 +87,7 @@ describe('mcp-server e2e', () => {
     expect(names).toContain('install_git_hook');
     expect(names).toContain('prepare_synthesis_context');
     expect(names).toContain('write_artifact');
-    expect(names.length).toBe(15);
+    expect(names).toContain('patch_frontmatter');
+    expect(names.length).toBe(16);
   }, 10000);
 });

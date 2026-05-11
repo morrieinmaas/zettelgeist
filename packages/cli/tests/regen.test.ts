@@ -112,11 +112,13 @@ describe('regenCommand cache', () => {
     expect(cacheAfter.generated_index).toContain('| foo |');
   });
 
-  it('works in non-git directory without writing a cache', async () => {
+  it('works in a non-git directory (cache keyed on content hash, not git tree SHA)', async () => {
     const r = await regenCommand({ path: tmp, check: false });
     expect(r.ok).toBe(true);
-    const cacheExists = await fs.access(path.join(tmp, '.zettelgeist', 'regen-cache.json'))
-      .then(() => true).catch(() => false);
-    expect(cacheExists).toBe(false);
+    // Content-hashing works without git, so caching is still useful and the
+    // cache file is written. Repeating the call should hit the cache.
+    const r2 = await regenCommand({ path: tmp, check: false });
+    expect(r2.ok).toBe(true);
+    if (r2.ok) expect(r2.data.cacheHit).toBe(true);
   });
 });

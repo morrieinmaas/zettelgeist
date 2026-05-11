@@ -32,6 +32,34 @@ describe('deriveStatus', () => {
     ).toBe('blocked');
   });
 
+  it('honors frontmatter override for all statuses (board drag-to-column writes any of the 7)', () => {
+    for (const s of ['draft', 'planned', 'in-progress', 'in-review', 'done'] as const) {
+      // Spec has 2 unticked tasks → derived would say "planned"
+      expect(
+        deriveStatus(
+          spec({
+            frontmatter: { status: s },
+            tasks: [
+              { index: 1, checked: false, text: 'a', tags: [] },
+              { index: 2, checked: false, text: 'b', tags: [] },
+            ],
+          }),
+          emptyRepoState,
+        ),
+      ).toBe(s);
+    }
+  });
+
+  it('ignores garbage frontmatter status and falls back to derived', () => {
+    // Cast: in the wild, frontmatter is parsed YAML — anything can show up
+    expect(
+      deriveStatus(
+        spec({ frontmatter: { status: 'not-a-status' as unknown as never } }),
+        emptyRepoState,
+      ),
+    ).toBe('draft');
+  });
+
   it('"cancelled" wins over "blocked" if both are set (cancelled is checked first)', () => {
     // The schema only allows one of the two, but defensively the priority is documented.
     expect(

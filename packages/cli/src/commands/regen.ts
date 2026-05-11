@@ -1,12 +1,8 @@
 import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import { runConformance, loadConfig } from '@zettelgeist/core';
 import { makeDiskFsReader } from '@zettelgeist/fs-adapters';
 import { okEnvelope, errorEnvelope, type Envelope } from '../output.js';
-
-const execFileP = promisify(execFile);
 
 export const HELP = `zettelgeist regen [--check] [--json]
 
@@ -37,16 +33,57 @@ interface CacheEntry {
 }
 
 async function getSpecsTreeSha(repoPath: string, specsDir: string): Promise<string | null> {
+  // We need the tree SHA of the WORKING tree (uncommitted changes count),
+  // not HEAD — otherwise REST writes that haven't been committed yet make
+  // the cache report "up to date" even though INDEX.md is now stale.
+  // `git stash create` produces a tree without modifying state, but is
+  // heavy. Simpler: stage the specs dir into a temporary index, then
+  // write-tree on it. Implementation here uses `git add --intent-to-add`
+  // semantics via `git write-tree` against a snapshot of the working tree:
+  // 1) `git ls-files -mco --exclude-standard <specsDir>` to enumerate
+  // 2) hash each file's working-tree content via `git hash-object`
+  // That's expensive for large repos. The pragmatic compromise: hash the
+  // file contents directly with our own walker.
   try {
-    const { stdout } = await execFileP('git', ['rev-parse', `HEAD:${specsDir}`], { cwd: repoPath });
-    return stdout.trim();
+    const hash = await hashWorkingTree(repoPath, specsDir);
+    return hash;
   } catch {
-    // specs/ may not yet exist in HEAD; fall back to root tree SHA of HEAD.
-    try {
-      const { stdout } = await execFileP('git', ['rev-parse', 'HEAD^{tree}'], { cwd: repoPath });
-      return stdout.trim();
-    } catch {
-      return null;
+    // Not a git repo or specs/ missing — caller will skip caching.
+    return null;
+  }
+}
+
+async function hashWorkingTree(repoPath: string, specsDir: string): Promise<string> {
+  const root = path.join(repoPath, specsDir);
+  const entries: Array<{ rel: string; sha: string }> = [];
+  const { createHash } = await import('node:crypto');
+  await walk(root, '');
+  entries.sort((a, b) => (a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0));
+  const h = createHash('sha1');
+  for (const e of entries) h.update(`${e.rel}\0${e.sha}\n`);
+  return h.digest('hex');
+
+  async function walk(absDir: string, relDir: string): Promise<void> {
+    let names: string[];
+    try { names = await fs.readdir(absDir); }
+    catch { return; }
+    for (const name of names) {
+      // Skip junk + the generated INDEX.md itself (otherwise writing it
+      // changes the tree hash and we never get a cache hit on round-trips).
+      if (name === '.git' || name === 'node_modules' || name === '.claim') continue;
+      if (relDir === '' && name === 'INDEX.md') continue;
+      const abs = path.join(absDir, name);
+      const rel = relDir ? `${relDir}/${name}` : name;
+      let stat;
+      try { stat = await fs.stat(abs); }
+      catch { continue; }
+      if (stat.isDirectory()) {
+        await walk(abs, rel);
+      } else if (stat.isFile()) {
+        const content = await fs.readFile(abs);
+        const sha = createHash('sha1').update(content).digest('hex');
+        entries.push({ rel, sha });
+      }
     }
   }
 }

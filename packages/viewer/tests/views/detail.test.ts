@@ -105,6 +105,77 @@ describe('renderDetail', () => {
     expect(tickSpy).toHaveBeenCalledWith('user-auth', 2);
   });
 
+  it('shows progress + status pill in the header', async () => {
+    const backend = mockBackend({
+      listSpecs: async () => [{
+        name: 'user-auth', status: 'in-progress', progress: '1/3',
+        blockedBy: null, frontmatterStatus: null, pr: null, branch: null, worktree: null,
+      }],
+    });
+    (window as Window & { zettelgeistBackend?: ZettelgeistBackend }).zettelgeistBackend = backend;
+    await renderDetail({ name: 'user-auth' });
+
+    const pill = document.querySelector('.zg-status-pill') as HTMLElement;
+    expect(pill).not.toBeNull();
+    expect(pill.textContent).toBe('in-progress');
+    expect(pill.classList.contains('zg-status-in-progress')).toBe(true);
+
+    const progress = document.querySelector('.zg-detail-progress')!;
+    expect(progress.textContent).toContain('1/3');
+  });
+
+  it('renders inline edit button on requirements body; clicking swaps to textarea', async () => {
+    await renderDetail({ name: 'user-auth' });
+    const editBtn = document.querySelector('.zg-md-edit-btn') as HTMLButtonElement;
+    expect(editBtn).not.toBeNull();
+    editBtn.click();
+    const ta = document.querySelector('.zg-md-textarea') as HTMLTextAreaElement;
+    expect(ta).not.toBeNull();
+    expect(ta.value).toBe(SAMPLE_SPEC.requirements);
+  });
+
+  it('saving a requirements edit calls writeSpecFile with the spliced frontmatter + new body', async () => {
+    let writtenContent = '';
+    const backend = mockBackend({
+      // simulate the existing full file with frontmatter
+      readSpecFile: async () => ({ content: '---\ndepends_on: [billing]\n---\n# old body\n' }),
+      writeSpecFile: async (_name, _rel, content) => { writtenContent = content; return { commit: 'abc' }; },
+    });
+    (window as Window & { zettelgeistBackend?: ZettelgeistBackend }).zettelgeistBackend = backend;
+    await renderDetail({ name: 'user-auth' });
+
+    (document.querySelector('.zg-md-edit-btn') as HTMLButtonElement).click();
+    const ta = document.querySelector('.zg-md-textarea') as HTMLTextAreaElement;
+    ta.value = '# new body\n';
+    document.querySelectorAll<HTMLButtonElement>('.zg-modal-confirm')[0]!.click();
+    await new Promise((r) => setTimeout(r, 10));
+
+    expect(writtenContent).toContain('depends_on: [billing]');
+    expect(writtenContent).toContain('# new body');
+    expect(writtenContent).not.toContain('# old body');
+  });
+
+  it('saving a handoff edit calls writeHandoff', async () => {
+    let captured = '';
+    const backend = mockBackend({
+      writeHandoff: async (_name, content) => { captured = content; return { commit: 'abc' }; },
+    });
+    (window as Window & { zettelgeistBackend?: ZettelgeistBackend }).zettelgeistBackend = backend;
+    await renderDetail({ name: 'user-auth' });
+
+    const handoffBtn = Array.from(document.querySelectorAll('.zg-tab-nav button'))
+      .find((b) => b.textContent === 'Handoff') as HTMLButtonElement;
+    handoffBtn.click();
+
+    (document.querySelector('.zg-md-edit-btn') as HTMLButtonElement).click();
+    const ta = document.querySelector('.zg-md-textarea') as HTMLTextAreaElement;
+    ta.value = 'New handoff notes.\n';
+    document.querySelector<HTMLButtonElement>('.zg-modal-confirm')!.click();
+    await new Promise((r) => setTimeout(r, 10));
+
+    expect(captured).toBe('New handoff notes.\n');
+  });
+
   it('shows error message when readSpec fails', async () => {
     const backend = mockBackend({
       readSpec: async () => { throw new Error('not found'); },

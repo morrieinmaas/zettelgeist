@@ -4,9 +4,18 @@ function isCounted(task: Task): boolean {
   return !task.tags.includes('#skip');
 }
 
+const VALID_STATUSES = new Set<Status>([
+  'draft', 'planned', 'in-progress', 'in-review', 'done', 'blocked', 'cancelled',
+]);
+
 export function deriveStatus(spec: Spec, repo: RepoState): Status {
-  if (spec.frontmatter.status === 'cancelled') return 'cancelled';
-  if (spec.frontmatter.status === 'blocked') return 'blocked';
+  // Frontmatter `status:` is an explicit override for ALL statuses, not just
+  // blocked/cancelled. Board drag-to-column writes this field; ignoring the
+  // override here would render those drags invisible (the card snaps back).
+  const fm = spec.frontmatter.status;
+  if (typeof fm === 'string' && VALID_STATUSES.has(fm as Status)) {
+    return fm as Status;
+  }
 
   const counted = spec.tasks.filter(isCounted);
   const claimed = repo.claimedSpecs.has(spec.name);

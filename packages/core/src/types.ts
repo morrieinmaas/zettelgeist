@@ -16,7 +16,11 @@ export interface Task {
 }
 
 export interface SpecFrontmatter {
-  status?: 'blocked' | 'cancelled';
+  /**
+   * Explicit override for derived status. Any of the 7 values; if unset,
+   * status is derived from tasks + claim + merge state.
+   */
+  status?: Status;
   blocked_by?: string;
   depends_on?: string[];
   part_of?: string;
