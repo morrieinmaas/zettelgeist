@@ -18,7 +18,7 @@ single highest-friction moment in the lifecycle.
 
 The system, when a signed-in account owner visits `/settings/billing`:
 
-- [ ] WHEN the page loads
+- [x] WHEN the page loads
 - [x] THE SYSTEM SHALL display the current plan name, monthly price, and renewal date
 - [ ] AND display usage against any metered limits (seats, API calls)
 - [ ] AND offer a "Change plan" button that opens the plan-picker drawer
