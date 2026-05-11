@@ -7,7 +7,7 @@
 | admin-dashboard | in-progress | 1/8 | — |
 | billing-ui | planned | 0/0 | — |
 | email-notifications | cancelled | 0/0 | Superseded by `webhooks`. Customers consistently asked for a structured event stream they could route themselves rather than another email firehose. See the `webhooks` spec for the replacement. |
-| new-spec | draft | 0/0 | — |
+| new-spec | draft | 0/1 | — |
 | oauth-providers | draft | 0/4 | — |
 | onboarding-tour | in-review | 6/6 | — |
 | payment-flow | blocked | 3/6 | Waiting on production Stripe credentials and a signed PSP agreement from finance. |
