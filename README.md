@@ -107,15 +107,28 @@ Then ask the agent to `list_specs`, `tick_task`, `claim_spec`, `set_status`, etc
 
 ### Use it inside VSCode (extension)
 
-The Kanban board, dependency graph, and editable detail view all run inside a VSCode panel. From a clone of this repo, with the workspace open in VSCode:
+The kanban board, dependency graph, and editable detail view all run inside a VSCode panel — the Activity Bar gets its own Zettelgeist icon with a Specs sidebar tree, and the board opens as a regular editor tab.
 
-```bash
-just ext          # build the extension
-```
+There's no Marketplace publish yet, so you run it from source:
 
-Then press **F5** (or pick "Zettelgeist: Extension Development Host" from the Run menu). A second VSCode window opens with the extension loaded against `examples/demo`. Run `Zettelgeist: Open Board` from the command palette. Every action goes through the same regen + commit pipeline as `zettelgeist serve` — the panel is just a different surface.
+1. **Open this repo in VSCode.**
+2. **Build the extension** (terminal inside VSCode):
 
-The extension also auto-activates whenever a workspace contains a `.zettelgeist.yaml`. See [packages/vscode-extension/README.md](packages/vscode-extension/README.md) for commands + configuration.
+   ```bash
+   just ext
+   ```
+
+   This bundles the viewer + the extension and prints next-step instructions.
+3. **Open the Run and Debug panel** — `Cmd+Shift+D` (macOS) / `Ctrl+Shift+D` (Linux/Windows). VSCode reads `.vscode/launch.json` from the repo root.
+4. **Pick a launch config** from the dropdown at the top of the panel:
+   - **Zettelgeist: Extension Development Host (demo)** — runs against `examples/demo/`
+   - **Zettelgeist: Extension Development Host (this repo)** — runs against the outer repo (dogfood mode)
+5. **Hit the green play button** (or press `F5` while the Run panel is focused). A second VSCode window opens — the **Extension Development Host** — with the extension installed.
+6. **In the new window:** click the Zettelgeist icon in the Activity Bar (left edge), or run `Zettelgeist: Open Board` from the command palette (`Cmd+Shift+P`).
+
+Iterating: after changing extension code, run `just ext` again, then in the dev-host window press `Cmd+R` (Reload Window) to pick up the change. For continuous rebuilds, `just ext-watch` keeps esbuild watching the extension source.
+
+The extension also auto-activates whenever a workspace contains a `.zettelgeist.yaml`, so once published you'd just install it normally. See [packages/vscode-extension/README.md](packages/vscode-extension/README.md) for the commands it contributes + configuration.
 
 ---
 
