@@ -1,8 +1,9 @@
 ---
-depends_on: [user-auth]
+depends_on:
+  - user-auth
 part_of: identity
+status: draft
 ---
-
 # OAuth provider integrations
 
 ## Why
