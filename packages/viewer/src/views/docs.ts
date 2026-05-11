@@ -1,5 +1,6 @@
 import type { DocEntry } from '../backend.js';
 import { renderMarkdownEditor } from '../components/markdown-editor.js';
+import { processWikiLinks, makeWikiLinkResolver } from '../util/wiki-links.js';
 import { escapeHtml } from '../util/sanitize.js';
 
 export async function renderDocs(params: Record<string, string>): Promise<void> {
@@ -8,12 +9,23 @@ export async function renderDocs(params: Record<string, string>): Promise<void> 
 
   const backend = window.zettelgeistBackend;
   let entries: DocEntry[];
+  let specNames: string[] = [];
   try {
-    entries = await backend.listDocs();
+    // Docs + specs in parallel. Specs feed the wiki-link resolver so a
+    // `[[user-auth]]` inside a doc body routes to the spec detail view.
+    const [docs, specs] = await Promise.all([
+      backend.listDocs(),
+      backend.listSpecs().catch(() => []),
+    ]);
+    entries = docs;
+    specNames = specs.map((s) => s.name);
   } catch (err) {
     app.innerHTML = `<p class="zg-error">Failed to list docs: ${escapeHtml((err as Error).message)}</p>`;
     return;
   }
+
+  const resolver = makeWikiLinkResolver(specNames, entries.map((e) => e.path));
+  const enrich = (root: HTMLElement): void => processWikiLinks(root, resolver);
 
   // Default-doc selection: README → architecture → onboarding → alphabetical
   // first. Keeps `#/docs` from landing on a blank pane.
@@ -66,6 +78,7 @@ export async function renderDocs(params: Record<string, string>): Promise<void> 
           emptyPlaceholder: `${selectedPath} is empty`,
           emptyHint: 'Click below to start writing.',
           interactiveCheckboxes: true,
+          postRender: enrich,
           onSave: async (newBody) => {
             await backend.writeDoc(selectedPath!, newBody);
           },

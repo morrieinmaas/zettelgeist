@@ -3,7 +3,7 @@ import { renderTabs } from '../components/tabs.js';
 import { renderTaskList } from '../components/task-list.js';
 import { renderFrontmatterForm } from '../components/frontmatter-form.js';
 import { renderMarkdownEditor, splitFrontmatter } from '../components/markdown-editor.js';
-import { processWikiLinks } from '../util/wiki-links.js';
+import { processWikiLinks, makeWikiLinkResolver } from '../util/wiki-links.js';
 import { escapeHtml } from '../util/sanitize.js';
 
 export async function renderDetail(params: Record<string, string>): Promise<void> {
@@ -19,22 +19,25 @@ export async function renderDetail(params: Record<string, string>): Promise<void
   const backend = window.zettelgeistBackend;
   let spec: SpecDetail;
   let summary: SpecSummary | null = null;
-  let knownSpecs: Set<string> = new Set();
+  let specNames: string[] = [];
+  let docPaths: string[] = [];
   try {
     spec = await backend.readSpec(name);
-    // Also pull the SpecSummary so we can display status/progress/PR/branch
-    // in the header. Cheap — listSpecs is already O(N).
-    const all = await backend.listSpecs();
+    // Pull SpecSummary + docs list in parallel for the wiki-link resolver +
+    // the header. Both are cheap O(N) calls already used elsewhere.
+    const [all, docs] = await Promise.all([backend.listSpecs(), backend.listDocs().catch(() => [])]);
     summary = all.find((s) => s.name === name) ?? null;
-    knownSpecs = new Set(all.map((s) => s.name));
+    specNames = all.map((s) => s.name);
+    docPaths = docs.map((d) => d.path);
   } catch (err) {
     app.innerHTML = `<p class="zg-error">Failed to load spec "${escapeHtml(name)}": ${escapeHtml((err as Error).message)}</p>`;
     return;
   }
 
-  // Single shared transform for every rendered markdown body in this view:
-  // turn `[[spec-name]]` into clickable wiki-links, marking missing targets.
-  const enrich = (root: HTMLElement): void => processWikiLinks(root, knownSpecs);
+  // Single shared transform: turn `[[name]]` into clickable wiki-links.
+  // Resolves to specs OR docs (by filename basename), marks missing targets.
+  const resolver = makeWikiLinkResolver(specNames, docPaths);
+  const enrich = (root: HTMLElement): void => processWikiLinks(root, resolver);
 
   app.innerHTML = '';
   const wrapper = document.createElement('article');

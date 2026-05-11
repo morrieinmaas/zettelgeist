@@ -26,16 +26,45 @@ function collectCandidates(node: Node, out: Text[]): void {
   }
 }
 
+export type WikiLinkResolver = (name: string) => string | null;
+
 /**
- * Walk a DOM subtree and replace every `[[name]]` text run with an anchor
- * that routes to `#/spec/<name>`. If `name` is not in `knownSpecs`, the
- * anchor gets a `zg-wikilink-missing` class so it can be styled differently
- * (e.g., orange + tooltip "spec doesn't exist yet").
- *
- * Idempotent: if called twice, the second pass finds no `[[…]]` text to
- * replace (we transform text nodes, not anchor contents).
+ * Build a resolver that maps a wiki-link `[[name]]` to a viewer route.
+ * Looks up specs first (`#/spec/<name>`), then docs by filename basename
+ * (`#/docs/<full-path>`). Returns null when nothing matches — caller styles
+ * the anchor as a missing-target.
  */
-export function processWikiLinks(root: HTMLElement, knownSpecs: ReadonlySet<string>): void {
+export function makeWikiLinkResolver(
+  specNames: Iterable<string>,
+  docPaths: Iterable<string>,
+): WikiLinkResolver {
+  const specs = new Set(specNames);
+  // Map basename-without-.md → full path. Lets `[[onboarding]]` find
+  // `docs/onboarding.md` without making users type the full path.
+  const docs = new Map<string, string>();
+  for (const p of docPaths) {
+    const basename = p.replace(/^.*\//, '').replace(/\.md$/, '');
+    docs.set(basename, p);
+  }
+  return (name: string): string | null => {
+    if (specs.has(name)) return `#/spec/${encodeURIComponent(name)}`;
+    const docPath = docs.get(name);
+    if (docPath) return `#/docs/${encodeURIComponent(docPath)}`;
+    return null;
+  };
+}
+
+/**
+ * Walk a DOM subtree and replace every `[[name]]` text run with an anchor.
+ * The resolver decides the target route — usually to a spec detail page
+ * or a doc. When the resolver returns null, the anchor still renders but
+ * gets a `zg-wikilink-missing` class so it can be styled differently
+ * (e.g., orange + tooltip "doesn't exist yet").
+ *
+ * Idempotent: a second pass finds no `[[…]]` text to replace (we transform
+ * text nodes, not anchor contents).
+ */
+export function processWikiLinks(root: HTMLElement, resolver: WikiLinkResolver): void {
   // Plain recursive walk — TreeWalker's filter-callback semantics differ
   // subtly across happy-dom and real browsers, so we just collect
   // candidates ourselves. Skip text inside <code>/<pre>/<a>; only keep
@@ -56,11 +85,15 @@ export function processWikiLinks(root: HTMLElement, knownSpecs: ReadonlySet<stri
         frag.appendChild(document.createTextNode(text.slice(lastIdx, m.index)));
       }
       const name = m[1]!.trim();
+      const route = resolver(name);
       const a = document.createElement('a');
-      a.href = `#/spec/${encodeURIComponent(name)}`;
+      // Even for missing targets we still emit a usable anchor — clicking it
+      // navigates to the spec route, which is where the user would create the
+      // spec from. (Docs are folder-anchored so we can't make up a path.)
+      a.href = route ?? `#/spec/${encodeURIComponent(name)}`;
       a.textContent = name;
-      a.className = 'zg-wikilink' + (knownSpecs.has(name) ? '' : ' zg-wikilink-missing');
-      if (!knownSpecs.has(name)) a.title = `Spec "${name}" doesn't exist yet`;
+      a.className = 'zg-wikilink' + (route ? '' : ' zg-wikilink-missing');
+      if (!route) a.title = `"${name}" doesn't exist yet`;
       frag.appendChild(a);
       lastIdx = m.index + m[0].length;
     }
