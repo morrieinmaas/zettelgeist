@@ -31,10 +31,11 @@ describe('renderGraph', () => {
     document.body.innerHTML = '<main id="app"></main>';
   });
 
-  it('shows "No specs yet" when there are no specs', async () => {
+  it('shows an empty-state when there are no specs', async () => {
     (window as Window & { zettelgeistBackend?: ZettelgeistBackend }).zettelgeistBackend = mockBackend([]);
     await renderGraph();
-    expect(document.body.textContent).toContain('No specs yet');
+    expect(document.querySelector('.zg-empty-state')).not.toBeNull();
+    expect(document.body.textContent).toMatch(/No specs to graph/);
   });
 
   it('shows a Dependency Graph heading when specs exist', async () => {

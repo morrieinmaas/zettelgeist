@@ -6,7 +6,10 @@ import DOMPurify, { type Config } from 'dompurify';
 // XSS vectors at the core level regardless of profile.
 const PURIFY_CONFIG: Config = {
   USE_PROFILES: { html: true, svg: true, svgFilters: true },
-  ADD_ATTR: ['data-spec', 'data-status'],
+  // Allow <input type="checkbox" disabled> for GFM task-list rendering and
+  // the `task-list-item` / `contains-task-list` classes marked emits.
+  ADD_TAGS: ['input'],
+  ADD_ATTR: ['data-spec', 'data-status', 'type', 'checked', 'disabled', 'class'],
   ALLOW_DATA_ATTR: false,
   KEEP_CONTENT: true,
 };

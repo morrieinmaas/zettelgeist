@@ -1,6 +1,12 @@
 import { marked } from 'marked';
 import { sanitizeHtml, escapeHtml } from '../util/sanitize.js';
 
+// GFM is the default in marked v10+ but we set it explicitly so task-list
+// items (`- [ ] foo` / `- [x] foo`) render as <input type="checkbox"> rather
+// than plain bullets. The Tasks tab handles interactive editing; markdown
+// bodies (requirements / handoff / lenses) get the visual representation.
+marked.setOptions({ gfm: true });
+
 export interface MarkdownEditorOptions {
   /** The current markdown body (no frontmatter). Pre-fills the textarea. */
   body: string | null;

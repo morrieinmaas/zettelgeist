@@ -105,6 +105,86 @@ describe('renderDetail', () => {
     expect(tickSpy).toHaveBeenCalledWith('user-auth', 2);
   });
 
+  it('appends a new task to tasks.md via writeSpecFile', async () => {
+    let written: { rel: string; content: string } | null = null;
+    const backend = mockBackend({
+      readSpecFile: async () => ({ content: '- [ ] 1. one\n- [ ] 2. two\n' }),
+      writeSpecFile: async (_name, rel, content) => { written = { rel, content }; return { commit: 'abc' }; },
+    });
+    (window as Window & { zettelgeistBackend?: ZettelgeistBackend }).zettelgeistBackend = backend;
+    await renderDetail({ name: 'user-auth' });
+
+    const tasksBtn = Array.from(document.querySelectorAll('.zg-tab-nav button'))
+      .find((b) => b.textContent?.startsWith('Tasks')) as HTMLButtonElement;
+    tasksBtn.click();
+
+    const input = document.querySelector('.zg-task-add-input') as HTMLInputElement;
+    input.value = 'a brand new task';
+    const btn = document.querySelector('.zg-task-add-btn') as HTMLButtonElement;
+    btn.click();
+    await new Promise((r) => setTimeout(r, 10));
+
+    expect(written).not.toBeNull();
+    expect(written!.rel).toBe('tasks.md');
+    expect(written!.content).toContain('- [ ] 3. a brand new task');
+  });
+
+  it('inline-edits a task text and writes the new tasks.md', async () => {
+    let written: string | null = null;
+    const backend = mockBackend({
+      readSpecFile: async () => ({ content: '- [x] 1. Add SAML\n- [ ] 2. Add OIDC\n- [ ] 3. Get sign-off\n' }),
+      writeSpecFile: async (_name, _rel, content) => { written = content; return { commit: 'abc' }; },
+    });
+    (window as Window & { zettelgeistBackend?: ZettelgeistBackend }).zettelgeistBackend = backend;
+    await renderDetail({ name: 'user-auth' });
+
+    const tasksBtn = Array.from(document.querySelectorAll('.zg-tab-nav button'))
+      .find((b) => b.textContent?.startsWith('Tasks')) as HTMLButtonElement;
+    tasksBtn.click();
+
+    const editBtns = document.querySelectorAll<HTMLButtonElement>('.zg-task-edit');
+    editBtns[1]!.click();  // edit task 2 ("Add OIDC")
+    const input = document.querySelector('.zg-task-edit-input') as HTMLInputElement;
+    input.value = 'Wire OIDC + CSRF';
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    await new Promise((r) => setTimeout(r, 10));
+
+    expect(written).not.toBeNull();
+    expect(written!).toContain('- [x] 1. Add SAML');
+    expect(written!).toContain('- [ ] 2. Wire OIDC + CSRF');
+    expect(written!).toContain('- [ ] 3. Get sign-off');
+  });
+
+  it('deletes a task and renumbers the rest', async () => {
+    let written: string | null = null;
+    const backend = mockBackend({
+      readSpecFile: async () => ({ content: '- [x] 1. Add SAML\n- [ ] 2. Add OIDC\n- [ ] 3. Get sign-off\n' }),
+      writeSpecFile: async (_name, _rel, content) => { written = content; return { commit: 'abc' }; },
+    });
+    (window as Window & { zettelgeistBackend?: ZettelgeistBackend }).zettelgeistBackend = backend;
+
+    // stub confirm() → true
+    const origConfirm = globalThis.confirm;
+    globalThis.confirm = () => true;
+    try {
+      await renderDetail({ name: 'user-auth' });
+      const tasksBtn = Array.from(document.querySelectorAll('.zg-tab-nav button'))
+        .find((b) => b.textContent?.startsWith('Tasks')) as HTMLButtonElement;
+      tasksBtn.click();
+
+      const delBtns = document.querySelectorAll<HTMLButtonElement>('.zg-task-delete');
+      delBtns[1]!.click();  // delete "Add OIDC"
+      await new Promise((r) => setTimeout(r, 10));
+    } finally {
+      globalThis.confirm = origConfirm;
+    }
+
+    expect(written).not.toBeNull();
+    expect(written!).toContain('- [x] 1. Add SAML');
+    expect(written!).toContain('- [ ] 2. Get sign-off');  // renumbered down from 3 → 2
+    expect(written!).not.toContain('Add OIDC');
+  });
+
   it('shows progress + status pill in the header', async () => {
     const backend = mockBackend({
       listSpecs: async () => [{

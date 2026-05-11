@@ -207,9 +207,95 @@ button.zg-detail-edit-btn:focus-visible {
   gap: 0.5rem;
 }
 
-.zg-task label {
+.zg-task .zg-task-label {
   flex: 1;
   cursor: pointer;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.zg-task-edit-input {
+  flex: 1;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.9rem;
+  font-family: inherit;
+  border: 1px solid var(--pico-muted-border-color, #ddd);
+  border-radius: 0.25rem;
+  background: var(--pico-background-color, #fff);
+  color: inherit;
+}
+
+.zg-task-actions {
+  display: inline-flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+button.zg-task-edit,
+button.zg-task-delete {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+  line-height: 1;
+  padding: 0.15rem 0.4rem;
+  margin: 0;
+  color: var(--zg-btn-fg, #57606a);
+  border-radius: 0.25rem;
+  transition: color 0.15s, background 0.15s;
+}
+button.zg-task-edit:hover,
+button.zg-task-edit:focus-visible {
+  color: var(--zg-btn-fg-hover, #1095c1);
+}
+button.zg-task-delete:hover,
+button.zg-task-delete:focus-visible {
+  color: var(--zg-color-blocked, #c0392b);
+}
+
+.zg-task-add {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 0.5rem 0;
+  margin-top: 0.5rem;
+  border-top: 1px solid var(--pico-muted-border-color, #eee);
+}
+
+.zg-task-add-input {
+  flex: 1;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.9rem;
+  font-family: inherit;
+  border: 1px solid var(--pico-muted-border-color, #ddd);
+  border-radius: 0.375rem;
+  background: var(--pico-background-color, #fff);
+  color: inherit;
+}
+.zg-task-add-input:focus {
+  outline: 2px solid var(--pico-primary, #1095c1);
+  outline-offset: -1px;
+}
+
+button.zg-task-add-btn {
+  background: var(--zg-btn-bg, #ffffff);
+  border: 1px solid var(--zg-btn-border, #d0d7de);
+  border-radius: 0.375rem;
+  padding: 0.45rem 1rem;
+  margin: 0;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--zg-btn-fg, #57606a);
+  transition: border-color 0.15s, color 0.15s;
+}
+button.zg-task-add-btn:hover,
+button.zg-task-add-btn:focus-visible {
+  border-color: var(--zg-btn-fg-hover, #1095c1);
+  color: var(--zg-btn-fg-hover, #1095c1);
+}
+button.zg-task-add-btn:disabled {
+  opacity: 0.5;
+  cursor: wait;
 }
 
 .zg-task-tags {

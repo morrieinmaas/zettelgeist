@@ -1,5 +1,6 @@
 import type { Status, SpecSummary } from '../backend.js';
 import { renderCard } from '../components/card.js';
+import { fetchAndRenderValidationBanner } from '../components/validation-banner.js';
 import { escapeHtml } from '../util/sanitize.js';
 
 const COLUMN_ORDER: Status[] = [
@@ -29,13 +30,22 @@ export async function renderBoard(): Promise<void> {
     return;
   }
 
+  app.innerHTML = '';
+
+  const banner = await fetchAndRenderValidationBanner();
+  if (banner) app.appendChild(banner);
+
+  if (specs.length === 0) {
+    app.appendChild(renderEmptyState());
+    return;
+  }
+
   const byStatus: Record<Status, SpecSummary[]> = {
     'draft': [], 'planned': [], 'in-progress': [], 'in-review': [],
     'done': [], 'blocked': [], 'cancelled': [],
   };
   for (const s of specs) byStatus[s.status].push(s);
 
-  app.innerHTML = '';
   const board = document.createElement('div');
   board.className = 'zg-board';
 
@@ -68,6 +78,39 @@ export async function renderBoard(): Promise<void> {
   }
 
   app.appendChild(board);
+}
+
+function renderEmptyState(): HTMLElement {
+  const wrap = document.createElement('div');
+  wrap.className = 'zg-empty-state';
+
+  const title = document.createElement('h2');
+  title.textContent = 'No specs yet';
+  wrap.appendChild(title);
+
+  const blurb = document.createElement('p');
+  blurb.textContent =
+    'A spec is a folder under specs/ with at least one of requirements.md, tasks.md, ' +
+    'handoff.md, or lenses/*.md. Create one by hand or ask your agent to.';
+  wrap.appendChild(blurb);
+
+  const example = document.createElement('pre');
+  example.className = 'zg-empty-example';
+  example.textContent =
+    'specs/my-first-spec/\n' +
+    '  requirements.md   # markdown body (optionally with --- frontmatter ---)\n' +
+    '  tasks.md          # "- [ ] 1. task text" lines\n\n' +
+    '# then:\n' +
+    'zettelgeist regen     # rebuilds specs/INDEX.md\n';
+  wrap.appendChild(example);
+
+  const hint = document.createElement('p');
+  hint.className = 'zg-empty-hint';
+  hint.innerHTML =
+    'Refresh this page once the spec is on disk — the board will pick it up.';
+  wrap.appendChild(hint);
+
+  return wrap;
 }
 
 // Dragging a card onto a column writes `status: <target>` to the spec's

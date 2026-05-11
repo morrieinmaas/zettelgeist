@@ -1,5 +1,6 @@
 import type { SpecSummary } from '../backend.js';
-import { sanitizeHtml, escapeHtml as escapeHtmlSafe } from '../util/sanitize.js';
+import { fetchAndRenderValidationBanner } from '../components/validation-banner.js';
+import { escapeHtml as escapeHtmlSafe } from '../util/sanitize.js';
 
 interface GraphData {
   specs: SpecSummary[];
@@ -68,6 +69,10 @@ export async function renderGraph(): Promise<void> {
   }
 
   app.innerHTML = '';
+
+  const banner = await fetchAndRenderValidationBanner();
+  if (banner) app.appendChild(banner);
+
   const wrapper = document.createElement('div');
   wrapper.className = 'zg-graph';
 
@@ -76,8 +81,14 @@ export async function renderGraph(): Promise<void> {
   wrapper.appendChild(heading);
 
   if (specs.length === 0) {
-    const empty = document.createElement('p');
-    empty.innerHTML = '<em>No specs yet.</em>';
+    const empty = document.createElement('div');
+    empty.className = 'zg-empty-state';
+    const h = document.createElement('h3');
+    h.textContent = 'No specs to graph';
+    empty.appendChild(h);
+    const p = document.createElement('p');
+    p.textContent = 'Once specs exist, depends_on edges between them are rendered here.';
+    empty.appendChild(p);
     wrapper.appendChild(empty);
     app.appendChild(wrapper);
     return;
@@ -92,7 +103,16 @@ export async function renderGraph(): Promise<void> {
   try {
     const mermaid = await loadMermaid();
     const { svg } = await mermaid.render('zg-graph-svg', mermaidSrc);
-    container.innerHTML = sanitizeHtml(svg);
+    // Trust Mermaid's output directly. Reasoning:
+    //  - Mermaid runs with securityLevel: 'strict' which sanitizes user input
+    //    and refuses to render HTML / scripts in labels.
+    //  - The input source (`graph TD ...`) is generated from spec names that
+    //    the format spec restricts to slug-like identifiers — no user-supplied
+    //    HTML reaches Mermaid in the first place.
+    //  - Running DOMPurify a second time over Mermaid's SVG was stripping
+    //    text-related attributes (`text-anchor`, `dominant-baseline`,
+    //    `font-*`, `<tspan>` content positioning), leaving empty node boxes.
+    container.innerHTML = svg;
 
     container.querySelectorAll<SVGElement>('.node').forEach((node) => {
       const label = node.querySelector('text')?.textContent;

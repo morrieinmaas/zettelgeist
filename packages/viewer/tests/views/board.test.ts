@@ -34,6 +34,16 @@ describe('renderBoard', () => {
     (window as Window & { zettelgeistBackend?: ZettelgeistBackend }).zettelgeistBackend = mockBackend();
   });
 
+  it('renders an empty-state instead of the board when there are no specs', async () => {
+    const backend = mockBackend();
+    backend.listSpecs = async () => [];
+    (window as Window & { zettelgeistBackend?: ZettelgeistBackend }).zettelgeistBackend = backend;
+    await renderBoard();
+    expect(document.querySelector('.zg-empty-state')).not.toBeNull();
+    expect(document.querySelector('.zg-board')).toBeNull();
+    expect(document.body.textContent).toMatch(/No specs yet/);
+  });
+
   it('renders 7 columns', async () => {
     await renderBoard();
     const columns = document.querySelectorAll('.zg-column');
