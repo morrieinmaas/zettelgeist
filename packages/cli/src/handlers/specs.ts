@@ -222,10 +222,16 @@ async function tickTask(
   sendJson(res, 200, { commit });
 }
 
+const ALLOWED_STATUSES = new Set([
+  'draft', 'planned', 'in-progress', 'in-review', 'done', 'blocked', 'cancelled',
+]);
+
 async function setStatus(req: IncomingMessage, res: ServerResponse, ctx: SpecsRouteContext, name: string): Promise<void> {
   const body = await readBody(req) as { status?: string | null; reason?: string } | null;
-  if (!body || (body.status !== null && body.status !== 'blocked' && body.status !== 'cancelled')) {
-    sendJson(res, 400, { error: 'body.status must be "blocked", "cancelled", or null' });
+  if (!body || (body.status !== null && !ALLOWED_STATUSES.has(body.status as string))) {
+    sendJson(res, 400, {
+      error: 'body.status must be one of draft, planned, in-progress, in-review, done, blocked, cancelled, or null',
+    });
     return;
   }
   const specDir = safeJoin(path.resolve(ctx.cwd, ctx.specsDir), name);

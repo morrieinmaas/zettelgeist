@@ -59,7 +59,7 @@ export interface ZettelgeistBackend {
   untickTask(name: string, n: number): Promise<{ commit: string }>;
   setStatus(
     name: string,
-    status: 'blocked' | 'cancelled' | null,
+    status: Status | null,
     reason?: string,
   ): Promise<{ commit: string }>;
   writeHandoff(name: string, content: string): Promise<{ commit: string }>;

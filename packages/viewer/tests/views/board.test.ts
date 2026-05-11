@@ -100,21 +100,62 @@ describe('renderBoard', () => {
     expect(blockedColumn.classList.contains('zg-column-drop-target')).toBe(true);
   });
 
-  it('does not mark non-override columns as drop target', async () => {
+  it('marks every column as drop target on dragover (drag-to-any-column)', async () => {
     await renderBoard();
-    const plannedColumn = document.querySelector(
-      '[data-status="planned"]',
-    ) as HTMLElement;
-    plannedColumn.dispatchEvent(dragEvent('dragover', new DataTransfer()));
-    expect(plannedColumn.classList.contains('zg-column-drop-target')).toBe(false);
+    for (const status of ['draft', 'planned', 'in-progress', 'in-review', 'done', 'blocked', 'cancelled']) {
+      const column = document.querySelector(`[data-status="${status}"]`) as HTMLElement;
+      column.dispatchEvent(dragEvent('dragover', new DataTransfer()));
+      expect(column.classList.contains('zg-column-drop-target')).toBe(true);
+    }
   });
 
-  it('card dragstart sets text/plain to spec name', async () => {
+  it('card dragstart sets text/plain to spec name and status', async () => {
     await renderBoard();
     const card = document.querySelector('[data-spec="user-auth"]') as HTMLElement;
     const dt = new DataTransfer();
     card.dispatchEvent(dragEvent('dragstart', dt));
     expect(dt.getData('text/plain')).toBe('user-auth');
+    expect(dt.getData('application/x-zg-status')).toBe('in-progress');
+  });
+
+  it('drop on a non-override column calls setStatus without prompting', async () => {
+    const backend = mockBackend();
+    let captured: { name: string; status: string | null; reason: string | undefined } | null = null;
+    backend.setStatus = async (name, status, reason) => {
+      captured = { name, status, reason };
+      return { commit: 'abc' };
+    };
+    (window as Window & { zettelgeistBackend?: ZettelgeistBackend }).zettelgeistBackend = backend;
+    await renderBoard();
+
+    const doneColumn = document.querySelector('[data-status="done"]') as HTMLElement;
+    const dt = new DataTransfer();
+    dt.setData('text/plain', 'user-auth');
+    dt.setData('application/x-zg-status', 'in-progress');
+    doneColumn.dispatchEvent(dragEvent('drop', dt));
+
+    await new Promise((r) => setTimeout(r, 0));
+    expect(captured).not.toBeNull();
+    expect(captured!.name).toBe('user-auth');
+    expect(captured!.status).toBe('done');
+    expect(captured!.reason).toBeUndefined();
+  });
+
+  it('drop on origin column is a no-op (does not call setStatus)', async () => {
+    const backend = mockBackend();
+    let called = false;
+    backend.setStatus = async () => { called = true; return { commit: 'abc' }; };
+    (window as Window & { zettelgeistBackend?: ZettelgeistBackend }).zettelgeistBackend = backend;
+    await renderBoard();
+
+    const inProgressColumn = document.querySelector('[data-status="in-progress"]') as HTMLElement;
+    const dt = new DataTransfer();
+    dt.setData('text/plain', 'user-auth');
+    dt.setData('application/x-zg-status', 'in-progress');
+    inProgressColumn.dispatchEvent(dragEvent('drop', dt));
+
+    await new Promise((r) => setTimeout(r, 0));
+    expect(called).toBe(false);
   });
 
   it('escapes error messages in the error UI', async () => {

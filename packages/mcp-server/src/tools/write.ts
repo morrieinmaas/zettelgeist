@@ -93,13 +93,15 @@ export const untickTaskTool: ToolDef<z.infer<typeof tickTaskInput>, { commit: st
 
 const setStatusInput = z.object({
   name: z.string(),
-  status: z.enum(['blocked', 'cancelled']).nullable(),
+  status: z.enum([
+    'draft', 'planned', 'in-progress', 'in-review', 'done', 'blocked', 'cancelled',
+  ]).nullable(),
   reason: z.string().optional(),
 });
 
 export const setStatusTool: ToolDef<z.infer<typeof setStatusInput>, { commit: string }> = {
   name: 'set_status',
-  description: 'Set the status frontmatter override on a spec (blocked/cancelled), or clear it (null).',
+  description: 'Set the status frontmatter override on a spec (any of draft/planned/in-progress/in-review/done/blocked/cancelled), or clear it (null) to fall back to derived status. `reason` is recorded in `blocked_by` and is required for `blocked`.',
   inputSchema: setStatusInput,
   async handler(args, ctx) {
     const reader = makeDiskFsReader(ctx.cwd);
