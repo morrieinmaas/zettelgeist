@@ -10,7 +10,7 @@
 | oauth-providers | draft | 0/4 | — |
 | onboarding-tour | in-review | 6/6 | — |
 | payment-flow | blocked | 3/6 | Waiting on production Stripe credentials and a signed PSP agreement from finance. |
-| search-api | in-progress | 1/6 | — |
+| search-api | planned | 0/6 | — |
 | subscription-mgmt | in-review | 5/5 | — |
 | user-auth | in-progress | 2/5 | — |
 | webhooks | in-progress | 4/6 | — |

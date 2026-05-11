@@ -1,6 +1,6 @@
 # Tasks
 
-- [x] 1. Pick the storage engine (Postgres tsvector + GIN — keep the stack flat)
+- [ ] 1. Pick the storage engine (Postgres tsvector + GIN — keep the stack flat)
 - [ ] 2. Add the `search_documents` materialized view + refresh trigger
 - [ ] 3. Implement the `/api/search` endpoint with cursor pagination
 - [ ] 4. Wire the ACL filter into the SQL query (not post-hoc)
