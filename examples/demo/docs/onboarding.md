@@ -5,7 +5,7 @@
 
 ## Your first 30 minutes
 
-- [ ] Clone the repo and `pnpm install`.
+- [x] Clone the repo and `pnpm install`.
 - [ ] Open the Zettelgeist Board (`just demo` or, in VSCode, the Activity Bar
       icon → click any spec).
 - [ ] Find a `planned` spec marked with `#help-wanted` in the tasks. Pick one.
