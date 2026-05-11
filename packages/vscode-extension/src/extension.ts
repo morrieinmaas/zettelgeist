@@ -7,6 +7,7 @@ import { SpecTreeProvider } from './tree-provider.js';
 export function activate(ctx: vscode.ExtensionContext): void {
   ctx.subscriptions.push(
     vscode.commands.registerCommand('zettelgeist.open', () => openBoard(ctx)),
+    vscode.commands.registerCommand('zettelgeist.openRoute', (route?: string) => openBoard(ctx, route)),
     vscode.commands.registerCommand('zettelgeist.regen', runRegen),
     vscode.commands.registerCommand('zettelgeist.installHook', runInstallHook),
   );

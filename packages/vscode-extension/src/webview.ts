@@ -4,9 +4,17 @@ import { makeBackend, type BackendRequest, type BackendResponse } from './backen
 
 let panel: vscode.WebviewPanel | undefined;
 
-export async function openBoard(ctx: vscode.ExtensionContext): Promise<void> {
+/**
+ * Open (or reveal) the Zettelgeist board webview as an editor tab.
+ *
+ * @param route Optional in-app route (e.g. "/spec/user-auth", "/graph",
+ *              "/docs"). If the panel is already open, posts a navigate
+ *              message; if not, the panel boots with this hash pre-set.
+ */
+export async function openBoard(ctx: vscode.ExtensionContext, route?: string): Promise<void> {
   if (panel) {
     panel.reveal();
+    if (route) panel.webview.postMessage({ kind: 'zg.navigate', route });
     return;
   }
   const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
@@ -28,7 +36,7 @@ export async function openBoard(ctx: vscode.ExtensionContext): Promise<void> {
     },
   );
 
-  panel.webview.html = await renderShell(panel.webview, bundleDir);
+  panel.webview.html = await renderShell(panel.webview, bundleDir, route);
 
   // Wire the message channel: webview posts BackendRequest, extension answers
   // with BackendResponse. The shim injected into the webview translates between
@@ -52,7 +60,7 @@ export async function openBoard(ctx: vscode.ExtensionContext): Promise<void> {
   panel.onDidDispose(() => { panel = undefined; });
 }
 
-async function renderShell(webview: vscode.Webview, bundleDir: vscode.Uri): Promise<string> {
+async function renderShell(webview: vscode.Webview, bundleDir: vscode.Uri, route?: string): Promise<string> {
   const indexPath = vscode.Uri.joinPath(bundleDir, 'index.html');
   const raw = Buffer.from(await vscode.workspace.fs.readFile(indexPath)).toString('utf8');
 
@@ -75,14 +83,63 @@ async function renderShell(webview: vscode.Webview, bundleDir: vscode.Uri): Prom
   const theme = themeFromVSCode();
   const shim = `<script nonce="${nonce}">${BACKEND_SHIM}</script>`;
   const config = `<script nonce="${nonce}">window.zettelgeistConfig = ${JSON.stringify({ theme })};</script>`;
+  // Pre-set the URL hash before main.js loads, so the viewer's router
+  // initializes on the requested deep-link route (spec detail, graph, docs).
+  // Also wire a postMessage listener so subsequent navigations (clicking
+  // another spec while the panel is already open) actually navigate.
+  const initialHash = route
+    ? `<script nonce="${nonce}">window.location.hash = ${JSON.stringify('#' + route)};</script>`
+    : '';
+  const navListener = `<script nonce="${nonce}">
+    window.addEventListener('message', (e) => {
+      const m = e.data;
+      if (m && m.kind === 'zg.navigate' && typeof m.route === 'string') {
+        window.location.hash = '#' + m.route;
+      }
+    });
+  </script>`;
+
+  // VSCode theme bridge: map our Pico CSS variables onto the editor's
+  // --vscode-* variables. Without this, the viewer's own light/dark CSS
+  // wins and the panel looks like a separate app. With it, the panel
+  // adopts whatever theme the editor is using (Dracula, Solarized, etc.).
+  // Inline + appended late so it overrides the cascade.
+  const themeBridge = `<style nonce="${nonce}">${VSCODE_THEME_BRIDGE}</style>`;
 
   const withCsp = rewritten.replace('<head>', `<head>\n<meta http-equiv="Content-Security-Policy" content="${csp}">`);
-  const withScripts = withCsp.replace(
+  const withTheme = withCsp.replace('</head>', `${themeBridge}\n</head>`);
+  const withScripts = withTheme.replace(
     /<script\s+type="module"\s+src="/i,
-    `${config}\n${shim}\n<script nonce="${nonce}" type="module" src="`,
+    `${config}\n${shim}\n${initialHash}\n${navListener}\n<script nonce="${nonce}" type="module" src="`,
   );
   return withScripts;
 }
+
+// CSS that overrides the viewer's Pico variables with VSCode theme tokens so
+// the panel feels native. Applies regardless of the viewer's data-theme.
+const VSCODE_THEME_BRIDGE = `
+:root, [data-theme='light'], [data-theme='dark'] {
+  --pico-background-color: var(--vscode-editor-background) !important;
+  --pico-color: var(--vscode-editor-foreground) !important;
+  --pico-card-background-color: var(--vscode-sideBar-background, var(--vscode-editorWidget-background)) !important;
+  --pico-muted-border-color: var(--vscode-panel-border, var(--vscode-input-border, #444)) !important;
+  --pico-muted-color: var(--vscode-descriptionForeground) !important;
+  --pico-primary: var(--vscode-textLink-foreground) !important;
+
+  /* Secondary button palette — pulls from VSCode's button + border tokens
+     so secondary actions read as buttons in whatever theme is active. */
+  --zg-btn-bg: var(--vscode-button-secondaryBackground, var(--vscode-editor-background)) !important;
+  --zg-btn-border: var(--vscode-button-border, var(--vscode-panel-border, #444)) !important;
+  --zg-btn-fg: var(--vscode-button-secondaryForeground, var(--vscode-editor-foreground)) !important;
+  --zg-btn-fg-hover: var(--vscode-textLink-foreground) !important;
+}
+body {
+  background: var(--vscode-editor-background);
+  color: var(--vscode-editor-foreground);
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+}
+`;
 
 function themeFromVSCode(): 'light' | 'dark' | 'system' {
   const setting = vscode.workspace.getConfiguration('zettelgeist').get<string>('theme', 'auto');

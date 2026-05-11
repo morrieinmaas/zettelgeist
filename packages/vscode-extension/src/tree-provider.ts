@@ -32,6 +32,30 @@ abstract class TreeNode extends vscode.TreeItem {
   }
 }
 
+// Top-level "Views" section: jumps to the kanban board / dep graph / docs
+// using the same routing the viewer would use in a browser. The webview is
+// opened (or revealed) and navigated to the given hash.
+class ViewsRoot extends TreeNode {
+  constructor() {
+    super('Views', vscode.TreeItemCollapsibleState.Expanded);
+    this.contextValue = 'zg.viewsRoot';
+    this.iconPath = new vscode.ThemeIcon('layout');
+  }
+}
+
+class RouteNode extends TreeNode {
+  constructor(label: string, route: string, codicon: string) {
+    super(label, vscode.TreeItemCollapsibleState.None);
+    this.iconPath = new vscode.ThemeIcon(codicon);
+    this.contextValue = 'zg.route';
+    this.command = {
+      command: 'zettelgeist.openRoute',
+      title: `Open ${label}`,
+      arguments: [route],
+    };
+  }
+}
+
 class StatusGroup extends TreeNode {
   constructor(public readonly status: Status, public readonly count: number) {
     super(`${capitalize(status)} (${count})`, vscode.TreeItemCollapsibleState.Expanded);
@@ -47,12 +71,13 @@ class SpecNode extends TreeNode {
     this.tooltip = spec.blockedBy ? `${spec.name} — blocked: ${spec.blockedBy}` : spec.name;
     this.iconPath = new vscode.ThemeIcon(STATUS_ICON[spec.status]);
     this.contextValue = 'zg.spec';
-    // Clicking a spec node opens the board panel; the user navigates from
-    // there. Direct deep-linking to a spec detail can come later.
+    // Click → open the board webview and deep-link to this spec's detail
+    // view. The webview's router picks up the initial hash on load (or
+    // postMessage navigates if the panel is already open).
     this.command = {
-      command: 'zettelgeist.open',
-      title: 'Open Zettelgeist Board',
-      arguments: [],
+      command: 'zettelgeist.openRoute',
+      title: `Open ${spec.name}`,
+      arguments: [`/spec/${encodeURIComponent(spec.name)}`],
     };
   }
 }
@@ -72,6 +97,13 @@ export class SpecTreeProvider implements vscode.TreeDataProvider<TreeNode> {
   }
 
   async getChildren(parent?: TreeNode): Promise<TreeNode[]> {
+    if (parent instanceof ViewsRoot) {
+      return [
+        new RouteNode('Board',  '/',      'layout-panel'),
+        new RouteNode('Graph',  '/graph', 'type-hierarchy'),
+        new RouteNode('Docs',   '/docs',  'book'),
+      ];
+    }
     if (parent instanceof StatusGroup) {
       const all = await this.listSpecs();
       return all.filter((s) => s.status === parent.status).map((s) => new SpecNode(s));
@@ -82,11 +114,11 @@ export class SpecTreeProvider implements vscode.TreeDataProvider<TreeNode> {
         draft: 0, planned: 0, 'in-progress': 0, 'in-review': 0, done: 0, blocked: 0, cancelled: 0,
       };
       for (const s of all) counts[s.status]++;
-      // Only show groups that actually have specs — keeps the panel tidy
-      // when most statuses are empty (common at the start of a project).
-      return STATUS_ORDER
+      // Roots: a Views section at the top, then one group per non-empty status.
+      const groups = STATUS_ORDER
         .filter((status) => counts[status] > 0)
         .map((status) => new StatusGroup(status, counts[status]));
+      return [new ViewsRoot(), ...groups];
     }
     return [];
   }
@@ -102,6 +134,5 @@ export class SpecTreeProvider implements vscode.TreeDataProvider<TreeNode> {
 }
 
 function capitalize(s: string): string {
-  // "in-progress" → "In progress" reads better than "In-progress" in the tree.
   return s.charAt(0).toUpperCase() + s.slice(1).replace(/-/g, ' ');
 }
