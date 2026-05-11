@@ -2,7 +2,16 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Zettelgeist: Extension Development Host",
+      // Press F5 with this config selected. Loads the extension at
+      // packages/vscode-extension/ into a new "Extension Development Host"
+      // window, with examples/demo open as the workspace.
+      //
+      // BUILD FIRST: from a terminal where Node/pnpm are on PATH, run
+      //   just ext        (or: node packages/viewer/scripts/build.mjs
+      //                         && node packages/vscode-extension/scripts/build.mjs)
+      // F5 deliberately has no preLaunchTask — VSCode task shells don't
+      // source ~/.zshrc on most setups, so any pnpm/node call fails 127.
+      "name": "Zettelgeist: Extension Development Host (demo)",
       "type": "extensionHost",
       "request": "launch",
       "args": [
@@ -11,8 +20,22 @@
       ],
       "outFiles": [
         "${workspaceFolder}/packages/vscode-extension/dist/**/*.js"
+      ]
+    },
+    {
+      // Dogfood variant: opens this repo as the workspace, so the extension
+      // operates on Zettelgeist's own specs/ (wiki-links, saved-views, etc.)
+      // rather than the bundled demo.
+      "name": "Zettelgeist: Extension Development Host (this repo)",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/packages/vscode-extension",
+        "${workspaceFolder}"
       ],
-      "preLaunchTask": "zettelgeist: build extension"
+      "outFiles": [
+        "${workspaceFolder}/packages/vscode-extension/dist/**/*.js"
+      ]
     }
   ]
 }
