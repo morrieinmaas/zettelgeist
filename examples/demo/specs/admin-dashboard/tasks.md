@@ -1,7 +1,7 @@
 # Tasks
 
 - [x] 1. Scaffold the `/admin` route, gate on the `staff` role claim
-- [x] 2. Implement the account search (Postgres trigram index on email + org slug)
+- [ ] 2. Implement the account search (Postgres trigram index on email + org slug)
 - [ ] 3. Build the account-overview panel (plan, MRR, last sign-in, ticket count)
 - [ ] 4. Wire the top-5 read-only saved queries (server-side, parameterized)
 - [ ] 5. Implement the three audited mutations + the confirmation modal
