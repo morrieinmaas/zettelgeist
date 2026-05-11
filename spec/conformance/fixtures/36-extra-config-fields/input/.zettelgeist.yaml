@@ -1,0 +1,6 @@
+format_version: "0.1"
+author: alice@example.com
+generator: handcrafted
+custom_setting:
+  retain: true
+  level: 3
