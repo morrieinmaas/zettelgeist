@@ -10,3 +10,7 @@ dist/
 **/.zettelgeist/exports/
 test-results/
 playwright-report/
+
+# Claude Code per-session state (scheduled-task locks, project memory).
+# Not project state — ignore so it doesn't surface in `git status`.
+.claude/
