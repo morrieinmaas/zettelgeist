@@ -219,6 +219,7 @@ const BACKEND_SHIM = `
     listDocs:            ()                  => call('listDocs', []),
     readDoc:             (p)                 => call('readDoc', [p]),
     writeDoc:            (p, c)              => call('writeDoc', [p, c]),
+    renameDoc:           (oldP, newP)        => call('renameDoc', [oldP, newP]),
     writeSpecFile:       (name, rel, c)      => call('writeSpecFile', [name, rel, c]),
     tickTask:            (name, n)           => call('tickTask', [name, n]),
     untickTask:          (name, n)           => call('untickTask', [name, n]),

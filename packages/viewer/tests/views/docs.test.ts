@@ -16,6 +16,7 @@ function mockBackend(docs: DocEntry[] = SAMPLE_DOCS): ZettelgeistBackend {
     listDocs: async () => docs,
     readDoc: async (path) => ({ source: `# Rendered ${path}\n\nbody`, metadata: { title: path.split('/').pop() ?? path } }),
     writeDoc: async () => ({ commit: 'abc' }),
+    renameDoc: async (_o, n) => ({ commit: 'abc', newPath: n }),
     writeSpecFile: async () => ({ commit: 'abc' }),
     tickTask: async () => ({ commit: 'abc' }),
     untickTask: async () => ({ commit: 'abc' }),

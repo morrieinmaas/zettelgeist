@@ -22,6 +22,7 @@ function mockBackend(overrides: Partial<ZettelgeistBackend> = {}): ZettelgeistBa
     listDocs: async () => [],
     readDoc: async () => ({ source: '', metadata: { title: '' } }),
     writeDoc: async () => ({ commit: 'abc' }),
+    renameDoc: async (_o, n) => ({ commit: 'abc', newPath: n }),
     writeSpecFile: async () => ({ commit: 'abc' }),
     tickTask: async () => ({ commit: 'abc' }),
     untickTask: async () => ({ commit: 'abc' }),

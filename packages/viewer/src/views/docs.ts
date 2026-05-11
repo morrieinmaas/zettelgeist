@@ -52,6 +52,8 @@ export async function renderDocs(params: Record<string, string>): Promise<void> 
   list.className = 'zg-docs-list';
   for (const entry of entries) {
     const li = document.createElement('li');
+    li.className = 'zg-docs-list-item';
+
     const link = document.createElement('a');
     link.href = `#/docs/${encodeURIComponent(entry.path)}`;
     link.textContent = entry.title || entry.path;
@@ -59,6 +61,32 @@ export async function renderDocs(params: Record<string, string>): Promise<void> 
       link.classList.add('active');
     }
     li.appendChild(link);
+
+    // Per-entry rename button. Pops a prompt with the current path so the
+    // user can edit just the basename or the full path. Refreshes the
+    // sidebar + jumps to the new path on success.
+    const renameBtn = document.createElement('button');
+    renameBtn.type = 'button';
+    renameBtn.className = 'zg-docs-rename';
+    renameBtn.title = 'Rename';
+    renameBtn.setAttribute('aria-label', `Rename ${entry.path}`);
+    renameBtn.textContent = '✎';
+    renameBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const next = window.prompt(`Rename "${entry.path}" to:`, entry.path);
+      if (!next || next.trim() === '' || next === entry.path) return;
+      try {
+        const result = await backend.renameDoc(entry.path, next.trim());
+        // Jump to the new path so the user lands on what they just renamed.
+        window.location.hash = `#/docs/${encodeURIComponent(result.newPath)}`;
+        window.dispatchEvent(new HashChangeEvent('hashchange'));
+      } catch (err) {
+        alert((err as Error).message);
+      }
+    });
+    li.appendChild(renameBtn);
+
     list.appendChild(li);
   }
   sidebar.appendChild(list);

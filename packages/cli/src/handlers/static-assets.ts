@@ -34,6 +34,7 @@ const REST_BACKEND_SHIM = `
     listDocs: () => json('/api/docs'),
     readDoc: (p) => json(\`/api/docs/\${p.split('/').map(enc).join('/')}\`),
     writeDoc: (p, content) => put(\`/api/docs/\${p.split('/').map(enc).join('/')}\`, { content }),
+    renameDoc: (oldPath, newPath) => post(\`/api/docs/\${oldPath.split('/').map(enc).join('/')}/rename\`, { newPath }),
     writeSpecFile: (name, rel, content) => put(\`/api/specs/\${enc(name)}/files/\${rel.split('/').map(enc).join('/')}\`, { content }),
     tickTask: (name, n) => post(\`/api/specs/\${enc(name)}/tasks/\${n}/tick\`),
     untickTask: (name, n) => post(\`/api/specs/\${enc(name)}/tasks/\${n}/untick\`),

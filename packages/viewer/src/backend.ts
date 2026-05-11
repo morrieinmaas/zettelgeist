@@ -59,6 +59,8 @@ export interface ZettelgeistBackend {
   listDocs(): Promise<DocEntry[]>;
   readDoc(path: string): Promise<{ source: string; metadata: { title: string } }>;
   writeDoc(path: string, content: string): Promise<{ commit: string }>;
+  /** Rename or move a doc file. Both paths must be inside the workspace. */
+  renameDoc(oldPath: string, newPath: string): Promise<{ commit: string; newPath: string }>;
 
   // mutate (each produces one git commit)
   writeSpecFile(name: string, relpath: string, content: string): Promise<{ commit: string }>;

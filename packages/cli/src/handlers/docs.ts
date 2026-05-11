@@ -18,6 +18,13 @@ export async function handleDocsRoute(
   if (pathname === '/api/docs' && req.method === 'GET') {
     return listDocs(res, cwd);
   }
+  // /api/docs/<path>/rename has its own POST route — must be matched BEFORE
+  // the generic /api/docs/<path> regex so a path ending in "/rename" isn't
+  // misread as a doc path.
+  const renameMatch = pathname.match(/^\/api\/docs\/(.+)\/rename$/);
+  if (renameMatch && req.method === 'POST') {
+    return renameDoc(req, res, cwd, decodeURIComponent(renameMatch[1]!));
+  }
   const m = pathname.match(/^\/api\/docs\/(.+)$/);
   if (m) {
     const relpath = decodeURIComponent(m[1]!);
@@ -111,6 +118,51 @@ async function writeDoc(
   await execFileP('git', ['commit', '-m', `[zg] write-doc: ${rel}`], { cwd });
   const { stdout } = await execFileP('git', ['rev-parse', 'HEAD'], { cwd });
   sendJson(res, 200, { commit: stdout.trim() });
+}
+
+async function renameDoc(
+  req: IncomingMessage,
+  res: ServerResponse,
+  cwd: string,
+  oldRel: string,
+): Promise<void> {
+  const body = await readBody(req) as { newPath?: string } | null;
+  if (!body || typeof body.newPath !== 'string' || body.newPath.trim() === '') {
+    sendJson(res, 400, { error: 'body must be {newPath: string}' });
+    return;
+  }
+  const oldAbs = guardPath(cwd, oldRel);
+  const newAbs = guardPath(cwd, body.newPath);
+  if (!oldAbs || !newAbs) { sendJson(res, 403, { error: 'forbidden' }); return; }
+
+  // Refuse to overwrite an existing file — rename should never silently
+  // clobber. Caller must delete the target first if they really want to.
+  const exists = await fs.access(newAbs).then(() => true).catch(() => false);
+  if (exists) { sendJson(res, 409, { error: 'target exists' }); return; }
+
+  try {
+    await fs.mkdir(path.dirname(newAbs), { recursive: true });
+    await fs.rename(oldAbs, newAbs);
+  } catch (err) {
+    sendJson(res, 500, { error: (err as Error).message });
+    return;
+  }
+
+  const oldRelClean = path.relative(cwd, oldAbs).split(path.sep).join('/');
+  const newRelClean = path.relative(cwd, newAbs).split(path.sep).join('/');
+  // -A stages both the deletion of the old path and the addition of the new
+  // one — git detects the rename automatically.
+  await execFileP('git', ['add', '-A', '--', oldRelClean, newRelClean], { cwd });
+  try {
+    await execFileP('git', ['diff', '--cached', '--quiet'], { cwd });
+    // No-op (same content + same path? Shouldn't happen, but be defensive.)
+    const { stdout } = await execFileP('git', ['rev-parse', 'HEAD'], { cwd });
+    sendJson(res, 200, { commit: stdout.trim(), newPath: newRelClean });
+    return;
+  } catch { /* diff present → commit */ }
+  await execFileP('git', ['commit', '-m', `[zg] rename-doc: ${oldRelClean} → ${newRelClean}`], { cwd });
+  const { stdout } = await execFileP('git', ['rev-parse', 'HEAD'], { cwd });
+  sendJson(res, 200, { commit: stdout.trim(), newPath: newRelClean });
 }
 
 function guardPath(cwd: string, relpath: string): string | null {

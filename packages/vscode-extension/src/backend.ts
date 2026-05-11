@@ -88,6 +88,7 @@ export function makeBackend(workspaceRoot: string) {
         case 'listDocs':        return listDocs();
         case 'readDoc':         return readDoc(req.args[0] as string);
         case 'writeDoc':        return writeDoc(req.args[0] as string, req.args[1] as string);
+        case 'renameDoc':       return renameDoc(req.args[0] as string, req.args[1] as string);
         case 'writeSpecFile':   return writeSpecFile(req.args[0] as string, req.args[1] as string, req.args[2] as string);
         case 'tickTask':        return mutateTask(req.args[0] as string, req.args[1] as number, true);
         case 'untickTask':      return mutateTask(req.args[0] as string, req.args[1] as number, false);
@@ -187,6 +188,27 @@ export function makeBackend(workspaceRoot: string) {
     const content = await fs.readFile(file, 'utf8');
     const m = content.match(/^#\s+(.+)$/m);
     return m?.[1]?.trim() ?? null;
+  }
+
+  async function renameDoc(oldPath: string, newPath: string) {
+    const { cwd } = await getCtx();
+    const oldAbs = safeJoin(cwd, oldPath);
+    const newAbs = safeJoin(cwd, newPath);
+    const exists = await fs.access(newAbs).then(() => true).catch(() => false);
+    if (exists) throw new Error(`target exists: ${newPath}`);
+    await fs.mkdir(path.dirname(newAbs), { recursive: true });
+    await fs.rename(oldAbs, newAbs);
+    const oldRel = path.relative(cwd, oldAbs).split(path.sep).join('/');
+    const newRel = path.relative(cwd, newAbs).split(path.sep).join('/');
+    await execFileP('git', ['add', '-A', '--', oldRel, newRel], { cwd });
+    try {
+      await execFileP('git', ['diff', '--cached', '--quiet'], { cwd });
+      const { stdout } = await execFileP('git', ['rev-parse', 'HEAD'], { cwd });
+      return { commit: stdout.trim(), newPath: newRel };
+    } catch { /* diff present → commit */ }
+    await execFileP('git', ['commit', '-m', `[zg] rename-doc: ${oldRel} → ${newRel}`], { cwd });
+    const { stdout } = await execFileP('git', ['rev-parse', 'HEAD'], { cwd });
+    return { commit: stdout.trim(), newPath: newRel };
   }
 
   async function writeDoc(p: string, content: string) {

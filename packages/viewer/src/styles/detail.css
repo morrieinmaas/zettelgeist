@@ -198,9 +198,10 @@ button.zg-detail-edit-btn:focus-visible {
   border: 1px solid var(--pico-muted-border-color, #ddd);
   border-radius: 0.5rem;
   overflow: hidden;
-  /* Breathing room between the detail-header (status pill, badges) and the
-     tab strip — without this they touch and the section reads cramped. */
-  margin-top: 0.75rem;
+  /* Breathing room between the detail-header (status pill, badges) and
+     the tab strip — bumped from 0.75rem because the meta bar's visual
+     weight still made the section feel cramped at that size. */
+  margin-top: 1.5rem;
 }
 
 .zg-tab-nav {
@@ -214,7 +215,7 @@ button.zg-detail-edit-btn:focus-visible {
 .zg-tab-nav button {
   background: transparent;
   border: none;
-  padding: 0.5rem 1rem;
+  padding: 0.7rem 1rem;
   cursor: pointer;
   font-size: 0.875rem;
   color: inherit;

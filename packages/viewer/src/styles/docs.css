@@ -29,12 +29,40 @@
   padding: 0.25rem 0;
 }
 
+.zg-docs-list-item {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
 .zg-docs-list a {
   text-decoration: none;
   font-size: 0.875rem;
   display: block;
   padding: 0.25rem 0.5rem;
   border-radius: 0.25rem;
+  flex: 1;
+  min-width: 0;
+}
+
+button.zg-docs-rename {
+  flex: 0 0 auto;
+  width: auto;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  line-height: 1;
+  padding: 0.25rem 0.4rem;
+  margin: 0;
+  color: var(--zg-btn-fg, #57606a);
+  border-radius: 0.25rem;
+  transition: color 0.15s, background 0.15s;
+}
+button.zg-docs-rename:hover,
+button.zg-docs-rename:focus-visible {
+  color: var(--zg-btn-fg-hover, #1095c1);
+  background: var(--pico-background-color, transparent);
 }
 
 .zg-docs-list a:hover {
