@@ -307,6 +307,27 @@ button.zg-card-edit:focus-visible {
   resize: vertical;
 }
 
+input.zg-modal-input {
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  margin: 0.5rem 0 0;
+  font-size: 0.95rem;
+  font-family: inherit;
+  border: 1px solid var(--pico-muted-border-color, #ddd);
+  border-radius: 0.375rem;
+  background: var(--pico-background-color, #fff);
+  color: inherit;
+  box-sizing: border-box;
+}
+input.zg-modal-input:focus {
+  outline: 2px solid var(--pico-primary, #1095c1);
+  outline-offset: -1px;
+}
+
+button.zg-modal-destructive {
+  background: var(--zg-color-blocked, #c0392b);
+}
+
 .zg-modal-error {
   color: var(--zg-color-blocked, #c0392b);
   font-size: 0.875rem;

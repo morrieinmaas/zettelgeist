@@ -169,21 +169,20 @@ describe('renderDetail', () => {
     });
     (window as Window & { zettelgeistBackend?: ZettelgeistBackend }).zettelgeistBackend = backend;
 
-    // stub confirm() → true
-    const origConfirm = globalThis.confirm;
-    globalThis.confirm = () => true;
-    try {
-      await renderDetail({ name: 'user-auth' });
-      const tasksBtn = Array.from(document.querySelectorAll('.zg-tab-nav button'))
-        .find((b) => b.textContent?.startsWith('Tasks')) as HTMLButtonElement;
-      tasksBtn.click();
+    await renderDetail({ name: 'user-auth' });
+    const tasksBtn = Array.from(document.querySelectorAll('.zg-tab-nav button'))
+      .find((b) => b.textContent?.startsWith('Tasks')) as HTMLButtonElement;
+    tasksBtn.click();
 
-      const delBtns = document.querySelectorAll<HTMLButtonElement>('.zg-task-delete');
-      delBtns[1]!.click();  // delete "Add OIDC"
-      await new Promise((r) => setTimeout(r, 10));
-    } finally {
-      globalThis.confirm = origConfirm;
-    }
+    const delBtns = document.querySelectorAll<HTMLButtonElement>('.zg-task-delete');
+    delBtns[1]!.click();  // delete "Add OIDC"
+    // The delete now uses an in-DOM confirm modal (window.confirm is silently
+    // blocked in VSCode webviews). Click the modal's "Delete" button.
+    await new Promise((r) => setTimeout(r, 10));
+    const confirmBtn = document.querySelector<HTMLButtonElement>('.zg-modal-overlay .zg-modal-confirm');
+    expect(confirmBtn).not.toBeNull();
+    confirmBtn!.click();
+    await new Promise((r) => setTimeout(r, 10));
 
     expect(written).not.toBeNull();
     expect(written!).toContain('- [x] 1. Add SAML');

@@ -1,6 +1,7 @@
 import type { Status, SpecSummary } from '../backend.js';
 import { renderCard } from '../components/card.js';
 import { fetchAndRenderValidationBanner } from '../components/validation-banner.js';
+import { showInputModal, showAlert } from '../components/prompt-modal.js';
 import { escapeHtml } from '../util/sanitize.js';
 
 const COLUMN_ORDER: Status[] = [
@@ -114,23 +115,34 @@ function templateFor(name: string, status: Status, blockedBy?: string): { requir
 }
 
 async function createSpecInColumn(status: Status, existing: SpecSummary[]): Promise<void> {
-  const raw = window.prompt(
-    `New spec in "${status}". Name (lowercase + dashes, e.g. "user-auth"):`,
-    '',
-  );
-  if (!raw) return;
+  // In-DOM modal — window.prompt() is silently blocked in VSCode webviews,
+  // so the same flow works in browser AND inside the extension panel.
+  const raw = await showInputModal({
+    title: `New spec in "${status}"`,
+    message: 'Lowercase letters, numbers, and dashes. Example: "user-auth".',
+    placeholder: 'my-new-spec',
+    confirmLabel: 'Create',
+    validate: (v) => {
+      const t = v.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+      if (!t) return 'Name is required.';
+      if (existing.some((s) => s.name === t)) return `A spec named "${t}" already exists.`;
+      return null;
+    },
+  });
+  if (raw === null) return;
   const name = raw.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-  if (!name) { alert('Invalid spec name.'); return; }
-  if (existing.some((s) => s.name === name)) {
-    alert(`A spec named "${name}" already exists.`);
-    return;
-  }
+  if (!name) return;
 
   let blockedBy: string | undefined;
   if (status === 'blocked') {
-    const reason = window.prompt('Why is this blocked? (required)', '');
-    if (!reason) return;
-    blockedBy = reason;
+    const reason = await showInputModal({
+      title: `Why is "${name}" blocked?`,
+      message: 'A reason is required for blocked specs.',
+      confirmLabel: 'Create',
+      validate: (v) => v.trim() ? null : 'Reason is required.',
+    });
+    if (reason === null) return;
+    blockedBy = reason.trim();
   }
 
   const { requirements, tasks } = templateFor(name, status, blockedBy);
@@ -143,7 +155,7 @@ async function createSpecInColumn(status: Status, existing: SpecSummary[]): Prom
     // Jump to the new spec's detail view so the user can start editing.
     window.location.hash = `#/spec/${encodeURIComponent(name)}`;
   } catch (err) {
-    alert((err as Error).message);
+    void showAlert('Error', (err as Error).message);
   }
 }
 
@@ -221,7 +233,7 @@ function attachDropHandlers(column: HTMLElement, status: Status): void {
       await window.zettelgeistBackend.setStatus(specName, status, reason || undefined);
       window.dispatchEvent(new HashChangeEvent('hashchange'));
     } catch (err) {
-      alert((err as Error).message);
+      void showAlert('Error', (err as Error).message);
     }
   });
 }

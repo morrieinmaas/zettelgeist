@@ -1,5 +1,5 @@
 import type { Task } from '../backend.js';
-import { escapeHtml } from '../util/sanitize.js';
+import { showConfirmModal, showAlert } from './prompt-modal.js';
 
 export function renderTaskList(specName: string, tasks: Task[]): HTMLElement {
   const wrap = document.createElement('div');
@@ -39,7 +39,7 @@ function renderTaskItem(specName: string, task: Task): HTMLLIElement {
       window.dispatchEvent(new HashChangeEvent('hashchange'));
     } catch (err) {
       checkbox.checked = !checkbox.checked;
-      alert((err as Error).message);
+      void showAlert('Error', (err as Error).message);
     }
   });
 
@@ -112,7 +112,7 @@ function renderAddForm(specName: string): HTMLFormElement {
       input.value = '';
       window.dispatchEvent(new HashChangeEvent('hashchange'));
     } catch (err) {
-      alert((err as Error).message);
+      void showAlert('Error', (err as Error).message);
     } finally {
       btn.disabled = false;
     }
@@ -166,7 +166,7 @@ function startInlineEdit(specName: string, task: Task, item: HTMLLIElement): voi
       await replaceTask(specName, task.index, next);
       window.dispatchEvent(new HashChangeEvent('hashchange'));
     } catch (err) {
-      alert((err as Error).message);
+      void showAlert('Error', (err as Error).message);
     }
   };
 
@@ -229,9 +229,15 @@ async function replaceTask(specName: string, n: number, text: string): Promise<v
 }
 
 async function deleteTask(specName: string, n: number): Promise<void> {
-  // Use the browser confirm — keeps the deletion explicit without dragging in
-  // the modal infrastructure. Same affordance the board uses for blocked drops.
-  if (!confirm(`Delete task ${n}? This removes the line and renumbers the rest.`)) return;
+  // In-DOM modal — confirm() is silently blocked in VSCode webviews, where
+  // clicking × on a task would do nothing without it.
+  const ok = await showConfirmModal({
+    title: `Delete task ${n}?`,
+    message: 'This removes the line and renumbers the remaining tasks.',
+    confirmLabel: 'Delete',
+    destructive: true,
+  });
+  if (!ok) return;
   try {
     const current = await readTasksFile(specName);
     const lines = current.split('\n');
@@ -252,6 +258,6 @@ async function deleteTask(specName: string, n: number): Promise<void> {
     await window.zettelgeistBackend.writeSpecFile(specName, 'tasks.md', kept.join('\n'));
     window.dispatchEvent(new HashChangeEvent('hashchange'));
   } catch (err) {
-    alert(escapeHtml((err as Error).message));
+    void showAlert('Error', (err as Error).message);
   }
 }

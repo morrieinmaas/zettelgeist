@@ -1,4 +1,5 @@
 import { marked } from 'marked';
+import { showAlert } from './prompt-modal.js';
 import { sanitizeHtml } from '../util/sanitize.js';
 
 // GFM is the default in marked v10+ but we set it explicitly so task-list
@@ -137,7 +138,7 @@ export function renderMarkdownEditor(opts: MarkdownEditorOptions): HTMLElement {
           input.checked = desired;
         } catch (err) {
           input.checked = !desired;
-          alert((err as Error).message);
+          void showAlert('Save failed', (err as Error).message);
         } finally {
           input.removeAttribute('disabled');
         }

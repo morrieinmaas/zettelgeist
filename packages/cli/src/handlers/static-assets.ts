@@ -93,7 +93,15 @@ export async function handleStaticRoute(
       `${inject}\n<script type="module" src="./main.js"`,
     );
 
-    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    // No-cache headers: this is a dev server. Without them browsers happily
+    // serve an old main.js after the bundle is rebuilt, which gave us the
+    // "fix shipped but my UI doesn't have it" class of bug.
+    res.writeHead(200, {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+    });
     res.end(html);
     return;
   }
@@ -113,7 +121,10 @@ export async function handleStaticRoute(
   }
   try {
     const content = await fs.readFile(filePath);
-    res.writeHead(200, { 'Content-Type': `${MIME_TYPES[ext]}; charset=utf-8` });
+    res.writeHead(200, {
+      'Content-Type': `${MIME_TYPES[ext]}; charset=utf-8`,
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+    });
     res.end(content);
   } catch {
     sendNotFound(res);
