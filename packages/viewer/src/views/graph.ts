@@ -252,16 +252,18 @@ function renderMermaidSource(
 }
 
 // Distinct, low-saturation cluster backgrounds. Deterministic per name so
-// the same epic keeps the same color across renders. Chosen to be readable
-// against both light and dark themes (alpha-ish tints).
+// the same epic keeps the same color across renders. Hex-with-alpha rather
+// than rgba() — Mermaid splits style directives on commas, so any
+// `fill:rgba(r, g, b, a)` value gets shredded mid-parse and the render
+// throws, falling back to raw-source display.
 const CLUSTER_PALETTE: Array<[string, string]> = [
-  ['rgba(96, 165, 250, 0.10)',  'rgba(96, 165, 250, 0.55)'],   // blue
-  ['rgba(245, 158, 11, 0.10)',  'rgba(245, 158, 11, 0.55)'],   // amber
-  ['rgba(139, 92, 246, 0.10)',  'rgba(139, 92, 246, 0.55)'],   // violet
-  ['rgba(16, 185, 129, 0.10)',  'rgba(16, 185, 129, 0.55)'],   // emerald
-  ['rgba(236, 72, 153, 0.10)',  'rgba(236, 72, 153, 0.55)'],   // pink
-  ['rgba(244, 114, 182, 0.10)', 'rgba(244, 114, 182, 0.55)'],  // rose
-  ['rgba(56, 189, 248, 0.10)',  'rgba(56, 189, 248, 0.55)'],   // sky
+  ['#60a5fa1a', '#60a5fa8c'],  // blue
+  ['#f59e0b1a', '#f59e0b8c'],  // amber
+  ['#8b5cf61a', '#8b5cf68c'],  // violet
+  ['#10b9811a', '#10b9818c'],  // emerald
+  ['#ec48991a', '#ec48998c'],  // pink
+  ['#f472b61a', '#f472b68c'],  // rose
+  ['#38bdf81a', '#38bdf88c'],  // sky
 ];
 function clusterPalette(name: string): [string, string] {
   let h = 0;

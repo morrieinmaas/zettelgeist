@@ -185,6 +185,32 @@ describe('renderDetail', () => {
     expect(written!).not.toContain('Add OIDC');
   });
 
+  it('ticking a GFM checkbox in requirements body saves the toggled line', async () => {
+    const spec: SpecDetail = {
+      ...SAMPLE_SPEC,
+      requirements: '## Acceptance criteria\n\n- [ ] WHEN trigger\n- [ ] THE SYSTEM SHALL respond\n',
+    };
+    let writtenContent = '';
+    const backend = mockBackend({
+      readSpec: async () => spec,
+      readSpecFile: async () => ({ content: '---\ndepends_on: [billing]\n---\n' + spec.requirements }),
+      writeSpecFile: async (_name, _rel, content) => { writtenContent = content; return { commit: 'abc' }; },
+    });
+    (window as Window & { zettelgeistBackend?: ZettelgeistBackend }).zettelgeistBackend = backend;
+    await renderDetail({ name: 'user-auth' });
+
+    // Find the first checkbox in the rendered requirements body and click it.
+    const cb = document.querySelector<HTMLInputElement>('.zg-markdown input[type="checkbox"]')!;
+    expect(cb.disabled).toBe(false);
+    cb.checked = true;
+    cb.dispatchEvent(new Event('change'));
+    await new Promise((r) => setTimeout(r, 10));
+
+    expect(writtenContent).toContain('- [x] WHEN trigger');
+    expect(writtenContent).toContain('- [ ] THE SYSTEM SHALL respond');
+    expect(writtenContent).toContain('depends_on: [billing]');  // frontmatter preserved
+  });
+
   it('shows progress + status pill in the header', async () => {
     const backend = mockBackend({
       listSpecs: async () => [{

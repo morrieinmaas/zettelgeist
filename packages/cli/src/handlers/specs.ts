@@ -353,12 +353,24 @@ async function writeHandoff(req: IncomingMessage, res: ServerResponse, ctx: Spec
 }
 
 async function regenAndCommit(ctx: SpecsRouteContext, files: string[], message: string): Promise<string> {
-  // Run regen first
   const { regenCommand } = await import('../commands/regen.js');
   await regenCommand({ path: ctx.cwd, check: false });
-  // Stage and commit
   const indexRel = path.posix.join(ctx.specsDir, 'INDEX.md');
   await execFileP('git', ['add', ...files, indexRel], { cwd: ctx.cwd });
+
+  // If the write produced no actual change (idempotent save — user clicked
+  // Save without modifying content, or ticked a checkbox back to its same
+  // state), `git diff --cached --quiet` exits 0 and we skip the commit.
+  // Returning the current HEAD treats this as a successful no-op rather
+  // than a 500.
+  try {
+    await execFileP('git', ['diff', '--cached', '--quiet'], { cwd: ctx.cwd });
+    // exit 0 → nothing staged → no-op save
+    const { stdout } = await execFileP('git', ['rev-parse', 'HEAD'], { cwd: ctx.cwd });
+    return stdout.trim();
+  } catch {
+    // exit 1 → diff present → proceed to commit
+  }
   await execFileP('git', ['commit', '-m', message], { cwd: ctx.cwd });
   const { stdout } = await execFileP('git', ['rev-parse', 'HEAD'], { cwd: ctx.cwd });
   return stdout.trim();

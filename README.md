@@ -105,6 +105,18 @@ Add `zettelgeist-mcp` to your Claude Code (or other MCP client) config:
 
 Then ask the agent to `list_specs`, `tick_task`, `claim_spec`, `set_status`, etc. Full tool list: [packages/mcp-server/SKILL.md](packages/mcp-server/SKILL.md).
 
+### Use it inside VSCode (extension)
+
+The Kanban board, dependency graph, and editable detail view all run inside a VSCode panel. From a clone of this repo, with the workspace open in VSCode:
+
+```bash
+just ext          # build the extension
+```
+
+Then press **F5** (or pick "Zettelgeist: Extension Development Host" from the Run menu). A second VSCode window opens with the extension loaded against `examples/demo`. Run `Zettelgeist: Open Board` from the command palette. Every action goes through the same regen + commit pipeline as `zettelgeist serve` — the panel is just a different surface.
+
+The extension also auto-activates whenever a workspace contains a `.zettelgeist.yaml`. See [packages/vscode-extension/README.md](packages/vscode-extension/README.md) for commands + configuration.
+
 ---
 
 ## How it works
@@ -208,9 +220,17 @@ Tags: `#human-only`, `#agent-only`, `#skip` (excluded from progress counting). T
 
 ### As a human
 
-1. `zettelgeist serve` — viewer opens at <http://127.0.0.1:7681>.
-2. Drag a card across columns, click the pencil to edit status / PR / branch, tick task checkboxes, write end-of-session notes in the Handoff tab.
-3. Every action is a commit; pull / push as usual.
+Pick a surface:
+
+- **`zettelgeist serve`** — viewer opens at <http://127.0.0.1:7681> in your browser.
+- **VSCode extension** — `Zettelgeist: Open Board` from the command palette opens the same viewer in a side panel.
+
+Then:
+
+1. Drag cards across columns, click the pencil to edit status / PR / branch, tick task checkboxes, write end-of-session notes in the Handoff tab.
+2. Tick acceptance-criteria checkboxes (`- [ ] WHEN …`) inline in the rendered Requirements body — no edit-mode needed.
+3. Link specs with wiki syntax: `[[other-spec]]` in any markdown body becomes a clickable router link.
+4. Every action is a commit; pull / push as usual.
 
 ### As an agent (Claude Code etc.)
 

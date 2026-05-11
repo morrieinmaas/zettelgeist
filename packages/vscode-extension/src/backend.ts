@@ -52,13 +52,20 @@ export function makeBackend(workspaceRoot: string) {
 
   async function regenAndCommit(filesRel: string[], commitMessage: string): Promise<string> {
     const { cwd, specsDir, reader } = await getCtx();
-    // Regenerate INDEX.md to reflect the change we just wrote.
     const result = await runConformance(reader);
     const indexAbs = path.join(cwd, specsDir, 'INDEX.md');
     await fs.mkdir(path.dirname(indexAbs), { recursive: true });
     await fs.writeFile(indexAbs, result.index, 'utf8');
     const indexRel = path.posix.join(specsDir, 'INDEX.md');
     await execFileP('git', ['add', ...filesRel, indexRel], { cwd });
+    // Idempotent saves (same content as HEAD) → no staged diff → skip commit.
+    try {
+      await execFileP('git', ['diff', '--cached', '--quiet'], { cwd });
+      const { stdout } = await execFileP('git', ['rev-parse', 'HEAD'], { cwd });
+      return stdout.trim();
+    } catch {
+      // exit 1 → diff present → commit
+    }
     await execFileP('git', ['commit', '-m', commitMessage], { cwd });
     const { stdout } = await execFileP('git', ['rev-parse', 'HEAD'], { cwd });
     return stdout.trim();

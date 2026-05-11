@@ -28,6 +28,32 @@ export interface MarkdownEditorOptions {
    * — done in a single place rather than per-tab in detail.ts.
    */
   postRender?: (rendered: HTMLElement) => void;
+  /**
+   * If true, GFM task-list checkboxes inside the rendered body become
+   * interactive in view mode: clicking toggles the underlying `- [ ]`
+   * line and auto-saves via `onSave`. Lets users tick acceptance criteria
+   * without entering edit mode.
+   */
+  interactiveCheckboxes?: boolean;
+}
+
+// Match a markdown task-list line: leading whitespace + bullet + [x] / [ ].
+const TASK_LIST_LINE_RE = /^([\s>]*[-*+]\s+\[)([ xX])(\])/;
+
+function toggleNthTaskLine(body: string, n: number, checked: boolean): string | null {
+  const lines = body.split('\n');
+  let count = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] ?? '';
+    const m = TASK_LIST_LINE_RE.exec(line);
+    if (!m) continue;
+    if (count === n) {
+      lines[i] = `${m[1]!}${checked ? 'x' : ' '}${m[3]!}${line.slice(m[0].length)}`;
+      return lines.join('\n');
+    }
+    count++;
+  }
+  return null;
 }
 
 /**
@@ -70,6 +96,7 @@ export function renderMarkdownEditor(opts: MarkdownEditorOptions): HTMLElement {
       const body = document.createElement('div');
       body.className = 'zg-markdown';
       body.innerHTML = sanitizeHtml(marked.parse(currentBody) as string);
+      if (opts.interactiveCheckboxes) wireInteractiveCheckboxes(body);
       opts.postRender?.(body);
       wrap.appendChild(body);
 
@@ -83,6 +110,34 @@ export function renderMarkdownEditor(opts: MarkdownEditorOptions): HTMLElement {
       wrap.appendChild(renderEmpty());
     }
     return wrap;
+  }
+
+  function wireInteractiveCheckboxes(body: HTMLElement): void {
+    const inputs = Array.from(body.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'));
+    inputs.forEach((input, idx) => {
+      input.disabled = false;
+      input.style.cursor = 'pointer';
+      input.addEventListener('change', async () => {
+        const desired = input.checked;
+        const nextBody = toggleNthTaskLine(currentBody, idx, desired);
+        if (nextBody === null) {
+          // Couldn't find the corresponding source line — bail rather than
+          // silently corrupting. Revert the checkbox to its previous state.
+          input.checked = !desired;
+          return;
+        }
+        input.disabled = true;  // prevent double-clicks mid-save
+        try {
+          await opts.onSave(nextBody);
+          currentBody = nextBody;
+        } catch (err) {
+          input.checked = !desired;
+          alert((err as Error).message);
+        } finally {
+          input.disabled = false;
+        }
+      });
+    });
   }
 
   function renderEmpty(): HTMLElement {

@@ -169,6 +169,7 @@ function renderRequirementsTab(spec: SpecDetail, postRender: (el: HTMLElement) =
         'and any references. Use `- [ ]` checkboxes for each acceptance criterion.',
       startingTemplate: REQUIREMENTS_TEMPLATE.replace('{NAME}', spec.name),
       postRender,
+      interactiveCheckboxes: true,
       // requirements.md has frontmatter we must preserve on body-only edits.
       onSave: async (newBody) => {
         const backend = window.zettelgeistBackend;
@@ -195,6 +196,7 @@ function renderHandoffTab(spec: SpecDetail, postRender: (el: HTMLElement) => voi
       '(or agent): what you did, what\'s next, and any open questions.',
     startingTemplate: HANDOFF_TEMPLATE,
     postRender,
+    interactiveCheckboxes: true,
     onSave: async (newBody) => {
       await window.zettelgeistBackend.writeHandoff(spec.name, newBody);
     },
@@ -246,6 +248,7 @@ function renderLensesTab(spec: SpecDetail, postRender: (el: HTMLElement) => void
         body: content,
         emptyPlaceholder: '(empty)',
         postRender,
+        interactiveCheckboxes: true,
         onSave: async (newBody) => {
           await window.zettelgeistBackend.writeSpecFile(spec.name, `lenses/${name}.md`, newBody);
         },

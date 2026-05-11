@@ -1,0 +1,15 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "zettelgeist: build extension",
+      "type": "shell",
+      "command": "pnpm --filter @zettelgeist/viewer build && pnpm --filter @zettelgeist/vscode-extension build",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated"
+      }
+    }
+  ]
+}
