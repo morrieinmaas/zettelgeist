@@ -10,21 +10,29 @@ interface MermaidApi {
   render: (id: string, src: string) => Promise<{ svg: string }>;
 }
 
-let mermaidApi: MermaidApi | null = null;
+interface MermaidModule {
+  default: { initialize: (cfg: unknown) => void; render: MermaidApi['render'] };
+}
+let mermaidModule: MermaidModule | null = null;
 
 async function loadMermaid(): Promise<MermaidApi> {
-  if (mermaidApi) return mermaidApi;
   // Lazy-imported so the Mermaid bundle (~hundreds of KB) is only fetched
   // when the graph view is opened. esbuild emits this as a separate chunk.
-  const mod = await import('mermaid');
-  const mermaid = mod.default;
+  if (!mermaidModule) {
+    mermaidModule = (await import('mermaid')) as unknown as MermaidModule;
+  }
+  const mermaid = mermaidModule.default;
+  // Re-initialize on every render so the theme toggle picks up immediately.
   mermaid.initialize({
     startOnLoad: false,
     theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default',
     securityLevel: 'strict',
+    // Mermaid's default htmlLabels emit <foreignObject> with HTML children,
+    // which DOMPurify's SVG profile strips — leaving empty node boxes. Native
+    // SVG <text> labels render fine through the sanitizer.
+    flowchart: { htmlLabels: false },
   });
-  mermaidApi = mermaid as unknown as MermaidApi;
-  return mermaidApi;
+  return mermaid as unknown as MermaidApi;
 }
 
 export async function renderGraph(): Promise<void> {

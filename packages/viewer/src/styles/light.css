@@ -5,4 +5,11 @@
   --pico-muted-border-color: #ddd;
   --pico-muted-color: #999;
   --pico-primary: #1095c1;
+
+  /* Secondary button palette — neutral chrome that has to stand on its own
+     against Pico's `button` element selector. */
+  --zg-btn-bg: #ffffff;
+  --zg-btn-border: #d0d7de;
+  --zg-btn-fg: #57606a;
+  --zg-btn-fg-hover: #1095c1;
 }

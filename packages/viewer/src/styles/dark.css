@@ -5,4 +5,9 @@
   --pico-muted-border-color: #444;
   --pico-muted-color: #888;
   --pico-primary: #41bbd9;
+
+  --zg-btn-bg: #2a2a2a;
+  --zg-btn-border: #444;
+  --zg-btn-fg: #c0c0c0;
+  --zg-btn-fg-hover: #41bbd9;
 }
