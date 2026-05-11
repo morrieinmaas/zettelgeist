@@ -39,11 +39,26 @@ Zettelgeist makes the **repo own the state** (markdown files, git-diffable, agen
 
 ## Quickstart
 
+### Prerequisites
+
+You'll need a few things on your `PATH` first:
+
+| Tool | Version | What for | How to install (macOS) |
+| --- | --- | --- | --- |
+| **Node.js** | ≥ 20 | runtime for the CLI, MCP server, build scripts | `brew install node` or [nvm](https://github.com/nvm-sh/nvm) / [fnm](https://github.com/Schniz/fnm) |
+| **pnpm** | ≥ 9 | workspace package manager | `npm i -g pnpm` or `brew install pnpm` or [corepack](https://nodejs.org/api/corepack.html) (`corepack enable`) |
+| **git** | any recent | every UI mutation produces a commit | usually pre-installed; `brew install git` otherwise |
+| **just** *(optional)* | any | one-liner dev recipes (`just demo`, `just ext`, …) | `brew install just` or `cargo install just`. Not required — `pnpm` scripts cover the same recipes. |
+| **VSCode** *(optional)* | ≥ 1.85 | only if you want the panel-based extension UI | <https://code.visualstudio.com/> |
+
+Linux is the same minus Homebrew; Windows works with WSL or Git Bash.
+
 ### See it work in 30 seconds
 
 ```bash
 git clone https://github.com/morrieinmaas/zettelgeist.git
 cd zettelgeist
+pnpm install         # one-time
 just demo            # or `pnpm demo` if you don't have `just`
 ```
 
