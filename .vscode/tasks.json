@@ -5,9 +5,18 @@
       "label": "zettelgeist: build extension",
       "type": "shell",
       "command": "pnpm --filter @zettelgeist/viewer build && pnpm --filter @zettelgeist/vscode-extension build",
+      // VSCode runs task shells non-interactively by default, which on macOS
+      // and most Linux setups skips ~/.zshrc / ~/.bashrc — pnpm (installed via
+      // Homebrew or a node version manager) ends up off PATH and the task
+      // exits 127 ("command not found"). Forcing a LOGIN shell sources the
+      // user's profile and picks up their PATH.
+      //
+      // `${env:SHELL}` resolves to whatever the contributor's shell is (zsh,
+      // bash, …); `-l` is portable across both. Fish users may need to
+      // override locally in their own .vscode/tasks.json.
       "options": {
         "shell": {
-          "executable": "/bin/zsh",
+          "executable": "${env:SHELL}",
           "args": ["-l"]
         }
       },
@@ -15,6 +24,16 @@
       "presentation": {
         "reveal": "silent",
         "panel": "dedicated"
+      },
+      // Windows: SHELL isn't typically set; fall back to PowerShell which
+      // inherits PATH from the user's environment.
+      "windows": {
+        "options": {
+          "shell": {
+            "executable": "powershell.exe",
+            "args": ["-NoProfile", "-Command"]
+          }
+        }
       }
     }
   ]
