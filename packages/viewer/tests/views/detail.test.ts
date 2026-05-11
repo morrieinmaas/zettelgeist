@@ -311,6 +311,32 @@ describe('renderDetail', () => {
     expect(reqBtnAfter.classList.contains('active')).toBe(false);
   });
 
+  it('frontmatter form: editing depends_on saves a comma-parsed array via patchFrontmatter', async () => {
+    let captured: { name: string; patch: Record<string, unknown> } | null = null;
+    const backend = mockBackend({
+      patchFrontmatter: async (name, patch) => {
+        captured = { name, patch };
+        return { commit: 'abc' };
+      },
+    });
+    (window as Window & { zettelgeistBackend?: ZettelgeistBackend }).zettelgeistBackend = backend;
+    await renderDetail({ name: 'user-auth' });
+
+    // Find the depends_on input (it's the one whose key field reads "depends_on").
+    const rows = Array.from(document.querySelectorAll<HTMLDivElement>('.zg-fm-row'));
+    const dependsRow = rows.find((r) => (r.querySelector('.zg-fm-key') as HTMLInputElement).value === 'depends_on');
+    expect(dependsRow).not.toBeUndefined();
+    const valueInput = dependsRow!.querySelector('.zg-fm-value') as HTMLInputElement;
+    valueInput.value = 'billing, payments, identity';
+
+    (document.querySelector('.zg-fm-save') as HTMLButtonElement).click();
+    await new Promise((r) => setTimeout(r, 10));
+
+    expect(captured).not.toBeNull();
+    expect(captured!.name).toBe('user-auth');
+    expect(captured!.patch).toEqual({ depends_on: ['billing', 'payments', 'identity'] });
+  });
+
   it('shows error message when readSpec fails', async () => {
     const backend = mockBackend({
       readSpec: async () => { throw new Error('not found'); },
