@@ -91,6 +91,29 @@ async function renderShell(webview: vscode.Webview, bundleDir: vscode.Uri, route
     ? `<script nonce="${nonce}">window.location.hash = ${JSON.stringify('#' + route)};</script>`
     : '';
   const navListener = `<script nonce="${nonce}">
+    // Two webview-specific navigation fixes:
+    //
+    // 1. Hash-anchor clicks. The webview's strict CSP (default-src 'none')
+    //    blocks <a href="#/..."> from changing window.location, so the nav
+    //    bar buttons + "Back to board" link silently no-op. Intercept any
+    //    click on an anchor whose href starts with "#" and set the hash
+    //    programmatically — the router then fires hashchange normally.
+    //
+    // 2. postMessage navigation from the tree view (extension host).
+    document.addEventListener('click', (e) => {
+      let t = e.target;
+      while (t && t.nodeType === 1) {
+        if (t.tagName === 'A') {
+          const href = t.getAttribute('href') || '';
+          if (href.startsWith('#')) {
+            e.preventDefault();
+            window.location.hash = href;
+            return;
+          }
+        }
+        t = t.parentElement;
+      }
+    });
     window.addEventListener('message', (e) => {
       const m = e.data;
       if (m && m.kind === 'zg.navigate' && typeof m.route === 'string') {
@@ -139,6 +162,10 @@ body {
   font-family: var(--vscode-font-family);
   font-size: var(--vscode-font-size);
 }
+
+/* The editor's color theme drives the look — the in-viewer light/dark
+   toggle would only fight with it. Hide it in the VSCode webview context. */
+button.zg-theme-toggle { display: none !important; }
 `;
 
 function themeFromVSCode(): 'light' | 'dark' | 'system' {

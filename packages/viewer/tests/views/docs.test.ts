@@ -39,9 +39,23 @@ describe('renderDocs', () => {
     expect(links.length).toBe(2);
   });
 
-  it('shows intro when no path selected', async () => {
+  it('auto-selects a default doc when no path is given', async () => {
+    // Without a path param, the view should land on a sensible default doc
+    // rather than a blank "pick something" pane. SAMPLE_DOCS first entry is
+    // README.md.
     await renderDocs({});
-    expect(document.querySelector('.zg-docs-main')?.textContent).toContain('Pick a document');
+    const main = document.querySelector('.zg-docs-main');
+    expect(main?.innerHTML).toContain('Rendered');
+    // Whichever default got picked should also be the active link.
+    expect(document.querySelector('.zg-docs-list a.active')).not.toBeNull();
+  });
+
+  it('shows empty-state when there are zero docs', async () => {
+    const backend = mockBackend([]);
+    (window as Window & { zettelgeistBackend?: ZettelgeistBackend }).zettelgeistBackend = backend;
+    await renderDocs({});
+    expect(document.querySelector('.zg-empty-state')).not.toBeNull();
+    expect(document.body.textContent).toMatch(/No docs yet/);
   });
 
   it('renders the selected doc when path is set', async () => {

@@ -14,7 +14,21 @@ export async function renderDocs(params: Record<string, string>): Promise<void> 
     return;
   }
 
-  const selectedPath = params.path ? decodeURIComponent(params.path) : null;
+  // If no doc is explicitly selected, default to a sensible first one rather
+  // than a blank "Pick a document" pane. Preference order:
+  //   1. docs/README.md (if it exists)
+  //   2. docs/architecture.md (common convention)
+  //   3. docs/onboarding.md
+  //   4. the alphabetically first doc
+  // This keeps `#/docs` navigable without an extra click.
+  let selectedPath = params.path ? decodeURIComponent(params.path) : null;
+  if (!selectedPath && entries.length > 0) {
+    const preferences = ['docs/README.md', 'docs/readme.md', 'docs/architecture.md', 'docs/onboarding.md'];
+    const sorted = [...entries].sort((a, b) => a.path.localeCompare(b.path));
+    selectedPath =
+      preferences.find((p) => entries.some((e) => e.path === p))
+      ?? sorted[0]!.path;
+  }
 
   app.innerHTML = '';
   const wrapper = document.createElement('div');
@@ -63,9 +77,18 @@ export async function renderDocs(params: Record<string, string>): Promise<void> 
       main.innerHTML = `<p class="zg-error">Failed to read doc: ${escapeHtml((err as Error).message)}</p>`;
     }
   } else {
-    const intro = document.createElement('div');
-    intro.innerHTML = '<h2>Docs</h2><p>Pick a document from the sidebar.</p>';
-    main.appendChild(intro);
+    // Empty state — only reachable when there are zero docs in the repo.
+    const empty = document.createElement('div');
+    empty.className = 'zg-empty-state';
+    const h = document.createElement('h3');
+    h.textContent = 'No docs yet';
+    empty.appendChild(h);
+    const p = document.createElement('p');
+    p.textContent =
+      'Add narrative documentation as markdown files under a `docs/` folder at ' +
+      'the repo root. Anything there shows up here.';
+    empty.appendChild(p);
+    main.appendChild(empty);
   }
 
   wrapper.appendChild(sidebar);

@@ -115,28 +115,54 @@ export function renderMarkdownEditor(opts: MarkdownEditorOptions): HTMLElement {
   function wireInteractiveCheckboxes(body: HTMLElement): void {
     const inputs = Array.from(body.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'));
     inputs.forEach((input, idx) => {
+      // Forcefully unblock the input. removeAttribute defeats CSS-framework
+      // styling that targets `[disabled]`, and pointer-events: auto wins
+      // against any cascading rule that disables interactivity (Pico, some
+      // VSCode-webview defaults).
+      input.removeAttribute('disabled');
       input.disabled = false;
       input.style.cursor = 'pointer';
-      input.addEventListener('change', async () => {
-        const desired = input.checked;
+      input.style.pointerEvents = 'auto';
+
+      async function commit(desired: boolean): Promise<void> {
         const nextBody = toggleNthTaskLine(currentBody, idx, desired);
         if (nextBody === null) {
-          // Couldn't find the corresponding source line — bail rather than
-          // silently corrupting. Revert the checkbox to its previous state.
           input.checked = !desired;
           return;
         }
-        input.disabled = true;  // prevent double-clicks mid-save
+        input.disabled = true;
         try {
           await opts.onSave(nextBody);
           currentBody = nextBody;
+          input.checked = desired;
         } catch (err) {
           input.checked = !desired;
           alert((err as Error).message);
         } finally {
-          input.disabled = false;
+          input.removeAttribute('disabled');
         }
-      });
+      }
+
+      input.addEventListener('change', () => void commit(input.checked));
+
+      // Also make the parent <li> clickable so a click anywhere in the row
+      // toggles. Pico's classless theme styles native checkboxes via pseudo-
+      // elements with appearance:none — the real input target is small and
+      // the AC text next to it isn't a real <label> (marked emits a bare
+      // text node). Without this, users tend to click the text and wonder
+      // why nothing happens.
+      const li = input.closest('li');
+      if (li) {
+        li.style.cursor = 'pointer';
+        li.addEventListener('click', (e) => {
+          if (e.target instanceof HTMLInputElement) return;  // input handles its own click
+          if (e.target instanceof HTMLAnchorElement) return;  // let wiki-links navigate
+          e.preventDefault();
+          const next = !input.checked;
+          input.checked = next;
+          void commit(next);
+        });
+      }
     });
   }
 

@@ -5,6 +5,7 @@ depends_on:
 part_of: internal
 status: in-progress
 ---
+
 # Internal admin dashboard
 
 ## Why
@@ -19,7 +20,7 @@ top-10 read-only queries plus a small set of audited mutations is the goal.
 
 The system, for any authenticated staff account:
 
-- [ ] WHEN a staff user visits `/admin`
+- [x] WHEN a staff user visits `/admin`
 - [ ] THE SYSTEM SHALL display a search box keyed on account ID, email, or org slug
 - [ ] AND surface, for the selected account: plan, MRR, last sign-in, support ticket count
 - [ ] AND offer the top-5 read-only "I need to debug this" queries as one-click actions
