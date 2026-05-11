@@ -2,38 +2,39 @@
   "version": "2.0.0",
   "tasks": [
     {
+      // The preLaunchTask for F5. Depends on the viewer build first
+      // (extension's build copies the viewer's dist into its own bundle),
+      // then runs its own command to bundle the extension.
       "label": "zettelgeist: build extension",
       "type": "shell",
-      "command": "pnpm --filter @zettelgeist/viewer build && pnpm --filter @zettelgeist/vscode-extension build",
-      // VSCode runs task shells non-interactively by default, which on macOS
-      // and most Linux setups skips ~/.zshrc / ~/.bashrc — pnpm (installed via
-      // Homebrew or a node version manager) ends up off PATH and the task
-      // exits 127 ("command not found"). Forcing a LOGIN shell sources the
-      // user's profile and picks up their PATH.
-      //
-      // `${env:SHELL}` resolves to whatever the contributor's shell is (zsh,
-      // bash, …); `-l` is portable across both. Fish users may need to
-      // override locally in their own .vscode/tasks.json.
-      "options": {
-        "shell": {
-          "executable": "${env:SHELL}",
-          "args": ["-l"]
-        }
-      },
+      "command": "node",
+      "args": [
+        "${workspaceFolder}/packages/vscode-extension/scripts/build.mjs"
+      ],
+      // Invoke the build scripts directly with `node` — sidesteps the
+      // "pnpm isn't on VSCode's task-shell PATH" problem entirely. Node
+      // itself must be on PATH for the extension host to launch at all,
+      // so it's always reachable here. Assumes deps are already installed
+      // (one-time: `pnpm install` from a terminal).
+      "dependsOrder": "sequence",
+      "dependsOn": ["zettelgeist: build viewer"],
       "problemMatcher": [],
       "presentation": {
         "reveal": "silent",
         "panel": "dedicated"
-      },
-      // Windows: SHELL isn't typically set; fall back to PowerShell which
-      // inherits PATH from the user's environment.
-      "windows": {
-        "options": {
-          "shell": {
-            "executable": "powershell.exe",
-            "args": ["-NoProfile", "-Command"]
-          }
-        }
+      }
+    },
+    {
+      "label": "zettelgeist: build viewer",
+      "type": "shell",
+      "command": "node",
+      "args": [
+        "${workspaceFolder}/packages/viewer/scripts/build.mjs"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated"
       }
     }
   ]
