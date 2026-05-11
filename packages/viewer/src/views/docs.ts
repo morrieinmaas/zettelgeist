@@ -1,5 +1,6 @@
 import type { DocEntry } from '../backend.js';
-import { sanitizeHtml, escapeHtml } from '../util/sanitize.js';
+import { renderMarkdownEditor } from '../components/markdown-editor.js';
+import { escapeHtml } from '../util/sanitize.js';
 
 export async function renderDocs(params: Record<string, string>): Promise<void> {
   const app = document.getElementById('app')!;
@@ -14,13 +15,8 @@ export async function renderDocs(params: Record<string, string>): Promise<void> 
     return;
   }
 
-  // If no doc is explicitly selected, default to a sensible first one rather
-  // than a blank "Pick a document" pane. Preference order:
-  //   1. docs/README.md (if it exists)
-  //   2. docs/architecture.md (common convention)
-  //   3. docs/onboarding.md
-  //   4. the alphabetically first doc
-  // This keeps `#/docs` navigable without an extra click.
+  // Default-doc selection: README → architecture → onboarding → alphabetical
+  // first. Keeps `#/docs` from landing on a blank pane.
   let selectedPath = params.path ? decodeURIComponent(params.path) : null;
   if (!selectedPath && entries.length > 0) {
     const preferences = ['docs/README.md', 'docs/readme.md', 'docs/architecture.md', 'docs/onboarding.md'];
@@ -53,11 +49,6 @@ export async function renderDocs(params: Record<string, string>): Promise<void> 
     li.appendChild(link);
     list.appendChild(li);
   }
-  if (entries.length === 0) {
-    const empty = document.createElement('li');
-    empty.innerHTML = '<em>No docs found.</em>';
-    list.appendChild(empty);
-  }
   sidebar.appendChild(list);
 
   const main = document.createElement('article');
@@ -66,18 +57,24 @@ export async function renderDocs(params: Record<string, string>): Promise<void> 
   if (selectedPath) {
     try {
       const doc = await backend.readDoc(selectedPath);
-      const heading = document.createElement('h2');
-      heading.textContent = doc.metadata.title || selectedPath;
-      const body = document.createElement('div');
-      body.className = 'zg-markdown';
-      body.innerHTML = sanitizeHtml(doc.rendered);
-      main.appendChild(heading);
-      main.appendChild(body);
+      // No auto-heading here. The doc's own H1 IS the title — adding our
+      // own would render it twice. If the doc lacks an H1, the sidebar link
+      // already shows the file name as a fallback.
+      main.appendChild(
+        renderMarkdownEditor({
+          body: doc.source,
+          emptyPlaceholder: `${selectedPath} is empty`,
+          emptyHint: 'Click below to start writing.',
+          interactiveCheckboxes: true,
+          onSave: async (newBody) => {
+            await backend.writeDoc(selectedPath!, newBody);
+          },
+        }),
+      );
     } catch (err) {
       main.innerHTML = `<p class="zg-error">Failed to read doc: ${escapeHtml((err as Error).message)}</p>`;
     }
   } else {
-    // Empty state — only reachable when there are zero docs in the repo.
     const empty = document.createElement('div');
     empty.className = 'zg-empty-state';
     const h = document.createElement('h3');

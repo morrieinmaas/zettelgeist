@@ -87,6 +87,7 @@ export function makeBackend(workspaceRoot: string) {
         case 'validateRepo':    return validateRepoCall();
         case 'listDocs':        return listDocs();
         case 'readDoc':         return readDoc(req.args[0] as string);
+        case 'writeDoc':        return writeDoc(req.args[0] as string, req.args[1] as string);
         case 'writeSpecFile':   return writeSpecFile(req.args[0] as string, req.args[1] as string, req.args[2] as string);
         case 'tickTask':        return mutateTask(req.args[0] as string, req.args[1] as number, true);
         case 'untickTask':      return mutateTask(req.args[0] as string, req.args[1] as number, false);
@@ -176,8 +177,35 @@ export function makeBackend(workspaceRoot: string) {
     const { cwd } = await getCtx();
     const abs = safeJoin(cwd, p);
     const content = await fs.readFile(abs, 'utf8');
-    // Return raw markdown — the viewer's markdown-editor / docs view renders it.
-    return { rendered: content, metadata: { title: path.basename(p, '.md') } };
+    // Return the raw source — the viewer renders + sanitizes via its shared
+    // markdown-editor (which also supports inline editing).
+    const title = await firstH1(abs).catch(() => null) ?? path.basename(p, '.md');
+    return { source: content, metadata: { title } };
+  }
+
+  async function firstH1(file: string): Promise<string | null> {
+    const content = await fs.readFile(file, 'utf8');
+    const m = content.match(/^#\s+(.+)$/m);
+    return m?.[1]?.trim() ?? null;
+  }
+
+  async function writeDoc(p: string, content: string) {
+    const { cwd } = await getCtx();
+    const abs = safeJoin(cwd, p);
+    const rel = path.relative(cwd, abs).split(path.sep).join('/');
+    await fs.mkdir(path.dirname(abs), { recursive: true });
+    const tmp = `${abs}.tmp`;
+    await fs.writeFile(tmp, content, 'utf8');
+    await fs.rename(tmp, abs);
+    await execFileP('git', ['add', rel], { cwd });
+    try {
+      await execFileP('git', ['diff', '--cached', '--quiet'], { cwd });
+      const { stdout } = await execFileP('git', ['rev-parse', 'HEAD'], { cwd });
+      return { commit: stdout.trim() };
+    } catch { /* diff present → commit */ }
+    await execFileP('git', ['commit', '-m', `[zg] write-doc: ${rel}`], { cwd });
+    const { stdout } = await execFileP('git', ['rev-parse', 'HEAD'], { cwd });
+    return { commit: stdout.trim() };
   }
 
   async function writeSpecFile(name: string, relpath: string, content: string) {

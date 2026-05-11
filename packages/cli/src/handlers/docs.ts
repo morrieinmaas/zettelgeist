@@ -1,8 +1,11 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
-import { renderMarkdownBody } from '../render.js';
-import { sendJson, sendNotFound } from './util.js';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { sendJson, sendNotFound, readBody } from './util.js';
+
+const execFileP = promisify(execFile);
 
 const DOCS_ROOTS = ['docs', 'spec', 'README.md'];
 
@@ -16,8 +19,10 @@ export async function handleDocsRoute(
     return listDocs(res, cwd);
   }
   const m = pathname.match(/^\/api\/docs\/(.+)$/);
-  if (m && req.method === 'GET') {
-    return readDoc(res, cwd, decodeURIComponent(m[1]!));
+  if (m) {
+    const relpath = decodeURIComponent(m[1]!);
+    if (req.method === 'GET') return readDoc(res, cwd, relpath);
+    if (req.method === 'PUT') return writeDoc(req, res, cwd, relpath);
   }
   sendNotFound(res);
 }
@@ -61,19 +66,56 @@ async function firstH1(file: string): Promise<string | null> {
 }
 
 async function readDoc(res: ServerResponse, cwd: string, relpath: string): Promise<void> {
-  // Path-traversal guard
-  const abs = path.resolve(cwd, relpath);
-  if (!abs.startsWith(path.resolve(cwd) + path.sep) && abs !== path.resolve(cwd)) {
-    sendJson(res, 403, { error: 'forbidden' });
-    return;
-  }
+  const abs = guardPath(cwd, relpath);
+  if (!abs) { sendJson(res, 403, { error: 'forbidden' }); return; }
   try {
     const content = await fs.readFile(abs, 'utf8');
+    // Return the raw source — the viewer renders + sanitizes it via the
+    // shared markdown-editor component (which also supports inline editing).
     sendJson(res, 200, {
-      rendered: renderMarkdownBody(content),
+      source: content,
       metadata: { title: await firstH1(abs) ?? relpath },
     });
   } catch (err) {
     sendJson(res, 404, { error: (err as Error).message });
   }
+}
+
+async function writeDoc(
+  req: IncomingMessage,
+  res: ServerResponse,
+  cwd: string,
+  relpath: string,
+): Promise<void> {
+  const body = await readBody(req) as { content?: string } | null;
+  if (!body || typeof body.content !== 'string') {
+    sendJson(res, 400, { error: 'body must be {content: string}' });
+    return;
+  }
+  const abs = guardPath(cwd, relpath);
+  if (!abs) { sendJson(res, 403, { error: 'forbidden' }); return; }
+  await fs.mkdir(path.dirname(abs), { recursive: true });
+  const tmp = `${abs}.tmp`;
+  await fs.writeFile(tmp, body.content, 'utf8');
+  await fs.rename(tmp, abs);
+
+  // Commit — same idempotent-no-op pattern as the specs handlers.
+  const rel = path.relative(cwd, abs).split(path.sep).join('/');
+  await execFileP('git', ['add', rel], { cwd });
+  try {
+    await execFileP('git', ['diff', '--cached', '--quiet'], { cwd });
+    const { stdout } = await execFileP('git', ['rev-parse', 'HEAD'], { cwd });
+    sendJson(res, 200, { commit: stdout.trim() });
+    return;
+  } catch { /* diff present → commit */ }
+  await execFileP('git', ['commit', '-m', `[zg] write-doc: ${rel}`], { cwd });
+  const { stdout } = await execFileP('git', ['rev-parse', 'HEAD'], { cwd });
+  sendJson(res, 200, { commit: stdout.trim() });
+}
+
+function guardPath(cwd: string, relpath: string): string | null {
+  const abs = path.resolve(cwd, relpath);
+  const root = path.resolve(cwd);
+  if (!abs.startsWith(root + path.sep) && abs !== root) return null;
+  return abs;
 }

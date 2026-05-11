@@ -14,7 +14,8 @@ function mockBackend(docs: DocEntry[] = SAMPLE_DOCS): ZettelgeistBackend {
     readSpecFile: async () => ({ content: '' }),
     validateRepo: async () => ({ errors: [] }),
     listDocs: async () => docs,
-    readDoc: async (path) => ({ rendered: `<p>Rendered ${path}</p>`, metadata: { title: path.split('/').pop() ?? path } }),
+    readDoc: async (path) => ({ source: `# Rendered ${path}\n\nbody`, metadata: { title: path.split('/').pop() ?? path } }),
+    writeDoc: async () => ({ commit: 'abc' }),
     writeSpecFile: async () => ({ commit: 'abc' }),
     tickTask: async () => ({ commit: 'abc' }),
     untickTask: async () => ({ commit: 'abc' }),
@@ -45,8 +46,8 @@ describe('renderDocs', () => {
     // README.md.
     await renderDocs({});
     const main = document.querySelector('.zg-docs-main');
-    expect(main?.innerHTML).toContain('Rendered');
-    // Whichever default got picked should also be the active link.
+    // The doc body's H1 should render — proof that something got picked.
+    expect(main?.querySelector('.zg-markdown h1')?.textContent).toMatch(/Rendered/);
     expect(document.querySelector('.zg-docs-list a.active')).not.toBeNull();
   });
 
@@ -61,7 +62,11 @@ describe('renderDocs', () => {
   it('renders the selected doc when path is set', async () => {
     await renderDocs({ path: encodeURIComponent('README.md') });
     const main = document.querySelector('.zg-docs-main');
-    expect(main?.innerHTML).toContain('Rendered README.md');
+    // markdown-editor renders the H1 from the source as <h1>; the view no
+    // longer prepends its own auto-heading.
+    expect(main?.querySelector('.zg-markdown h1')?.textContent).toBe('Rendered README.md');
+    // Exactly ONE h1 — no duplicated title.
+    expect(main?.querySelectorAll('h1').length).toBe(1);
   });
 
   it('marks the active doc in the sidebar', async () => {

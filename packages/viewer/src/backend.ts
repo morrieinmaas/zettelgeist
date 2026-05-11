@@ -57,7 +57,8 @@ export interface ZettelgeistBackend {
   readSpecFile(name: string, relpath: string): Promise<{ content: string }>;
   validateRepo(): Promise<{ errors: ValidationError[] }>;
   listDocs(): Promise<DocEntry[]>;
-  readDoc(path: string): Promise<{ rendered: string; metadata: { title: string } }>;
+  readDoc(path: string): Promise<{ source: string; metadata: { title: string } }>;
+  writeDoc(path: string, content: string): Promise<{ commit: string }>;
 
   // mutate (each produces one git commit)
   writeSpecFile(name: string, relpath: string, content: string): Promise<{ commit: string }>;

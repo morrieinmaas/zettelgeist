@@ -33,6 +33,7 @@ const REST_BACKEND_SHIM = `
     validateRepo: () => json('/api/validation'),
     listDocs: () => json('/api/docs'),
     readDoc: (p) => json(\`/api/docs/\${p.split('/').map(enc).join('/')}\`),
+    writeDoc: (p, content) => put(\`/api/docs/\${p.split('/').map(enc).join('/')}\`, { content }),
     writeSpecFile: (name, rel, content) => put(\`/api/specs/\${enc(name)}/files/\${rel.split('/').map(enc).join('/')}\`, { content }),
     tickTask: (name, n) => post(\`/api/specs/\${enc(name)}/tasks/\${n}/tick\`),
     untickTask: (name, n) => post(\`/api/specs/\${enc(name)}/tasks/\${n}/untick\`),
