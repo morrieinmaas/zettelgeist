@@ -1,0 +1,4 @@
+- [ ] 1. first task with leading number
+- [ ] 42. arbitrary number stripped
+- [x] 100. checked with number
+- [ ] No leading number stays as-is

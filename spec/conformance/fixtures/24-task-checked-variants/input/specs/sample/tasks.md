@@ -1,0 +1,5 @@
+- [ ] unchecked
+- [x] lowercase x
+- [X] uppercase X
+- [] no space — not a task
+- [  ] two spaces — not a task

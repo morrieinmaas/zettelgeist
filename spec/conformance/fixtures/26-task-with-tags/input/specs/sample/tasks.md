@@ -1,0 +1,5 @@
+- [ ] Manual review #human-only
+- [ ] Auto-generate templates #agent-only
+- [ ] Out-of-scope item #skip
+- [ ] Two tags on one task #human-only #skip
+- [ ] Unknown #not-a-tag stays as text
