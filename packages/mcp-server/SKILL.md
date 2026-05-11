@@ -33,6 +33,7 @@ You're operating in a repository that contains a `.zettelgeist.yaml` file. Specs
 | `tick_task` | `{name, n}` | new commit SHA |
 | `untick_task` | `{name, n}` | new commit SHA |
 | `set_status` | `{name, status, reason?}` | new commit SHA |
+| `patch_frontmatter` | `{name, patch}` (patch is `Record<string, unknown>`; `null` values delete keys; `status` / `blocked_by` are forbidden — use `set_status`) | new commit SHA |
 | `claim_spec` | `{name, agent_id?}` | acknowledged |
 | `release_spec` | `{name}` | acknowledged |
 | `write_handoff` | `{name, content}` | new commit SHA |

@@ -1,6 +1,6 @@
 # @zettelgeist/mcp-server
 
-Stdio MCP server exposing 15 tools for agents operating on [Zettelgeist v0.1](../../spec/zettelgeist-v0.1.md) repositories.
+Stdio MCP server exposing 16 tools for agents operating on [Zettelgeist v0.1](../../spec/zettelgeist-v0.1.md) repositories.
 
 ## Install
 
@@ -32,9 +32,9 @@ Same shape — point `command` at `npx` (or `zettelgeist-mcp` once installed glo
 See [SKILL.md](SKILL.md) for the full agent-readable manifest with arg/return shapes. Brief summary:
 
 | Group | Tools |
-|---|---|
+| --- | --- |
 | Read | `list_specs`, `read_spec`, `read_spec_file`, `validate_repo` |
-| Write | `write_spec_file`, `write_handoff`, `tick_task`, `untick_task`, `set_status` |
+| Write | `write_spec_file`, `write_handoff`, `tick_task`, `untick_task`, `set_status`, `patch_frontmatter` |
 | State | `claim_spec`, `release_spec`, `regenerate_index`, `install_git_hook` |
 | Synthesis | `prepare_synthesis_context`, `write_artifact` |
 

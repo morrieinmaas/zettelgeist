@@ -287,11 +287,12 @@ Full schemas: [packages/mcp-server/SKILL.md](packages/mcp-server/SKILL.md).
 ### REST (served by `zettelgeist serve`)
 
 | Method | Path | Body | Effect |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `GET` | `/api/specs` | — | List specs with derived status, progress, PR / branch / worktree. |
 | `GET` | `/api/specs/:name` | — | Full spec detail. |
+| `DELETE` | `/api/specs/:name` | — | Remove the entire spec folder; regen + commit. |
 | `GET` | `/api/specs/:name/files/:relpath` | — | Read any file inside the spec dir. |
-| `PUT` | `/api/specs/:name/files/:relpath` | `{content}` | Write any file; triggers regen + commit. |
+| `PUT` | `/api/specs/:name/files/:relpath` | `{content}` | Write any file; regen + commit. |
 | `POST` | `/api/specs/:name/tasks/:n/tick` | — | Tick task N; commit. |
 | `POST` | `/api/specs/:name/tasks/:n/untick` | — | Untick task N; commit. |
 | `POST` | `/api/specs/:name/status` | `{status, reason?}` | Set or clear the status override; commit. |
@@ -299,6 +300,11 @@ Full schemas: [packages/mcp-server/SKILL.md](packages/mcp-server/SKILL.md).
 | `PUT` | `/api/specs/:name/handoff` | `{content}` | Write `handoff.md`; commit. |
 | `POST` | `/api/specs/:name/claim` | `{agent_id?}` | Write the `.claim` file. |
 | `POST` | `/api/specs/:name/release` | — | Delete the `.claim` file. |
+| `GET` | `/api/docs` | — | List markdown docs under `docs/`, `spec/`, and root `README.md`. |
+| `GET` | `/api/docs/:path` | — | Read a doc's raw markdown + title. |
+| `PUT` | `/api/docs/:path` | `{content}` | Overwrite a doc; commit. |
+| `POST` | `/api/docs/:path/rename` | `{newPath}` | Rename or move a doc. Refuses to overwrite (409). |
+| `GET` | `/api/validation` | — | Run `validate_repo`; returns the list of structural errors. |
 | `POST` | `/api/regenerate` | — | Rebuild `INDEX.md`. |
 
 All write endpoints are guarded against path traversal (`..` in paths returns `403`) and produce one commit per request.
@@ -365,7 +371,7 @@ cd zettelgeist
 pnpm install
 
 pnpm -r typecheck       # strict TS across the workspace
-pnpm -r test            # 237 unit + integration tests
+pnpm -r test            # 254 unit + integration tests
 pnpm conformance        # 11 format conformance fixtures
 pnpm --filter @zettelgeist/cli build
 pnpm --filter @zettelgeist/cli test:e2e   # Playwright e2e against the running viewer
@@ -383,7 +389,7 @@ Contributing guidelines and the workflow checklist live in [CONTRIBUTING.md](CON
 ## Status and roadmap
 
 - **Format**: stable for v0.1. Future minor versions add fields, error codes, and rules in a backwards-compatible way.
-- **Reference implementation**: passes all 11 conformance fixtures + 237 unit/integration tests. CI green on every commit to `main`.
+- **Reference implementation**: passes all 11 conformance fixtures + 254 unit/integration tests. CI green on every commit to `main`.
 - **Distribution**: `npm publish`-ready for `@zettelgeist/cli`, `@zettelgeist/mcp-server`, `@zettelgeist/core`. Not yet pushed to a registry — install from source for now.
 - **v0.2 backlog**: see [docs/v02-backlog.md](docs/v02-backlog.md). Highlights: wiki-style `[[spec-name]]` links, config-driven saved views, frozen events catalogue, VSCode extension, Layer 3 viewer template override.
 
