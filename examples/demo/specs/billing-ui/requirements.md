@@ -19,7 +19,7 @@ single highest-friction moment in the lifecycle.
 The system, when a signed-in account owner visits `/settings/billing`:
 
 - [x] WHEN the page loads
-- [ ] THE SYSTEM SHALL display the current plan name, monthly price, and renewal date
+- [x] THE SYSTEM SHALL display the current plan name, monthly price, and renewal date
 - [ ] AND display usage against any metered limits (seats, API calls)
 - [ ] AND offer a "Change plan" button that opens the plan-picker drawer
 - [ ] AND offer a "Manage payment method" link to Stripe's customer portal
