@@ -207,6 +207,11 @@ button.zg-detail-edit-btn:focus-visible {
 .zg-tab-nav {
   display: flex;
   gap: 0;
+  /* Inset padding around the buttons so the active tab doesn't sit flush
+     against the .zg-tabs container's top border. Previous attempts only
+     touched margin on .zg-tabs (which moved the whole strip down but
+     didn't open space ABOVE the buttons within the strip). */
+  padding: 0.5rem 0.5rem 0;
   border-bottom: 1px solid var(--pico-muted-border-color, #ddd);
   background: var(--pico-card-background-color, #f5f5f5);
   flex-wrap: wrap;

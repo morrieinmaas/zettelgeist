@@ -40,6 +40,31 @@
   flex: 1;
 }
 
+button.zg-column-add {
+  flex: 0 0 auto;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  margin: 0;
+  border: 1px dashed var(--zg-btn-border, #d0d7de);
+  border-radius: 0.25rem;
+  background: transparent;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--zg-btn-fg, #57606a);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+button.zg-column-add:hover,
+button.zg-column-add:focus-visible {
+  border-color: var(--zg-btn-fg-hover, #1095c1);
+  color: var(--zg-btn-fg-hover, #1095c1);
+  border-style: solid;
+}
+
 .zg-column-count {
   font-size: 0.75rem;
   background: var(--pico-muted-color, #999);

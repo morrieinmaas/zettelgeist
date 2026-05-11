@@ -75,14 +75,22 @@ export async function renderDocs(params: Record<string, string>): Promise<void> 
       e.preventDefault();
       e.stopPropagation();
       const next = window.prompt(`Rename "${entry.path}" to:`, entry.path);
-      if (!next || next.trim() === '' || next === entry.path) return;
+      if (next === null) return;  // cancelled
+      const trimmed = next.trim();
+      if (trimmed === '' || trimmed === entry.path) return;
       try {
-        const result = await backend.renameDoc(entry.path, next.trim());
-        // Jump to the new path so the user lands on what they just renamed.
-        window.location.hash = `#/docs/${encodeURIComponent(result.newPath)}`;
+        const result = await backend.renameDoc(entry.path, trimmed);
+        // If the user was viewing the doc they just renamed, follow the
+        // file. Otherwise stay where we are and just refresh the sidebar.
+        const wasViewing = entry.path === selectedPath;
+        if (wasViewing) {
+          window.location.hash = `#/docs/${encodeURIComponent(result.newPath)}`;
+        }
+        // Always force a refresh: hashchange is suppressed for same-hash
+        // assignments, so explicitly dispatch.
         window.dispatchEvent(new HashChangeEvent('hashchange'));
       } catch (err) {
-        alert((err as Error).message);
+        alert(`Rename failed: ${(err as Error).message}`);
       }
     });
     li.appendChild(renameBtn);

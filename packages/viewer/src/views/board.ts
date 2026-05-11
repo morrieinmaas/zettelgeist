@@ -62,8 +62,21 @@ export async function renderBoard(): Promise<void> {
     const count = document.createElement('span');
     count.className = 'zg-column-count';
     count.textContent = String(byStatus[status].length);
+
+    // Per-column "+" — creates a new spec already at this column's status,
+    // pre-filled with a template. Prompt is browser-native for v0.1; a
+    // proper modal can replace it later.
+    const addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.className = 'zg-column-add';
+    addBtn.title = `New spec in ${COLUMN_LABELS[status]}`;
+    addBtn.setAttribute('aria-label', `New spec in ${COLUMN_LABELS[status]}`);
+    addBtn.textContent = '+';
+    addBtn.addEventListener('click', () => void createSpecInColumn(status, specs));
+
     header.appendChild(title);
     header.appendChild(count);
+    header.appendChild(addBtn);
 
     const cards = document.createElement('div');
     cards.className = 'zg-column-cards';
@@ -78,6 +91,60 @@ export async function renderBoard(): Promise<void> {
   }
 
   app.appendChild(board);
+}
+
+// Status-aware templates for new-spec creation. The frontmatter pins the
+// spec to the source column (relies on deriveStatus honoring frontmatter
+// `status:` for all 7 values — shipped earlier).
+function templateFor(name: string, status: Status, blockedBy?: string): { requirements: string; tasks: string } {
+  const fmLines: string[] = ['---'];
+  // Pin to the chosen column unless it's one of the derived-friendly statuses
+  // (planned/in-progress emerge naturally from task state); even for those we
+  // pin explicitly so the new spec appears in the right column immediately.
+  fmLines.push(`status: ${status}`);
+  if (status === 'blocked' && blockedBy) fmLines.push(`blocked_by: ${JSON.stringify(blockedBy)}`);
+  fmLines.push('depends_on: []');
+  fmLines.push('---');
+  const requirements =
+    `${fmLines.join('\n')}\n# ${name}\n\n## Why\n\n<!-- Why does this spec exist? -->\n\n` +
+    `## Acceptance criteria\n\n- [ ] WHEN <trigger>\n- [ ] THE SYSTEM SHALL <observable behavior>\n\n` +
+    `## Out of scope\n\n- \n\n## References\n\n- \n`;
+  const tasks = `- [ ] 1. \n`;
+  return { requirements, tasks };
+}
+
+async function createSpecInColumn(status: Status, existing: SpecSummary[]): Promise<void> {
+  const raw = window.prompt(
+    `New spec in "${status}". Name (lowercase + dashes, e.g. "user-auth"):`,
+    '',
+  );
+  if (!raw) return;
+  const name = raw.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+  if (!name) { alert('Invalid spec name.'); return; }
+  if (existing.some((s) => s.name === name)) {
+    alert(`A spec named "${name}" already exists.`);
+    return;
+  }
+
+  let blockedBy: string | undefined;
+  if (status === 'blocked') {
+    const reason = window.prompt('Why is this blocked? (required)', '');
+    if (!reason) return;
+    blockedBy = reason;
+  }
+
+  const { requirements, tasks } = templateFor(name, status, blockedBy);
+  try {
+    const backend = window.zettelgeistBackend;
+    // Two writes, two commits — each is small and round-trips through the
+    // same regen-and-commit path the rest of the editor uses.
+    await backend.writeSpecFile(name, 'requirements.md', requirements);
+    await backend.writeSpecFile(name, 'tasks.md', tasks);
+    // Jump to the new spec's detail view so the user can start editing.
+    window.location.hash = `#/spec/${encodeURIComponent(name)}`;
+  } catch (err) {
+    alert((err as Error).message);
+  }
 }
 
 function renderEmptyState(): HTMLElement {
