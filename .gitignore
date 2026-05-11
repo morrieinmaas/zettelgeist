@@ -3,7 +3,10 @@ dist/
 *.tsbuildinfo
 .DS_Store
 .claim
+!examples/**/.claim
 .zettelgeist/regen-cache.json
 .zettelgeist/exports/
+**/.zettelgeist/regen-cache.json
+**/.zettelgeist/exports/
 test-results/
 playwright-report/
