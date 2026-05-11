@@ -7,7 +7,7 @@ Items deferred from Plan 1 + Plan 2 + Sprint reviews. Not commitments — a trac
 - **PR / branch / worktree linkage** *(shipped 2026-05)* — `pr`, `branch`, `worktree` frontmatter fields. Surfaced as badges on board cards, editable via the per-card edit modal. No spec doc — just frontmatter.
 - **Wiki-style links** *(shipped 2026-05)* — inline `[[name]]` references in any markdown body, navigable in the viewer. Resolves against specs first, then docs by basename; missing targets render in a different style. ([specs/wiki-links/](../specs/wiki-links/))
 - **Frontmatter status honored for all 7 values** *(shipped 2026-05)* — `deriveStatus` previously only honored `blocked` / `cancelled`, silently ignoring the other 5 overrides; now any of the 7 wins over derivation. Board drag-to-column writes the override and the card stays put.
-- **Saved views** — config-defined live queries over the spec set: "blockers I own", "stale > 30d", "everything in `payments`". Rendered as additional sections in `INDEX.md` and as filter chips in the viewer. ([specs/saved-views/](../specs/saved-views/))
+- ~~Saved views~~ *(cancelled — see [specs/saved-views/requirements.md](../specs/saved-views/requirements.md))* — Persisted filter expressions don't add value in a workflow where every user has an MCP-capable agent that can query specs directly. `part_of` already exists for declaring group membership.
 - **Events catalogue** (webhooks + MCP event stream) — frozen payload shapes, fixture coverage. ([specs/events-catalogue/](../specs/events-catalogue/))
 - `auto_merge: true` triggering automated merge behavior.
 - Suggestion-branch contribution flow (per-user draft branches for non-coders).

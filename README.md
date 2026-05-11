@@ -409,7 +409,7 @@ Contributing guidelines and the workflow checklist live in [CONTRIBUTING.md](CON
 - **Format**: stable for v0.1. Future minor versions add fields, error codes, and rules in a backwards-compatible way.
 - **Reference implementation**: passes all 11 conformance fixtures + 254 unit/integration tests. CI green on every commit to `main`.
 - **Distribution**: `npm publish`-ready for `@zettelgeist/cli`, `@zettelgeist/mcp-server`, `@zettelgeist/core`. Not yet pushed to a registry — install from source for now.
-- **v0.2 backlog**: see [docs/v02-backlog.md](docs/v02-backlog.md). Highlights: wiki-style `[[spec-name]]` links, config-driven saved views, frozen events catalogue, VSCode extension, Layer 3 viewer template override.
+- **v0.2 backlog**: see [docs/v02-backlog.md](docs/v02-backlog.md). Most v0.2 items have shipped (wiki-links, VSCode extension, editable everything, per-card delete, deriveStatus-for-all-7-values). Remaining: events catalogue, `auto_merge` flag, `.claim`-flips-status, an expanded conformance fixture set.
 
 ---
 

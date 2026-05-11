@@ -1,14 +1,45 @@
 ---
 depends_on: []
 part_of: v0.2
+status: cancelled
+blocked_by: >-
+  Cancelled in favor of the agent-first thesis. The premise of saved views
+  was that users want to maintain a library of named filters over the spec
+  set. In a workflow where every user has an LLM agent in hand and MCP
+  exposes `prepare_synthesis_context`, "show me blocked specs in payments"
+  is one prompt — there's no value in persisting that as a configuration
+  artifact. `part_of` already exists for declaring "this group of specs is
+  meaningful," and git history is queryable by the agent directly.
+  Keeping this doc as a record of the decision; not scheduled for any
+  release.
 ---
-# Saved views
+# Saved views (CANCELLED)
 
-## Why
+## Why this got dropped
 
-`INDEX.md` shows every spec in one table. Real teams want focused views: "blockers I own", "stale specs > 30 days old", "everything in the `payments` epic", "recently merged". Today they'd build these by hand or via MCP `prepare_synthesis_context`.
+`INDEX.md` shows every spec in one table. The original idea was: real
+teams want focused views ("blockers I own", "stale > 30 days",
+"everything in the `payments` epic"), so let `.zettelgeist.yaml` declare
+named filters that the tools render into `INDEX.md` sections + viewer
+chips.
 
-Rowboat-style live queries demonstrate the value: an auto-updated saved view is a continuous knowledge surface, not a one-shot report. For Zettelgeist, saved views are configurable filters over the spec set, defined in `.zettelgeist.yaml` and rendered by the same tools that produce `INDEX.md` and the viewer.
+After shipping the rest of v0.2, the design pressure shifted: this
+project's thesis is agents and humans as equals, with MCP giving agents
+a tool surface that's strictly more powerful than any pre-canned filter
+UI. The agent already has `list_specs`, `read_spec`, `prepare_synthesis_context`.
+A user with an agent in hand asks "show me blocked specs in payments"
+and gets the answer — no configuration to maintain, no schema to extend,
+no UI surface to design. The remaining audience for saved views would
+be users without an agent, but that's not the user we're optimizing for.
+
+`part_of` already exists for the legitimate underlying need (declaring
+"this group of specs belongs together"). Saved views would have been
+*persisted filter expressions* on top — which is pure UI sugar, not a
+new abstraction.
+
+Keeping this directory as a record of the decision. If the call ever
+gets reversed, the original requirements + tasks are below for
+reference.
 
 ## Acceptance criteria
 

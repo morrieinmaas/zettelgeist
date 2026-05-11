@@ -24,7 +24,7 @@
     },
     {
       // Dogfood variant: opens this repo as the workspace, so the extension
-      // operates on Zettelgeist's own specs/ (wiki-links, saved-views, etc.)
+      // operates on Zettelgeist's own specs/ (wiki-links, events-catalogue, etc.)
       // rather than the bundled demo.
       "name": "Zettelgeist: Extension Development Host (this repo)",
       "type": "extensionHost",
