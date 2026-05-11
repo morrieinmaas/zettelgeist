@@ -6,7 +6,7 @@
 |------|--------|----------|------------|
 | events-catalogue | planned | 0/7 | — |
 | mcp-sdk-migration | planned | 0/6 | — |
-| per-command-help | planned | 0/5 | — |
+| per-command-help | in-review | 5/5 | — |
 | publish-to-npm | planned | 0/7 | — |
 | viewer-empty-state | planned | 0/5 | — |
 | vscode-extension | planned | 0/7 | — |

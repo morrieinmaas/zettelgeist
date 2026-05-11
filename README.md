@@ -20,6 +20,21 @@ Zettelgeist makes the **repo own the state** (markdown files, git-diffable, agen
 
 ---
 
+## Try the demo
+
+```bash
+git clone https://github.com/morrieinmaas/zettelgeist.git
+cd zettelgeist
+just demo
+```
+
+Opens the viewer at <http://127.0.0.1:7681> with a fully populated [example
+repo](examples/demo/README.md) — 10 specs across all status columns, a
+dependency graph, lenses, inline tags, handoff notes, the works. No `just`?
+Use `pnpm demo`.
+
+---
+
 ## Quick start
 
 Pick the path that matches your role.
