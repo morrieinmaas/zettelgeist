@@ -77,7 +77,7 @@ function renderTaskItem(specName: string, task: Task): HTMLLIElement {
   delBtn.className = 'zg-task-delete';
   delBtn.title = 'Delete task';
   delBtn.setAttribute('aria-label', `Delete task ${task.index}`);
-  delBtn.textContent = '×';
+  delBtn.textContent = '🗑';
   delBtn.addEventListener('click', () => deleteTask(specName, task.index));
 
   actions.appendChild(editBtn);

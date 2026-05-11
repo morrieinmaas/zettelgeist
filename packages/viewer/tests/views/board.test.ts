@@ -24,6 +24,7 @@ function mockBackend(): ZettelgeistBackend {
     setStatus: async () => ({ commit: 'abc' }),
     patchFrontmatter: async () => ({ commit: 'abc' }),
     writeHandoff: async () => ({ commit: 'abc' }),
+    deleteSpec: async () => ({ commit: 'abc' }),
     regenerateIndex: async () => ({ commit: null }),
     claimSpec: async () => ({ acknowledged: true }),
     releaseSpec: async () => ({ acknowledged: true }),
@@ -204,6 +205,25 @@ describe('renderBoard', () => {
     expect(editBtn).not.toBeNull();
     editBtn.click();
     expect(window.location.hash).toBe(initialHash);
+  });
+
+  it('clicking the card trash button confirms then calls deleteSpec', async () => {
+    let deleted: string | null = null;
+    const backend = mockBackend();
+    backend.deleteSpec = async (name) => { deleted = name; return { commit: 'abc' }; };
+    (window as Window & { zettelgeistBackend?: ZettelgeistBackend }).zettelgeistBackend = backend;
+    await renderBoard();
+
+    const delBtn = document.querySelector<HTMLButtonElement>('[data-spec="user-auth"] .zg-card-delete')!;
+    expect(delBtn).not.toBeNull();
+    delBtn.click();
+    await new Promise((r) => setTimeout(r, 10));
+    const confirmBtn = document.querySelector<HTMLButtonElement>('.zg-modal-overlay .zg-modal-confirm');
+    expect(confirmBtn).not.toBeNull();
+    confirmBtn!.click();
+    await new Promise((r) => setTimeout(r, 10));
+
+    expect(deleted).toBe('user-auth');
   });
 
   it('escapes error messages in the error UI', async () => {

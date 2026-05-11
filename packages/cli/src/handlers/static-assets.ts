@@ -25,6 +25,7 @@ const REST_BACKEND_SHIM = `
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
+  const del = (url) => json(url, { method: 'DELETE' });
   const enc = encodeURIComponent;
   window.zettelgeistBackend = {
     listSpecs: () => json('/api/specs'),
@@ -41,6 +42,7 @@ const REST_BACKEND_SHIM = `
     setStatus: (name, status, reason) => post(\`/api/specs/\${enc(name)}/status\`, { status, reason }),
     patchFrontmatter: (name, fmPatch) => patch(\`/api/specs/\${enc(name)}/frontmatter\`, { patch: fmPatch }),
     writeHandoff: (name, content) => put(\`/api/specs/\${enc(name)}/handoff\`, { content }),
+    deleteSpec: (name) => del(\`/api/specs/\${enc(name)}\`),
     regenerateIndex: () => post('/api/regenerate'),
     claimSpec: (name, agentId) => post(\`/api/specs/\${enc(name)}/claim\`, { agent_id: agentId }),
     releaseSpec: (name) => post(\`/api/specs/\${enc(name)}/release\`),

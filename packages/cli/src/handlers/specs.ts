@@ -72,6 +72,11 @@ async function dispatchSpecsRoute(
     return readSpecDetail(res, ctx, name);
   }
 
+  // DELETE /api/specs/<name>  → remove the whole spec folder + commit
+  if (rest === '' && req.method === 'DELETE') {
+    return deleteSpec(res, ctx, name);
+  }
+
   // /api/specs/<name>/files/<path...>
   const filesMatch = rest.match(/^\/files\/(.+)$/);
   if (filesMatch) {
@@ -146,6 +151,21 @@ const VALID_STATUSES = new Set([
 ]);
 function statusOrNull(v: unknown): string | null {
   return typeof v === 'string' && VALID_STATUSES.has(v) ? v : null;
+}
+
+async function deleteSpec(res: ServerResponse, ctx: SpecsRouteContext, name: string): Promise<void> {
+  const specDir = safeJoin(path.resolve(ctx.cwd, ctx.specsDir), name);
+  const exists = await fs.stat(specDir).then(() => true).catch(() => false);
+  if (!exists) { sendJson(res, 404, { error: 'spec not found' }); return; }
+  try {
+    await fs.rm(specDir, { recursive: true, force: true });
+  } catch (err) {
+    sendJson(res, 500, { error: (err as Error).message });
+    return;
+  }
+  const specRel = path.relative(ctx.cwd, specDir).split(path.sep).join('/');
+  const commit = await regenAndCommit(ctx, [specRel], `[zg] delete-spec: ${name}`);
+  sendJson(res, 200, { commit });
 }
 
 async function readSpecDetail(res: ServerResponse, ctx: SpecsRouteContext, name: string): Promise<void> {

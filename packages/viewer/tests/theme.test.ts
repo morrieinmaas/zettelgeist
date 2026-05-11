@@ -17,6 +17,7 @@ function mockBackend(): ZettelgeistBackend {
     setStatus: async () => ({ commit: 'abc' }),
     patchFrontmatter: async () => ({ commit: 'abc' }),
     writeHandoff: async () => ({ commit: 'abc' }),
+    deleteSpec: async () => ({ commit: 'abc' }),
     regenerateIndex: async () => ({ commit: null }),
     claimSpec: async () => ({ acknowledged: true }),
     releaseSpec: async () => ({ acknowledged: true }),

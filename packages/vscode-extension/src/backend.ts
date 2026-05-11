@@ -95,6 +95,7 @@ export function makeBackend(workspaceRoot: string) {
         case 'setStatus':       return setStatus(req.args[0] as string, req.args[1] as Status | null, req.args[2] as string | undefined);
         case 'patchFrontmatter':return patchFrontmatter(req.args[0] as string, req.args[1] as Record<string, unknown>);
         case 'writeHandoff':    return writeHandoff(req.args[0] as string, req.args[1] as string);
+        case 'deleteSpec':      return deleteSpec(req.args[0] as string);
         case 'regenerateIndex': return regenerateIndex();
         case 'claimSpec':       return claimSpec(req.args[0] as string, req.args[1] as string | undefined);
         case 'releaseSpec':     return releaseSpec(req.args[0] as string);
@@ -323,6 +324,17 @@ export function makeBackend(workspaceRoot: string) {
     await fs.writeFile(tmp, content, 'utf8');
     await fs.rename(tmp, reqAbs);
     const commit = await regenAndCommit([reqRel], `[zg] patch-frontmatter: ${name}`);
+    return { commit };
+  }
+
+  async function deleteSpec(name: string) {
+    const { cwd, specsDir } = await getCtx();
+    const specDir = safeJoin(path.resolve(cwd, specsDir), name);
+    const exists = await fs.stat(specDir).then(() => true).catch(() => false);
+    if (!exists) throw new Error(`spec not found: ${name}`);
+    await fs.rm(specDir, { recursive: true, force: true });
+    const specRel = path.relative(cwd, specDir).split(path.sep).join('/');
+    const commit = await regenAndCommit([specRel], `[zg] delete-spec: ${name}`);
     return { commit };
   }
 

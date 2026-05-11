@@ -226,6 +226,7 @@ const BACKEND_SHIM = `
     setStatus:           (name, s, r)        => call('setStatus', [name, s, r]),
     patchFrontmatter:    (name, p)           => call('patchFrontmatter', [name, p]),
     writeHandoff:        (name, c)           => call('writeHandoff', [name, c]),
+    deleteSpec:          (name)              => call('deleteSpec', [name]),
     regenerateIndex:     ()                  => call('regenerateIndex', []),
     claimSpec:           (name, a)           => call('claimSpec', [name, a]),
     releaseSpec:         (name)              => call('releaseSpec', [name]),

@@ -27,8 +27,35 @@ export function renderCard(spec: SpecSummary): HTMLElement {
     if (saved) window.dispatchEvent(new HashChangeEvent('hashchange'));
   });
 
+  const delBtn = document.createElement('button');
+  delBtn.type = 'button';
+  delBtn.className = 'zg-card-delete';
+  delBtn.title = 'Delete spec';
+  delBtn.setAttribute('aria-label', `Delete ${spec.name}`);
+  delBtn.textContent = '🗑';
+  delBtn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const { showConfirmModal, showAlert } = await import('./prompt-modal.js');
+    const ok = await showConfirmModal({
+      title: `Delete "${spec.name}"?`,
+      message:
+        'This removes the entire spec folder from disk and commits the deletion. ' +
+        'You can still recover it from git history, but no in-app undo.',
+      confirmLabel: 'Delete spec',
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      await window.zettelgeistBackend.deleteSpec(spec.name);
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+    } catch (err) {
+      void showAlert('Delete failed', (err as Error).message);
+    }
+  });
+
   header.appendChild(name);
   header.appendChild(editBtn);
+  header.appendChild(delBtn);
 
   const meta = document.createElement('div');
   meta.className = 'zg-card-meta';

@@ -79,6 +79,8 @@ export interface ZettelgeistBackend {
     patch: Record<string, unknown>,
   ): Promise<{ commit: string }>;
   writeHandoff(name: string, content: string): Promise<{ commit: string }>;
+  /** Permanently delete a spec (its whole directory + INDEX.md regen). */
+  deleteSpec(name: string): Promise<{ commit: string }>;
   regenerateIndex(): Promise<{ commit: string | null }>;
 
   // claim (no commit; .claim file is gitignored)
