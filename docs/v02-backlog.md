@@ -41,5 +41,6 @@ Items deferred from Plan 1 + Plan 2 + Sprint reviews. Not commitments — a trac
 - Unify `installPreCommitHook` between CLI and MCP-server (currently duplicated).
 - Reconcile `agent_id` (MCP) vs `agentId` (REST) field naming.
 - Add accessibility tests + ARIA attributes to the viewer.
+- **Conformance suite expansion** *(shipped 2026-05)* — fixtures 12–42 cover edge cases for names, frontmatter, task syntax, status derivation, graph, config, encoding, and integration. Brings the contract from 11 to 42 byte-exact pinned scenarios.
 - Add a Rust port of `@zettelgeist/core` (conformance fixtures are the contract).
 - Bundle CRDT-based concurrent editing (much later).
