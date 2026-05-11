@@ -1,0 +1,8 @@
+{
+  "specs": {
+    "api": "draft",
+    "core": "draft",
+    "db": "blocked",
+    "ui": "draft"
+  }
+}

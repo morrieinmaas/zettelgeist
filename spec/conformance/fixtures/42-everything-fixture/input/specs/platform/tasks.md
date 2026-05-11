@@ -1,0 +1,4 @@
+- [x] Wire repository layer
+- [ ] Write integration tests #agent-only
+- [ ] Manual smoke test against staging #human-only
+- [ ] Stretch: profile slow query #skip

@@ -1,0 +1,14 @@
+{
+  "nodes": [
+    { "name": "foundation", "partOf": "phase-one" },
+    { "name": "launch", "partOf": null },
+    { "name": "phase-one", "partOf": null },
+    { "name": "platform", "partOf": "phase-one" },
+    { "name": "research", "partOf": null }
+  ],
+  "edges": [
+    { "from": "launch", "to": "platform" },
+    { "from": "platform", "to": "foundation" }
+  ],
+  "cycles": []
+}

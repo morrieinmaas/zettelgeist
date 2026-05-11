@@ -1,0 +1,4 @@
+- [x] 1. Design schema
+- [x] 2. Write migration
+- [x] 3. Apply locally
+- [ ] 4. Roll out to staging #skip

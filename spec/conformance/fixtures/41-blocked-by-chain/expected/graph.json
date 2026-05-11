@@ -1,0 +1,14 @@
+{
+  "nodes": [
+    { "name": "api", "partOf": null },
+    { "name": "core", "partOf": null },
+    { "name": "db", "partOf": null },
+    { "name": "ui", "partOf": null }
+  ],
+  "edges": [
+    { "from": "api", "to": "core" },
+    { "from": "core", "to": "db" },
+    { "from": "ui", "to": "api" }
+  ],
+  "cycles": []
+}
