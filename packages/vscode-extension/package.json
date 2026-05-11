@@ -24,21 +24,61 @@
     "workspaceContains:**/.zettelgeist.yaml"
   ],
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "zettelgeist",
+          "title": "Zettelgeist",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "zettelgeist": [
+        {
+          "id": "zettelgeistSpecs",
+          "name": "Specs",
+          "icon": "media/icon.svg",
+          "contextualTitle": "Zettelgeist"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "zettelgeist.open",
+          "when": "view == zettelgeistSpecs",
+          "group": "navigation@1"
+        },
+        {
+          "command": "zettelgeist.refreshTree",
+          "when": "view == zettelgeistSpecs",
+          "group": "navigation@2"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "zettelgeist.open",
-        "title": "Zettelgeist: Open Board",
-        "category": "Zettelgeist"
+        "title": "Open Board",
+        "category": "Zettelgeist",
+        "icon": "$(open-preview)"
       },
       {
         "command": "zettelgeist.regen",
-        "title": "Zettelgeist: Regenerate INDEX.md",
+        "title": "Regenerate INDEX.md",
         "category": "Zettelgeist"
       },
       {
         "command": "zettelgeist.installHook",
-        "title": "Zettelgeist: Install Pre-commit Hook",
+        "title": "Install Pre-commit Hook",
         "category": "Zettelgeist"
+      },
+      {
+        "command": "zettelgeist.refreshTree",
+        "title": "Refresh",
+        "category": "Zettelgeist",
+        "icon": "$(refresh)"
       }
     ],
     "configuration": {
