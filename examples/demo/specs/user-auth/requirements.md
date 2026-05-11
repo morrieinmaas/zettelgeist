@@ -14,16 +14,16 @@ Acme's customers need to sign in to access their billing dashboards and account 
 
 The system, when a user signs in:
 
-- WHEN a user submits credentials via the login form
-- THE SYSTEM SHALL authenticate against the configured identity provider (local credentials, SAML 2.0, or OIDC)
-- AND issue a session token compatible with the existing cookie-based session storage
-- AND CSRF-protect all subsequent state-changing requests
+- [ ] WHEN a user submits credentials via the login form
+- [ ] THE SYSTEM SHALL authenticate against the configured identity provider (local credentials, SAML 2.0, or OIDC)
+- [ ] AND issue a session token compatible with the existing cookie-based session storage
+- [ ] AND CSRF-protect all subsequent state-changing requests
 
 The system, when a user signs out:
 
-- WHEN a user clicks "sign out"
-- THE SYSTEM SHALL invalidate the session token server-side
-- AND clear the session cookie client-side
+- [ ] WHEN a user clicks "sign out"
+- [ ] THE SYSTEM SHALL invalidate the session token server-side
+- [ ] AND clear the session cookie client-side
 
 ## Out of scope
 

@@ -17,17 +17,17 @@ three highest-value flows in the first 60 seconds.
 
 The system, when a user signs in for the first time:
 
-- WHEN a freshly-created account's user signs in
-- THE SYSTEM SHALL display a multi-step product tour overlay on the main app shell
-- AND highlight three key surfaces: "Create your first project", "Invite a teammate", "Connect a data source"
-- AND track each step's completion and skip-rate in the product analytics stream
-- AND allow the user to dismiss the tour at any step
+- [ ] WHEN a freshly-created account's user signs in
+- [ ] THE SYSTEM SHALL display a multi-step product tour overlay on the main app shell
+- [ ] AND highlight three key surfaces: "Create your first project", "Invite a teammate", "Connect a data source"
+- [ ] AND track each step's completion and skip-rate in the product analytics stream
+- [ ] AND allow the user to dismiss the tour at any step
 
 The system, on subsequent sign-ins:
 
-- WHEN a user who has previously completed or dismissed the tour signs in
-- THE SYSTEM SHALL NOT show the tour again
-- AND SHALL surface a "Show me around" link in the help menu instead
+- [ ] WHEN a user who has previously completed or dismissed the tour signs in
+- [ ] THE SYSTEM SHALL NOT show the tour again
+- [ ] AND SHALL surface a "Show me around" link in the help menu instead
 
 ## Out of scope
 

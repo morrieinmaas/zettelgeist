@@ -1,6 +1,12 @@
 node_modules/
 dist/
 *.tsbuildinfo
+# Defensive: stop tsc emit-in-place leaks if someone runs `tsc` from a package
+# root without `outDir`. Source files are .ts only — anything next to them in
+# .js / .d.ts / .js.map is build output that doesn't belong in git.
+packages/*/src/**/*.js
+packages/*/src/**/*.d.ts
+packages/*/src/**/*.js.map
 .DS_Store
 .claim
 !examples/**/.claim

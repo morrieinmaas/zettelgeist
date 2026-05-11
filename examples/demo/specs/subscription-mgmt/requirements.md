@@ -16,17 +16,17 @@ direct Stripe access (PCI scope reduction).
 
 The system, for any authenticated support engineer:
 
-- WHEN a support engineer issues `POST /admin/subscriptions/:id/cancel`
-- THE SYSTEM SHALL cancel the subscription in Stripe via the SDK
-- AND set the local subscription state to `cancelled`
-- AND emit an audit log entry tagging the actor and the reason
-- AND keep entitlements active until the current period end
+- [ ] WHEN a support engineer issues `POST /admin/subscriptions/:id/cancel`
+- [ ] THE SYSTEM SHALL cancel the subscription in Stripe via the SDK
+- [ ] AND set the local subscription state to `cancelled`
+- [ ] AND emit an audit log entry tagging the actor and the reason
+- [ ] AND keep entitlements active until the current period end
 
 The system, on plan upgrades:
 
-- WHEN a user upgrades their plan mid-cycle
-- THE SYSTEM SHALL prorate the difference using Stripe's default proration logic
-- AND grant the new plan's entitlements immediately
+- [ ] WHEN a user upgrades their plan mid-cycle
+- [ ] THE SYSTEM SHALL prorate the difference using Stripe's default proration logic
+- [ ] AND grant the new plan's entitlements immediately
 
 ## Out of scope
 

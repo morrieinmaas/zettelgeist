@@ -17,17 +17,17 @@ flagged this as the most common request in self-serve onboarding feedback.
 
 The system, when a user starts an OAuth sign-in:
 
-- WHEN a user clicks "Continue with $PROVIDER" on the sign-in or sign-up page
-- THE SYSTEM SHALL redirect to the provider's OAuth authorize endpoint
-- AND include the configured scopes (`email`, `profile`)
-- AND validate the returned ID token's signature and issuer
-- AND create or link a local user record keyed by the verified email
+- [ ] WHEN a user clicks "Continue with $PROVIDER" on the sign-in or sign-up page
+- [ ] THE SYSTEM SHALL redirect to the provider's OAuth authorize endpoint
+- [ ] AND include the configured scopes (`email`, `profile`)
+- [ ] AND validate the returned ID token's signature and issuer
+- [ ] AND create or link a local user record keyed by the verified email
 
 The system, on first sign-in via OAuth:
 
-- WHEN the verified email matches an existing local account
-- THE SYSTEM SHALL link the OAuth identity to the existing account
-- AND require the user to enter their existing password once to confirm the link
+- [ ] WHEN the verified email matches an existing local account
+- [ ] THE SYSTEM SHALL link the OAuth identity to the existing account
+- [ ] AND require the user to enter their existing password once to confirm the link
 
 ## Out of scope
 

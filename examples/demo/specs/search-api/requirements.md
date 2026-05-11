@@ -15,17 +15,17 @@ search endpoint plus a header search field would close the gap.
 
 The system, for any authenticated user:
 
-- WHEN a user issues `GET /api/search?q=<term>`
-- THE SYSTEM SHALL return matching records (projects, tasks, comments) from
+- [ ] WHEN a user issues `GET /api/search?q=<term>`
+- [ ] THE SYSTEM SHALL return matching records (projects, tasks, comments) from
   every project the user has read access to
-- AND rank results by recency * relevance with a documented scoring formula
-- AND paginate at 50 results per page with cursor-based pagination
-- AND respond within 300ms p95 for typical queries
+- [ ] AND rank results by recency * relevance with a documented scoring formula
+- [ ] AND paginate at 50 results per page with cursor-based pagination
+- [ ] AND respond within 300ms p95 for typical queries
 
 The system, for access control:
 
-- WHEN building the result set
-- THE SYSTEM SHALL exclude records the user does not have read access to,
+- [ ] WHEN building the result set
+- [ ] THE SYSTEM SHALL exclude records the user does not have read access to,
   enforced at the storage layer (not just filtered after-the-fact)
 
 ## Out of scope

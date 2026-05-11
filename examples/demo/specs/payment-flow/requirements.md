@@ -17,18 +17,18 @@ access. The self-serve growth motion needs in-app checkout.
 
 The system, when a signed-in user starts a checkout:
 
-- WHEN a user on the pricing page clicks "Buy" on a paid plan
-- THE SYSTEM SHALL create a Stripe Checkout Session with the matching price ID
-- AND redirect to the Stripe-hosted checkout URL
-- AND associate the resulting subscription with the user's account on success
-- AND grant the plan's entitlements within 5 seconds of the webhook arriving
+- [ ] WHEN a user on the pricing page clicks "Buy" on a paid plan
+- [ ] THE SYSTEM SHALL create a Stripe Checkout Session with the matching price ID
+- [ ] AND redirect to the Stripe-hosted checkout URL
+- [ ] AND associate the resulting subscription with the user's account on success
+- [ ] AND grant the plan's entitlements within 5 seconds of the webhook arriving
 
 The system, on payment failure:
 
-- WHEN Stripe returns a `payment_failed` webhook
-- THE SYSTEM SHALL set the subscription state to `past_due`
-- AND email the account owner with a retry link
-- AND continue to allow read-only access for a 7-day grace period
+- [ ] WHEN Stripe returns a `payment_failed` webhook
+- [ ] THE SYSTEM SHALL set the subscription state to `past_due`
+- [ ] AND email the account owner with a retry link
+- [ ] AND continue to allow read-only access for a 7-day grace period
 
 ## Out of scope
 

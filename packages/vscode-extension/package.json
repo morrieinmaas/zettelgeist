@@ -1,0 +1,76 @@
+{
+  "name": "@zettelgeist/vscode-extension",
+  "displayName": "Zettelgeist",
+  "description": "Spec-driven project management for VSCode. Opens the Zettelgeist viewer in a panel; every action is a markdown edit + commit.",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "publisher": "morrieinmaas",
+  "private": true,
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "zettelgeist",
+    "specs",
+    "kanban",
+    "agent",
+    "markdown"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "workspaceContains:**/.zettelgeist.yaml"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "zettelgeist.open",
+        "title": "Zettelgeist: Open Board",
+        "category": "Zettelgeist"
+      },
+      {
+        "command": "zettelgeist.regen",
+        "title": "Zettelgeist: Regenerate INDEX.md",
+        "category": "Zettelgeist"
+      },
+      {
+        "command": "zettelgeist.installHook",
+        "title": "Zettelgeist: Install Pre-commit Hook",
+        "category": "Zettelgeist"
+      }
+    ],
+    "configuration": {
+      "title": "Zettelgeist",
+      "properties": {
+        "zettelgeist.theme": {
+          "type": "string",
+          "default": "auto",
+          "enum": ["auto", "light", "dark"],
+          "description": "Viewer theme. `auto` follows the VSCode color theme."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "package": "vsce package --no-dependencies"
+  },
+  "dependencies": {
+    "@zettelgeist/core": "workspace:*",
+    "@zettelgeist/fs-adapters": "workspace:*",
+    "@zettelgeist/git-hook": "workspace:*",
+    "gray-matter": "^4.0.3",
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.24.0",
+    "vitest": "^2.1.0"
+  }
+}

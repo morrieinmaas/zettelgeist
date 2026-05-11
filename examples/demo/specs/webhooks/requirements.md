@@ -22,17 +22,17 @@ adjacent revenue impact is real.
 
 The system, when a registered event occurs:
 
-- WHEN any event in the configured event taxonomy fires
-- THE SYSTEM SHALL POST a signed JSON payload to each subscribed endpoint
-- AND retry with exponential backoff for 24 hours on non-2xx responses
-- AND record every attempt (success or failure) in a per-account delivery log
+- [ ] WHEN any event in the configured event taxonomy fires
+- [ ] THE SYSTEM SHALL POST a signed JSON payload to each subscribed endpoint
+- [ ] AND retry with exponential backoff for 24 hours on non-2xx responses
+- [ ] AND record every attempt (success or failure) in a per-account delivery log
 
 The system, for endpoint security:
 
-- WHEN an endpoint is registered
-- THE SYSTEM SHALL generate a per-endpoint signing secret
-- AND sign each delivery's body with HMAC-SHA256
-- AND include the signature in the `X-Acme-Signature` header
+- [ ] WHEN an endpoint is registered
+- [ ] THE SYSTEM SHALL generate a per-endpoint signing secret
+- [ ] AND sign each delivery's body with HMAC-SHA256
+- [ ] AND include the signature in the `X-Acme-Signature` header
 
 ## Out of scope
 

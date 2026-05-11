@@ -45,10 +45,15 @@ export class Router {
   }
 
   start(): void {
-    window.addEventListener('hashchange', () => { this.navigate(); });
-    window.addEventListener('DOMContentLoaded', () => { this.navigate(); });
-    if (document.readyState !== 'loading') {
-      this.navigate();
+    window.addEventListener('hashchange', () => { void this.navigate(); });
+    // Trigger the initial render exactly once. The previous version
+    // registered DOMContentLoaded AND fired navigate() inline when the
+    // document was already loaded → two renders, hence the duplicated
+    // wrapper on the graph view.
+    if (document.readyState === 'loading') {
+      window.addEventListener('DOMContentLoaded', () => { void this.navigate(); }, { once: true });
+    } else {
+      void this.navigate();
     }
   }
 }
