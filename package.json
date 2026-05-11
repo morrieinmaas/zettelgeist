@@ -16,7 +16,9 @@
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
-    "conformance": "pnpm --filter @zettelgeist/conformance-harness test"
+    "conformance": "pnpm --filter @zettelgeist/conformance-harness test",
+    "demo": "just demo",
+    "demo:reset": "just demo-reset"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
