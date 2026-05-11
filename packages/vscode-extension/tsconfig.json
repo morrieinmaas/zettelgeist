@@ -1,14 +1,19 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "rootDir": "src",
     "outDir": "dist",
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "target": "ES2022",
     "lib": ["ES2022", "DOM"],
     "types": ["node", "vscode"],
-    "noEmit": true
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@zettelgeist/core": ["../core/src/index.ts"],
+      "@zettelgeist/fs-adapters": ["../fs-adapters/src/index.ts"],
+      "@zettelgeist/git-hook": ["../git-hook/src/index.ts"]
+    }
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "tests/**/*"]
 }
