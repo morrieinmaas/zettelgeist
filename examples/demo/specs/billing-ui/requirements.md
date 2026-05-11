@@ -1,7 +1,7 @@
 ---
 depends_on: []
 part_of: payments
-status: planned
+status: draft
 ---
 # Billing UI
 
