@@ -54,6 +54,6 @@ jobs:
       - run: pnpm --filter @zettelgeist/viewer build
       - run: pnpm --filter @zettelgeist/cli build
       - name: Install Playwright
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm --filter @zettelgeist/cli exec playwright install --with-deps chromium
       - name: Run viewer e2e
         run: pnpm --filter @zettelgeist/cli test:e2e
