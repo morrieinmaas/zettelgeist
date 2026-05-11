@@ -8,6 +8,9 @@
 
 Zettelgeist is a portable file format plus a small reference toolchain for tracking work the way you already track code — as plain files, in git, diffable and grep-able. A Kanban board, a dependency graph, claimable tickets, agent handoff notes, and an HTML viewer ship in the box. Every "click" in the UI is a git commit; everything else is markdown.
 
+> **📜 The format is the contract.**
+> [**`spec/zettelgeist-v0.1.md`**](spec/zettelgeist-v0.1.md) defines what makes a directory a Zettelgeist repo — 14 sections, short enough to read in one sitting. The [11 conformance fixtures](spec/conformance/fixtures/) are the executable contract any implementation can validate against. **This repository is one reference implementation**; rewriting the toolchain in Rust, Python, or anything else is a stated goal of v0.2.
+
 ---
 
 ## Table of contents
