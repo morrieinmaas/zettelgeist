@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { promises as fs } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { installSkillCommand } from '../src/commands/install-skill.js';
+import { installSkillCommand, stripFrontmatter } from '../src/commands/install-skill.js';
 
 let cwd: string;
 let homeDir: string;
@@ -120,6 +120,62 @@ describe('installSkillCommand', () => {
       const r = await installSkillCommand({ cwd, scope: 'agents-md', force: false, homeDir });
       expect(r.ok).toBe(false);
       if (!r.ok) expect(r.error.message).toMatch(/malformed/i);
+    });
+
+    it('errors on malformed marker pair (end without begin)', async () => {
+      const dest = path.join(cwd, 'AGENTS.md');
+      await fs.writeFile(dest, 'Body\n<!-- ZETTELGEIST:SKILL-END -->\nleftover\n');
+      const r = await installSkillCommand({ cwd, scope: 'agents-md', force: false, homeDir });
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.error.message).toMatch(/malformed/i);
+    });
+
+    it('--force recovers from a malformed marker pair by stripping orphans and appending', async () => {
+      const dest = path.join(cwd, 'AGENTS.md');
+      await fs.writeFile(
+        dest,
+        '# Project\n\nBody.\n\n<!-- ZETTELGEIST:SKILL-BEGIN — managed by `zettelgeist install-skill` -->\nstale leftover\n',
+      );
+      const r = await installSkillCommand({ cwd, scope: 'agents-md', force: true, homeDir });
+      expect(r.ok).toBe(true);
+      const content = await fs.readFile(dest, 'utf8');
+      // Original prose preserved
+      expect(content).toContain('# Project');
+      expect(content).toContain('Body.');
+      // Orphan marker line removed
+      const beginCount = content.split('ZETTELGEIST:SKILL-BEGIN').length - 1;
+      const endCount = content.split('ZETTELGEIST:SKILL-END').length - 1;
+      expect(beginCount).toBe(1);
+      expect(endCount).toBe(1);
+      // Skill content present
+      expect(content).toContain('Zettelgeist agent workflow');
+    });
+  });
+
+  describe('stripFrontmatter()', () => {
+    it('strips a well-formed YAML frontmatter', () => {
+      const body = stripFrontmatter('---\nname: x\ndescription: y\n---\n# Heading\nBody.\n');
+      expect(body).toBe('# Heading\nBody.\n');
+    });
+
+    it('returns the input unchanged when there is no frontmatter', () => {
+      const input = '# Just a heading\nBody.\n';
+      expect(stripFrontmatter(input)).toBe(input);
+    });
+
+    it('returns the input unchanged when the closing delimiter is missing', () => {
+      const input = '---\nname: x\n\nno closing\n# Heading\n';
+      expect(stripFrontmatter(input)).toBe(input);
+    });
+
+    it('strips leading blank lines after the delimiter', () => {
+      const body = stripFrontmatter('---\nx: 1\n---\n\n\n# Heading\n');
+      expect(body).toBe('# Heading\n');
+    });
+
+    it('handles a frontmatter that is the entire file (no body)', () => {
+      const body = stripFrontmatter('---\nx: 1\n---\n');
+      expect(body).toBe('');
     });
   });
 });

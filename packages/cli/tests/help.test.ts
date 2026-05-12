@@ -9,7 +9,7 @@ const execFileP = promisify(execFile);
 const here = path.dirname(fileURLToPath(import.meta.url));
 const BIN = path.resolve(here, '..', 'dist', 'bin.js');
 
-const COMMANDS = ['regen', 'validate', 'install-hook', 'serve', 'export-doc'];
+const COMMANDS = ['regen', 'validate', 'install-hook', 'install-skill', 'serve', 'export-doc'];
 
 const skip = !existsSync(BIN);
 const describeFn = skip ? describe.skip : describe;
@@ -48,5 +48,20 @@ describeFn('--help per command', () => {
   it('zettelgeist (no args) prints global help and exits 0', async () => {
     const { stdout } = await execFileP('node', [BIN]);
     expect(stdout).toContain('Commands:');
+  });
+
+  it('zettelgeist install-skill --scope nonsense exits 2 with a useful message', async () => {
+    let exitCode = 0;
+    let stderr = '';
+    try {
+      await execFileP('node', [BIN, 'install-skill', '--scope', 'nonsense']);
+    } catch (err: unknown) {
+      const e = err as { code?: number; stderr?: string };
+      exitCode = e.code ?? 1;
+      stderr = e.stderr ?? '';
+    }
+    expect(exitCode).toBe(2);
+    expect(stderr).toContain('--scope');
+    expect(stderr).toContain('nonsense');
   });
 });

@@ -24,8 +24,10 @@ export const HELP = `zettelgeist install-skill [--scope user|project|agents-md] 
 
   Flags:
     --scope SCOPE  Where to install. Defaults to "user".
-    --force        Overwrite (for user/project) or replace the marker
-                   region without prompting (for agents-md).
+    --force        For user/project: overwrite an existing SKILL.md.
+                   For agents-md: recover from a malformed marker pair
+                   (strip the orphan markers and append a clean region).
+                   Normal smart-merges happen without --force.
     --json         Emit a machine-readable JSON envelope.
 
   The skill is a workflow guide: claim → read → mutate → handoff →
@@ -100,9 +102,13 @@ function resolveDest(input: InstallSkillInput): string {
 
 /**
  * Strip the YAML frontmatter (`---\n...\n---\n`) from a SKILL.md so the body
- * can be embedded into AGENTS.md (which is plain markdown).
+ * can be embedded into AGENTS.md (which is plain markdown). If the input does
+ * not start with `---\n` or has no closing delimiter, returns the input
+ * unchanged — callers should pass a well-formed SKILL.md.
+ *
+ * Exported for direct test coverage.
  */
-function stripFrontmatter(skill: string): string {
+export function stripFrontmatter(skill: string): string {
   if (!skill.startsWith('---\n')) return skill;
   const end = skill.indexOf('\n---\n', 4);
   if (end === -1) return skill;
@@ -115,11 +121,17 @@ function renderAgentsRegion(skillBody: string): string {
 
 /**
  * Merge the skill region into an existing AGENTS.md.
- * If both markers are present, replace the region between them.
- * If neither marker is present, append.
- * If only one marker is present, fail — the file is in a weird state.
+ * - If both markers are present, replace the region between them.
+ * - If neither marker is present, append.
+ * - If only one marker is present (or they're in the wrong order), fail
+ *   unless `force` is true, in which case strip the orphan marker and
+ *   append a clean region.
  */
-function mergeAgentsMd(existing: string, skillBody: string): { content: string; merged: boolean } {
+function mergeAgentsMd(
+  existing: string,
+  skillBody: string,
+  force: boolean,
+): { content: string; merged: boolean } {
   const begin = existing.indexOf(AGENTS_BEGIN);
   const end = existing.indexOf(AGENTS_END);
   if (begin === -1 && end === -1) {
@@ -127,9 +139,21 @@ function mergeAgentsMd(existing: string, skillBody: string): { content: string; 
     return { content: `${existing}${sep}${renderAgentsRegion(skillBody)}\n`, merged: true };
   }
   if (begin === -1 || end === -1 || end < begin) {
-    throw new Error(
-      'AGENTS.md has a malformed ZETTELGEIST marker pair — fix manually then re-run',
-    );
+    if (!force) {
+      throw new Error(
+        'AGENTS.md has a malformed ZETTELGEIST marker pair — fix manually or re-run with --force to recover',
+      );
+    }
+    // Strip both markers wherever they appear and append a clean region.
+    let stripped = existing
+      .split('\n')
+      .filter((line) => !line.includes(AGENTS_BEGIN) && !line.includes(AGENTS_END))
+      .join('\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .replace(/\n+$/, '');
+    if (stripped.length === 0) stripped = '';
+    const sep = stripped.length === 0 ? '' : '\n\n';
+    return { content: `${stripped}${sep}${renderAgentsRegion(skillBody)}\n`, merged: true };
   }
   const before = existing.slice(0, begin).replace(/\n+$/, '');
   const after = existing.slice(end + AGENTS_END.length).replace(/^\n+/, '');
@@ -170,7 +194,7 @@ export async function installSkillCommand(
         await fs.writeFile(dest, `${renderAgentsRegion(body)}\n`, 'utf8');
         return okEnvelope({ installed: true, path: dest, scope: input.scope });
       }
-      const merged = mergeAgentsMd(existing, body);
+      const merged = mergeAgentsMd(existing, body, input.force);
       await fs.writeFile(dest, merged.content, 'utf8');
       return okEnvelope({ installed: true, path: dest, scope: input.scope, merged: merged.merged });
     } catch (err) {
