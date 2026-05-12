@@ -65,4 +65,13 @@ describe('parseInvocation', () => {
       name: 'floob',
     });
   });
+
+  it('parses install-skill with --scope and --force', () => {
+    const inv = parseInvocation(['install-skill', '--scope', 'project', '--force']);
+    expect(inv).toMatchObject({ kind: 'command', name: 'install-skill' });
+    if (inv.kind === 'command') {
+      expect(inv.flags.scope).toBe('project');
+      expect(inv.flags.force).toBe(true);
+    }
+  });
 });

@@ -30,4 +30,10 @@ await esbuild.build({
   logLevel: 'info',
 });
 
+// Copy the canonical agent skill next to bin.js so the runtime can read it.
+// Source of truth lives in @zettelgeist/cli to avoid duplication.
+const skillSource = path.resolve(root, '..', 'cli', 'templates', 'skill', 'SKILL.md');
+await fs.copyFile(skillSource, path.join(dist, 'SKILL.md'));
+
 console.log('mcp-server bundled →', path.join(dist, 'bin.js'));
+console.log('skill copied →', path.join(dist, 'SKILL.md'));

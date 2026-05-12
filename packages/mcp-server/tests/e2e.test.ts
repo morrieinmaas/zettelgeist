@@ -90,4 +90,41 @@ describe('mcp-server e2e', () => {
     expect(names).toContain('patch_frontmatter');
     expect(names.length).toBe(16);
   }, 10000);
+
+  it('exposes the zettelgeist-workflow prompt via prompts/list and prompts/get', async () => {
+    try {
+      await fs.stat(BIN);
+    } catch {
+      console.warn(`skipping e2e: ${BIN} not built`);
+      return;
+    }
+
+    proc = spawn('node', [BIN], { cwd: tmp, stdio: ['pipe', 'pipe', 'pipe'] });
+
+    await sendRequest(proc, {
+      jsonrpc: '2.0', id: 0, method: 'initialize',
+      params: { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'test', version: '0' } },
+    });
+
+    const listResp = (await sendRequest(proc, {
+      jsonrpc: '2.0', id: 1, method: 'prompts/list', params: {},
+    })) as { result: { prompts: Array<{ name: string; description: string }> } };
+
+    expect(listResp.result.prompts).toHaveLength(1);
+    expect(listResp.result.prompts[0]?.name).toBe('zettelgeist-workflow');
+
+    const getResp = (await sendRequest(proc, {
+      jsonrpc: '2.0', id: 2, method: 'prompts/get',
+      params: { name: 'zettelgeist-workflow' },
+    })) as {
+      result: { messages: Array<{ role: string; content: { type: string; text: string } }> };
+    };
+
+    expect(getResp.result.messages).toHaveLength(1);
+    const text = getResp.result.messages[0]?.content.text ?? '';
+    expect(text).toContain('Zettelgeist agent workflow');
+    expect(text).toContain('claim_spec');
+    // YAML frontmatter must be stripped
+    expect(text.startsWith('---\n')).toBe(false);
+  }, 10000);
 });

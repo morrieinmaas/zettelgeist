@@ -8,6 +8,7 @@ export interface CommandFlags {
   port?: string;
   'no-open'?: boolean;
   template?: string;
+  scope?: string;
 }
 
 export type Invocation =
@@ -20,7 +21,14 @@ export type Invocation =
   | { kind: 'help'; topic: string | null }
   | { kind: 'unknown-command'; name: string };
 
-const KNOWN_COMMANDS = new Set(['regen', 'validate', 'install-hook', 'serve', 'export-doc']);
+const KNOWN_COMMANDS = new Set([
+  'regen',
+  'validate',
+  'install-hook',
+  'install-skill',
+  'serve',
+  'export-doc',
+]);
 
 const FLAG_OPTIONS = {
   json:      { type: 'boolean' as const },
@@ -30,6 +38,7 @@ const FLAG_OPTIONS = {
   port:      { type: 'string'  as const },
   'no-open': { type: 'boolean' as const },
   template:  { type: 'string'  as const },
+  scope:     { type: 'string'  as const },
 };
 
 export function parseInvocation(argv: string[]): Invocation {
@@ -58,6 +67,7 @@ export function parseInvocation(argv: string[]): Invocation {
     ...(values.port !== undefined ? { port: values.port } : {}),
     ...(values['no-open'] !== undefined ? { 'no-open': values['no-open'] } : {}),
     ...(values.template !== undefined ? { template: values.template } : {}),
+    ...(values.scope !== undefined ? { scope: values.scope } : {}),
   };
 
   return { kind: 'command', name: first, args: positionals, flags };

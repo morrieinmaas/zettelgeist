@@ -37,8 +37,9 @@ async function loadDefaultTemplate(): Promise<string> {
   // relative to this module file.
   const here = path.dirname(fileURLToPath(import.meta.url));
   const candidates = [
-    path.join(here, '..', 'templates', 'export.html'),       // when running from dist/commands/
-    path.join(here, '..', '..', 'templates', 'export.html'), // when running from src/commands/ via vite/test
+    path.join(here, 'templates', 'export.html'),             // npm install: bin.js is at dist/, sibling templates/
+    path.join(here, '..', 'templates', 'export.html'),       // workspace dev: dist/bin.js, sibling templates/ at package root
+    path.join(here, '..', '..', 'templates', 'export.html'), // tests: src/commands/, templates/ two levels up
   ];
   for (const c of candidates) {
     try { return await fs.readFile(c, 'utf8'); } catch {}

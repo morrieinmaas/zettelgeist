@@ -3,6 +3,7 @@ import { emit, realEmitContext } from './output.js';
 import { HELP as REGEN_HELP } from './commands/regen.js';
 import { HELP as VALIDATE_HELP } from './commands/validate.js';
 import { HELP as INSTALL_HOOK_HELP } from './commands/install-hook.js';
+import { HELP as INSTALL_SKILL_HELP } from './commands/install-skill.js';
 import { HELP as SERVE_HELP } from './commands/serve.js';
 import { HELP as EXPORT_DOC_HELP } from './commands/export-doc.js';
 
@@ -15,6 +16,7 @@ Commands:
   regen [--check]                regenerate specs/INDEX.md
   validate                       validate the repo against the spec
   install-hook [--force]         install pre-commit hook
+  install-skill [--scope S]      install the agent skill (Claude Code etc.)
   serve [--port N] [--no-open]   serve the viewer over HTTP
   export-doc <path> [--template T]  render markdown to HTML
 
@@ -29,6 +31,7 @@ const COMMAND_HELP: Record<string, string> = {
   regen: REGEN_HELP,
   validate: VALIDATE_HELP,
   'install-hook': INSTALL_HOOK_HELP,
+  'install-skill': INSTALL_SKILL_HELP,
   serve: SERVE_HELP,
   'export-doc': EXPORT_DOC_HELP,
 };
@@ -73,6 +76,27 @@ async function main(): Promise<number> {
       const env = await installHookCommand({ path: cwd, force: inv.flags.force ?? false });
       emit(ctx, env, () =>
         env.ok ? `install-hook: installed${env.data.backup ? ` (backup: ${env.data.backup})` : ''}` : '',
+      );
+      return env.ok ? 0 : 1;
+    }
+    case 'install-skill': {
+      const { installSkillCommand, isScope } = await import('./commands/install-skill.js');
+      const scopeRaw = inv.flags.scope ?? 'user';
+      if (!isScope(scopeRaw)) {
+        process.stderr.write(
+          `install-skill: --scope must be 'user', 'project', or 'agents-md' (got '${scopeRaw}')\n`,
+        );
+        return 2;
+      }
+      const env = await installSkillCommand({
+        cwd,
+        scope: scopeRaw,
+        force: inv.flags.force ?? false,
+      });
+      emit(ctx, env, () =>
+        env.ok
+          ? `install-skill: ${env.data.merged ? 'merged into' : 'wrote'} ${env.data.path}`
+          : '',
       );
       return env.ok ? 0 : 1;
     }

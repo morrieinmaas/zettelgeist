@@ -123,6 +123,18 @@ Add `zettelgeist-mcp` to your Claude Code (or other MCP client) config:
 
 Then ask the agent to `list_specs`, `tick_task`, `claim_spec`, `set_status`, etc. Full tool list: [packages/mcp-server/SKILL.md](packages/mcp-server/SKILL.md).
 
+### Install the agent skill
+
+The MCP server already lists its tools — but agents work much better if they also have the *workflow* (claim → read → mutate → handoff → release) and the v0.1 format rules in their context. Three ways to ship that:
+
+```bash
+zettelgeist install-skill                            # ~/.claude/skills/zettelgeist/SKILL.md (system-wide for this user)
+zettelgeist install-skill --scope project            # <repo>/.claude/skills/zettelgeist/SKILL.md (commit for the team)
+zettelgeist install-skill --scope agents-md          # <repo>/AGENTS.md (cross-tool: Codex, Copilot CLI, etc.)
+```
+
+The `agents-md` scope smart-merges into an existing `AGENTS.md` between marker comments — anything else in that file is preserved. MCP-aware clients also get the same content automatically via the `prompts/list` capability — no install needed.
+
 ### Use it inside VSCode (extension)
 
 The kanban board, dependency graph, and editable detail view all run inside a VSCode panel — the Activity Bar gets its own Zettelgeist icon with a Specs sidebar tree, and the board opens as a regular editor tab.
@@ -291,6 +303,7 @@ The interesting case. A PM drags a spec from Draft to Planned; an agent claims i
 | `zettelgeist regen [--check]` | Regenerate `specs/INDEX.md`. `--check` exits non-zero if stale. |
 | `zettelgeist validate` | Validate the repo against the format spec. |
 | `zettelgeist install-hook [--force]` | Install the pre-commit hook (smart-merge with any existing hook). |
+| `zettelgeist install-skill [--scope user\|project\|agents-md] [--force]` | Install the agent workflow skill. `user` (default) is system-wide for this user; `project` is per-repo and commit-friendly; `agents-md` smart-merges into `AGENTS.md` for cross-tool coverage (Codex, Copilot CLI). |
 | `zettelgeist serve [--port N] [--no-open]` | Launch the local viewer (default port 7681). |
 | `zettelgeist export-doc <path> [--template T]` | Render a markdown file to standalone HTML. |
 
@@ -389,7 +402,7 @@ cd zettelgeist
 pnpm install
 
 pnpm -r typecheck       # strict TS across the workspace
-pnpm -r test            # 286 unit + integration tests
+pnpm -r test            # 298 unit + integration tests
 pnpm conformance        # 42 format conformance fixtures
 pnpm --filter @zettelgeist/cli build
 pnpm --filter @zettelgeist/cli test:e2e   # Playwright e2e against the running viewer
@@ -407,7 +420,7 @@ Contributing guidelines and the workflow checklist live in [CONTRIBUTING.md](CON
 ## Status and roadmap
 
 - **Format**: stable for v0.1. Future minor versions add fields, error codes, and rules in a backwards-compatible way.
-- **Reference implementation**: passes all 42 conformance fixtures + 286 unit/integration tests. CI green on every commit to `main`.
+- **Reference implementation**: passes all 42 conformance fixtures + 298 unit/integration tests. CI green on every commit to `main`.
 - **Distribution**: `npm publish`-ready for `@zettelgeist/cli`, `@zettelgeist/mcp-server`, `@zettelgeist/core`. Not yet pushed to a registry — install from source for now.
 - **v0.2 backlog**: see [docs/v02-backlog.md](docs/v02-backlog.md). Most v0.2 items have shipped (wiki-links, VSCode extension, editable everything, per-card delete, deriveStatus-for-all-7-values, 42-fixture conformance suite). Remaining: events catalogue, `auto_merge` flag, `.claim`-flips-status.
 
