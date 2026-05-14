@@ -1,23 +1,37 @@
 {
-  "name": "@zettelgeist/vscode-extension",
+  "name": "zettelgeist",
   "displayName": "Zettelgeist",
-  "description": "Spec-driven project management for VSCode. Opens the Zettelgeist viewer in a panel; every action is a markdown edit + commit.",
+  "description": "Spec-driven project management for VS Code. Opens the Zettelgeist viewer in a panel; every action is a markdown edit + commit.",
   "version": "0.1.0",
   "license": "Apache-2.0",
   "publisher": "morrieinmaas",
-  "private": true,
+  "icon": "media/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/morrieinmaas/zettelgeist.git",
+    "directory": "packages/vscode-extension"
+  },
+  "bugs": {
+    "url": "https://github.com/morrieinmaas/zettelgeist/issues"
+  },
+  "homepage": "https://github.com/morrieinmaas/zettelgeist#readme",
   "engines": {
     "vscode": "^1.85.0"
   },
   "categories": [
-    "Other"
+    "Other",
+    "Visualization",
+    "Notebooks"
   ],
   "keywords": [
     "zettelgeist",
     "specs",
+    "spec-driven",
     "kanban",
     "agent",
-    "markdown"
+    "mcp",
+    "markdown",
+    "project management"
   ],
   "main": "./dist/extension.js",
   "activationEvents": [

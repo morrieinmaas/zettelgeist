@@ -17,6 +17,9 @@ packages/*/src/**/*.js.map
 test-results/
 playwright-report/
 
+# VS Code / Open VSX extension packaging artifacts
+*.vsix
+
 # Claude Code per-session state (scheduled-task locks, project memory).
 # Not project state — ignore so it doesn't surface in `git status`.
 .claude/

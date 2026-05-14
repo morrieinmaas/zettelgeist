@@ -23,15 +23,6 @@ importers:
 
   packages/cli:
     dependencies:
-      '@zettelgeist/core':
-        specifier: workspace:*
-        version: link:../core
-      '@zettelgeist/fs-adapters':
-        specifier: workspace:*
-        version: link:../fs-adapters
-      '@zettelgeist/git-hook':
-        specifier: workspace:*
-        version: link:../git-hook
       gray-matter:
         specifier: ^4.0.3
         version: 4.0.3
@@ -48,6 +39,15 @@ importers:
       '@types/js-yaml':
         specifier: ^4.0.9
         version: 4.0.9
+      '@zettelgeist/core':
+        specifier: workspace:*
+        version: link:../core
+      '@zettelgeist/fs-adapters':
+        specifier: workspace:*
+        version: link:../fs-adapters
+      '@zettelgeist/git-hook':
+        specifier: workspace:*
+        version: link:../git-hook
       esbuild:
         specifier: ^0.24.0
         version: 0.24.2
@@ -81,15 +81,6 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.0.0
         version: 1.29.0(zod@3.25.76)
-      '@zettelgeist/core':
-        specifier: workspace:*
-        version: link:../core
-      '@zettelgeist/fs-adapters':
-        specifier: workspace:*
-        version: link:../fs-adapters
-      '@zettelgeist/git-hook':
-        specifier: workspace:*
-        version: link:../git-hook
       gray-matter:
         specifier: ^4.0.3
         version: 4.0.3
@@ -106,6 +97,15 @@ importers:
       '@types/js-yaml':
         specifier: ^4.0.9
         version: 4.0.9
+      '@zettelgeist/core':
+        specifier: workspace:*
+        version: link:../core
+      '@zettelgeist/fs-adapters':
+        specifier: workspace:*
+        version: link:../fs-adapters
+      '@zettelgeist/git-hook':
+        specifier: workspace:*
+        version: link:../git-hook
       esbuild:
         specifier: ^0.24.0
         version: 0.24.2
