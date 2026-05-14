@@ -78,5 +78,5 @@ jobs:
           gh release create "$tag" \
             "packages/vscode-extension/zettelgeist-${{ steps.ver.outputs.version }}.vsix" \
             --title "VS Code extension $tag" \
-            --notes "Install from VS Code: Extensions → ⋯ → Install from VSIX → select the attached file. Also available at https://open-vsx.org/extension/morrieinmaas/zettelgeist" \
+            --notes "Install from VS Code / Cursor: Extensions → ⋯ → Install from VSIX → select the attached file. Also available at https://open-vsx.org/extension/morriearty-zg/zettelgeist and https://marketplace.visualstudio.com/items?itemName=morriearty-zg.zettelgeist" \
             || gh release upload "$tag" "packages/vscode-extension/zettelgeist-${{ steps.ver.outputs.version }}.vsix" --clobber

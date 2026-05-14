@@ -4,7 +4,7 @@
   "description": "Spec-driven project management for VS Code. Opens the Zettelgeist viewer in a panel; every action is a markdown edit + commit.",
   "version": "0.1.0",
   "license": "Apache-2.0",
-  "publisher": "morrieinmaas",
+  "publisher": "morriearty-zg",
   "icon": "media/icon.png",
   "repository": {
     "type": "git",

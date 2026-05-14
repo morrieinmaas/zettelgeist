@@ -5,7 +5,7 @@
 [![CI](https://github.com/morrieinmaas/zettelgeist/actions/workflows/ci.yml/badge.svg)](https://github.com/morrieinmaas/zettelgeist/actions/workflows/ci.yml)
 [![npm: @zettelgeist/cli](https://img.shields.io/npm/v/@zettelgeist/cli?label=%40zettelgeist%2Fcli)](https://www.npmjs.com/package/@zettelgeist/cli)
 [![npm: @zettelgeist/mcp-server](https://img.shields.io/npm/v/@zettelgeist/mcp-server?label=%40zettelgeist%2Fmcp-server)](https://www.npmjs.com/package/@zettelgeist/mcp-server)
-[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/morrieinmaas.zettelgeist?label=VS%20Code)](https://marketplace.visualstudio.com/items?itemName=morrieinmaas.zettelgeist)
+[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/morriearty-zg.zettelgeist?label=VS%20Code)](https://marketplace.visualstudio.com/items?itemName=morriearty-zg.zettelgeist)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![format_version](https://img.shields.io/badge/format__version-0.1-orange.svg)](spec/zettelgeist-v0.1.md)
 [![conformance fixtures](https://img.shields.io/badge/conformance%20fixtures-42-brightgreen.svg)](spec/conformance/fixtures/)
