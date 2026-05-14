@@ -1,0 +1,78 @@
+name: Release
+
+# Push to main: if pending changesets exist, open/update a "Version Packages" PR.
+# When that PR is merged (which bumps versions and removes the changesets),
+# this workflow runs again and publishes the bumped packages to npm.
+#
+# Plain feature merges to main do NOT publish. Only merging the Version
+# Packages PR does.
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write       # changesets/action needs to push the Version Packages branch
+  pull-requests: write  # ...and open the PR
+  id-token: write       # for npm provenance
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history so changesets can compute version bumps
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org/'
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm -r typecheck
+
+      - name: Test
+        run: pnpm -r test
+
+      - name: Build (verifies dist before publish)
+        run: pnpm -r build
+
+      - name: Create release PR or publish to npm
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          # When pending changesets exist on main, this opens/updates the
+          # "Version Packages" PR. When that PR merges (no changesets left),
+          # this runs `pnpm release` which publishes the bumped packages.
+          version: pnpm version-packages
+          publish: pnpm release
+          commit: "chore(release): version packages"
+          title: "chore(release): version packages"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Summary
+        if: always()
+        run: |
+          if [[ "${{ steps.changesets.outputs.published }}" == "true" ]]; then
+            echo "## Published" >> $GITHUB_STEP_SUMMARY
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            echo '${{ steps.changesets.outputs.publishedPackages }}' >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          elif [[ "${{ steps.changesets.outputs.pullRequestNumber }}" != "" ]]; then
+            echo "## Version PR open: #${{ steps.changesets.outputs.pullRequestNumber }}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## No pending changesets; nothing to release" >> $GITHUB_STEP_SUMMARY
+          fi

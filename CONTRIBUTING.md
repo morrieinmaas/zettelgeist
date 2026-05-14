@@ -43,6 +43,30 @@ Or wire up `pnpm link --global` if you want `zettelgeist` on your PATH.
 - Never add `Co-Authored-By: Claude` or "Generated with AI" to commit messages.
 - Run `pnpm -r test && pnpm conformance` before opening a PR.
 
+## Releasing
+
+This repo uses [Changesets](https://github.com/changesets/changesets) for versioning and npm publish. Releases happen automatically via [`.github/workflows/release.yml`](.github/workflows/release.yml) — but only when the "Version Packages" PR is merged. A regular feature merge to `main` does NOT publish.
+
+For any user-facing change to `@zettelgeist/core`, `@zettelgeist/cli`, or `@zettelgeist/mcp-server`:
+
+```bash
+pnpm changeset              # interactive: pick packages, bump level, summary
+git add .changeset
+git commit -m "..."
+```
+
+The summary line becomes the entry in each affected package's `CHANGELOG.md`. Keep it short and user-focused — what changed, not how.
+
+The flow once merged:
+
+1. Push to `main` with changesets present → bot opens **"Version Packages" PR** that bumps versions and rewrites changelogs.
+2. Merge the Version Packages PR → release workflow publishes the bumped packages to npm.
+3. Multiple changesets accumulate over multiple PRs and ship together when the Version PR is merged. The bot keeps the PR up to date as more changesets land.
+
+Skip a changeset only for: pure docs, internal refactors with no surface change, test-only diffs, CI tweaks. The `changeset-check.yml` workflow nudges you with a PR comment if it thinks you forgot one.
+
+The VS Code extension follows a separate publishing flow (manual + tag-based) — not part of changesets. The `viewer`, `fs-adapters`, `git-hook`, and `conformance-harness` packages are workspace-internal and not published to npm; they're listed in `.changeset/config.json` under `ignore`.
+
 ## Architecture
 
 See [docs/architecture.md](docs/architecture.md) for package layout and data flow.
