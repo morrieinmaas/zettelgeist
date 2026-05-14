@@ -25,9 +25,6 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@zettelgeist/core": "workspace:*",
-    "@zettelgeist/fs-adapters": "workspace:*",
-    "@zettelgeist/git-hook": "workspace:*",
     "gray-matter": "^4.0.3",
     "js-yaml": "^3.14.2",
     "marked": "^14.0.0"
@@ -35,6 +32,9 @@
   "devDependencies": {
     "@playwright/test": "^1.51.0",
     "@types/js-yaml": "^4.0.9",
+    "@zettelgeist/core": "workspace:*",
+    "@zettelgeist/fs-adapters": "workspace:*",
+    "@zettelgeist/git-hook": "workspace:*",
     "esbuild": "^0.24.0"
   }
 }
