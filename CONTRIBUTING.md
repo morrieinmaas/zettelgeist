@@ -13,8 +13,8 @@ You need Node 20+, pnpm 9+, and git 2.30+.
 ## Run the test suite
 
 ```bash
-pnpm -r test          # 190+ unit tests across all packages
-pnpm conformance      # 11 format conformance fixtures
+pnpm -r test          # 309 unit + integration tests across all packages
+pnpm conformance      # 42 format conformance fixtures
 pnpm -r typecheck     # all packages
 ```
 
@@ -72,6 +72,10 @@ See [docs/architecture.md](docs/architecture.md) for package layout and data flo
 ## Reporting bugs
 
 Open an issue with reproduction steps. If it's a format-spec ambiguity, propose the rule + a fixture in the issue.
+
+## Sign-off
+
+This project uses the [Developer Certificate of Origin](https://developercertificate.org/) — by adding `Signed-off-by: Your Name <you@example.com>` to your commit messages (e.g. `git commit -s`) you affirm that you have the right to submit the contribution under the project's license. The sign-off is not enforced by a bot today; if you forget, a maintainer may ask you to amend.
 
 ## License
 

@@ -3,13 +3,17 @@
 > **Spec-driven project management where LLM agents and humans collaborate as equals.** Your repo is the database, markdown is the source of truth — agents work via MCP, humans via an HTML viewer or VSCode extension, every action is a git commit.
 
 [![CI](https://github.com/morrieinmaas/zettelgeist/actions/workflows/ci.yml/badge.svg)](https://github.com/morrieinmaas/zettelgeist/actions/workflows/ci.yml)
+[![npm: @zettelgeist/cli](https://img.shields.io/npm/v/@zettelgeist/cli?label=%40zettelgeist%2Fcli)](https://www.npmjs.com/package/@zettelgeist/cli)
+[![npm: @zettelgeist/mcp-server](https://img.shields.io/npm/v/@zettelgeist/mcp-server?label=%40zettelgeist%2Fmcp-server)](https://www.npmjs.com/package/@zettelgeist/mcp-server)
+[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/morrieinmaas.zettelgeist?label=VS%20Code)](https://marketplace.visualstudio.com/items?itemName=morrieinmaas.zettelgeist)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![format_version](https://img.shields.io/badge/format__version-0.1-orange.svg)](spec/zettelgeist-v0.1.md)
+[![conformance fixtures](https://img.shields.io/badge/conformance%20fixtures-42-brightgreen.svg)](spec/conformance/fixtures/)
 
 Zettelgeist is a portable file format plus a small reference toolchain for tracking work the way you already track code — as plain files, in git, diffable and grep-able. A Kanban board, a dependency graph, claimable tickets, agent handoff notes, and an HTML viewer ship in the box. Every "click" in the UI is a git commit; everything else is markdown.
 
 > **📜 The format is the contract.**
-> [**`spec/zettelgeist-v0.1.md`**](spec/zettelgeist-v0.1.md) defines what makes a directory a Zettelgeist repo — 14 sections, short enough to read in one sitting. The [11 conformance fixtures](spec/conformance/fixtures/) are the executable contract any implementation can validate against. **This repository is one reference implementation**; rewriting the toolchain in Rust, Python, or anything else is a stated goal of v0.2.
+> [**`spec/zettelgeist-v0.1.md`**](spec/zettelgeist-v0.1.md) defines what makes a directory a Zettelgeist repo — 14 sections, short enough to read in one sitting. The [42 conformance fixtures](spec/conformance/fixtures/) are the executable contract any implementation can validate against. **This repository is one reference implementation**; rewriting the toolchain in Rust, Python, or anything else is a stated goal of v0.2.
 
 ---
 

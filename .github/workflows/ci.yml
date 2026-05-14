@@ -28,14 +28,8 @@ jobs:
       - name: Conformance fixtures
         run: pnpm conformance
 
-      - name: Build viewer
-        run: pnpm --filter @zettelgeist/viewer build
-
-      - name: Build CLI
-        run: pnpm --filter @zettelgeist/cli build
-
-      - name: Build MCP server
-        run: pnpm --filter @zettelgeist/mcp-server build
+      - name: Build all packages (topological order)
+        run: pnpm -r build
 
       - name: regen --check
         run: node packages/cli/dist/bin.js regen --check
