@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { loadAllSpecs } from '../src/loader.js';
-import { makeMemFsReader as makeMemFs } from '@zettelgeist/fs-adapters';
+import { makeMemFsReader as makeMemFs } from './helpers/mem-fs.js';
 
 describe('loadAllSpecs', () => {
   it('returns empty array when specs/ does not exist', async () => {

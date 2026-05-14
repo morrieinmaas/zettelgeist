@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { validateRepo } from '../src/validate.js';
-import { makeMemFsReader as makeMemFs } from '@zettelgeist/fs-adapters';
+import { makeMemFsReader as makeMemFs } from './helpers/mem-fs.js';
 
 describe('validateRepo', () => {
   it('returns no errors for a healthy repo', async () => {

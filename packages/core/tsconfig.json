@@ -4,8 +4,7 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
-      "@zettelgeist/core": ["./src/index.ts"],
-      "@zettelgeist/fs-adapters": ["../fs-adapters/src/index.ts"]
+      "@zettelgeist/core": ["./src/index.ts"]
     }
   },
   "include": ["src/**/*", "tests/**/*", "vitest.config.ts"]

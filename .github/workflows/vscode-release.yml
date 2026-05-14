@@ -1,0 +1,82 @@
+name: VS Code extension release
+
+# Triggered by a git tag `vscode-vX.Y.Z` (extension versions are decoupled
+# from npm package versions). Builds the .vsix and publishes to Open VSX
+# (always) and the VS Code Marketplace (only if VSCE_PAT secret is set).
+#
+# Trigger from the CLI:
+#   git tag vscode-v0.1.0 && git push origin vscode-v0.1.0
+#
+# Or via the GitHub UI: Actions → "VS Code extension release" → Run workflow.
+
+on:
+  push:
+    tags:
+      - 'vscode-v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write  # for uploading the .vsix to a GitHub Release
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build viewer + extension
+        run: pnpm -r build
+
+      - name: Read extension version
+        id: ver
+        run: |
+          v=$(node -p "require('./packages/vscode-extension/package.json').version")
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
+      - name: Package .vsix
+        working-directory: packages/vscode-extension
+        run: npx --yes @vscode/vsce package --no-dependencies
+
+      - name: Publish to Open VSX
+        working-directory: packages/vscode-extension
+        env:
+          OVSX_PAT: ${{ secrets.VSX_TOKEN }}
+        run: |
+          if [ -z "$OVSX_PAT" ]; then
+            echo "::error::VSX_TOKEN secret is not set"
+            exit 1
+          fi
+          npx --yes ovsx publish "zettelgeist-${{ steps.ver.outputs.version }}.vsix" -p "$OVSX_PAT"
+
+      - name: Publish to VS Code Marketplace (optional)
+        if: ${{ env.VSCE_PAT != '' }}
+        working-directory: packages/vscode-extension
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: |
+          npx --yes @vscode/vsce publish --packagePath "zettelgeist-${{ steps.ver.outputs.version }}.vsix" -p "$VSCE_PAT"
+
+      - name: Attach .vsix to the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            tag="vscode-v${{ steps.ver.outputs.version }}"
+            git tag "$tag" || true
+            git push origin "$tag" || true
+          fi
+          gh release create "$tag" \
+            "packages/vscode-extension/zettelgeist-${{ steps.ver.outputs.version }}.vsix" \
+            --title "VS Code extension $tag" \
+            --notes "Install from VS Code: Extensions → ⋯ → Install from VSIX → select the attached file. Also available at https://open-vsx.org/extension/morrieinmaas/zettelgeist" \
+            || gh release upload "$tag" "packages/vscode-extension/zettelgeist-${{ steps.ver.outputs.version }}.vsix" --clobber
