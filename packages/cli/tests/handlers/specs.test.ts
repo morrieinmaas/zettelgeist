@@ -73,7 +73,7 @@ describe('specs routes', () => {
     expect(reqs).toContain('blocked_by: IDP creds');
   });
 
-  it('POST /api/specs/foo/claim writes .claim', async () => {
+  it('POST /api/specs/foo/claim writes a per-actor .claim-<slug>', async () => {
     await setupRepo();
     server = await startServer({ cwd: tmp, port: 0, viewerBundlePath: viewerBundle });
     const r = await fetch(`${server.url}/api/specs/foo/claim`, {
@@ -82,8 +82,53 @@ describe('specs routes', () => {
       body: JSON.stringify({ agent_id: 'alice@laptop' }),
     });
     expect(r.status).toBe(200);
-    const claim = await fs.readFile(path.join(tmp, 'specs', 'foo', '.claim'), 'utf8');
-    expect(claim).toContain('alice@laptop');
+    const body = await r.json() as { acknowledged: true; agent_id: string };
+    expect(body.agent_id).toBe('alice-laptop'); // sanitized: @ -> -
+    const claim = await fs.readFile(
+      path.join(tmp, 'specs', 'foo', '.claim-alice-laptop'),
+      'utf8',
+    );
+    expect(claim).toContain('alice@laptop'); // raw id preserved in body for diagnostics
+  });
+
+  it('two agents claiming the same spec produce two distinct files', async () => {
+    await setupRepo();
+    server = await startServer({ cwd: tmp, port: 0, viewerBundlePath: viewerBundle });
+    await fetch(`${server.url}/api/specs/foo/claim`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agent_id: 'alice' }),
+    });
+    await fetch(`${server.url}/api/specs/foo/claim`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agent_id: 'bob' }),
+    });
+    await fs.access(path.join(tmp, 'specs', 'foo', '.claim-alice'));
+    await fs.access(path.join(tmp, 'specs', 'foo', '.claim-bob'));
+  });
+
+  it('release_spec only removes the calling agent\'s file', async () => {
+    await setupRepo();
+    server = await startServer({ cwd: tmp, port: 0, viewerBundlePath: viewerBundle });
+    await fetch(`${server.url}/api/specs/foo/claim`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agent_id: 'alice' }),
+    });
+    await fetch(`${server.url}/api/specs/foo/claim`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agent_id: 'bob' }),
+    });
+    const r = await fetch(`${server.url}/api/specs/foo/release`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agent_id: 'alice' }),
+    });
+    expect(r.status).toBe(200);
+    await expect(fs.access(path.join(tmp, 'specs', 'foo', '.claim-alice'))).rejects.toThrow();
+    await fs.access(path.join(tmp, 'specs', 'foo', '.claim-bob'));   // still there
   });
 });
 

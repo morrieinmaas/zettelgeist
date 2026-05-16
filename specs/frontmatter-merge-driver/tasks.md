@@ -1,0 +1,9 @@
+- [ ] 1. Implement `mergeFrontmatter` in `@zettelgeist/core` (pure: 3 strings in, 1 string + ok flag out)
+- [ ] 2. Per-field merge rules per spec (status, depends_on, blocked_by, part_of, merged_into, auto_merge, unknown keys)
+- [ ] 3. YAML-comment-friendly conflict markers for unresolved fields
+- [ ] 4. Body merging uses standard text-merge (delegate to git via tmp files + `git merge-file`)
+- [ ] 5. Unit tests for every rule branch
+- [ ] 6. CLI subcommand `zettelgeist merge-driver frontmatter`
+- [ ] 7. `install-hook` registers in `.git/config` and `.gitattributes` (`specs/*/requirements.md merge=zettelgeist-frontmatter`)
+- [ ] 8. Conformance fixtures (per-field rules)
+- [ ] 9. Changeset (minor bump on core + cli + git-hook)

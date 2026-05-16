@@ -13,7 +13,9 @@ Items deferred from Plan 1 + Plan 2 + Sprint reviews. Not commitments — a trac
 - Suggestion-branch contribution flow (per-user draft branches for non-coders).
 - Multi-repo specs with cross-repo identifiers.
 - Richer non-text content in `requirements.md` (image embeds, decision tables).
-- `.claim` file actually flips derived status — today the CLI/viewer's `claimedSpecs` is hardcoded to empty; should scan the spec folder for non-stale `.claim` files at status-derivation time.
+- **`.claim` file flips derived status** *(shipped 2026-05-14)* — `scanClaimedSpecs()` in core walks each spec dir and reports any present `.claim` (legacy) or `.claim-<actor>` (v0.2 per-actor) file. CLI + MCP read paths now populate `RepoState.claimedSpecs` from disk, so claimed specs derive to `in-progress` correctly.
+- **Per-actor claim files** *(shipped 2026-05-14)* — `claim_spec({name, agent_id})` now writes `.claim-<sanitized-slug>` so two machines claiming concurrently don't conflict. Legacy `.claim` still recognised on read for back-compat. See [specs/per-actor-claim/](../specs/per-actor-claim/).
+- **Distributed-conflict robustness suite** — specs landed for the remaining items: INDEX/tasks/frontmatter merge drivers, `sync` command, TUI. See `specs/{index,tasks,frontmatter}-merge-driver/`, `specs/sync-command/`, `specs/tui-surface/`.
 
 ## Tools
 

@@ -8,12 +8,12 @@
 [![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/morriearty-zg.zettelgeist?label=VS%20Code)](https://marketplace.visualstudio.com/items?itemName=morriearty-zg.zettelgeist)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![format_version](https://img.shields.io/badge/format__version-0.1-orange.svg)](spec/zettelgeist-v0.1.md)
-[![conformance fixtures](https://img.shields.io/badge/conformance%20fixtures-42-brightgreen.svg)](spec/conformance/fixtures/)
+[![conformance fixtures](https://img.shields.io/badge/conformance%20fixtures-44-brightgreen.svg)](spec/conformance/fixtures/)
 
 Zettelgeist is a portable file format plus a small reference toolchain for tracking work the way you already track code — as plain files, in git, diffable and grep-able. A Kanban board, a dependency graph, claimable tickets, agent handoff notes, and an HTML viewer ship in the box. Every "click" in the UI is a git commit; everything else is markdown.
 
 > **📜 The format is the contract.**
-> [**`spec/zettelgeist-v0.1.md`**](spec/zettelgeist-v0.1.md) defines what makes a directory a Zettelgeist repo — 14 sections, short enough to read in one sitting. The [42 conformance fixtures](spec/conformance/fixtures/) are the executable contract any implementation can validate against. **This repository is one reference implementation**; rewriting the toolchain in Rust, Python, or anything else is a stated goal of v0.2.
+> [**`spec/zettelgeist-v0.1.md`**](spec/zettelgeist-v0.1.md) defines what makes a directory a Zettelgeist repo — 14 sections, short enough to read in one sitting. The [44 conformance fixtures](spec/conformance/fixtures/) are the executable contract any implementation can validate against. **This repository is one reference implementation**; rewriting the toolchain in Rust, Python, or anything else is a stated goal of v0.2.
 
 ---
 
@@ -406,8 +406,8 @@ cd zettelgeist
 pnpm install
 
 pnpm -r typecheck       # strict TS across the workspace
-pnpm -r test            # 309 unit + integration tests
-pnpm conformance        # 42 format conformance fixtures
+pnpm -r test            # 341 unit + integration tests
+pnpm conformance        # 44 format conformance fixtures
 pnpm --filter @zettelgeist/cli build
 pnpm --filter @zettelgeist/cli test:e2e   # Playwright e2e against the running viewer
 
@@ -424,7 +424,7 @@ Contributing guidelines and the workflow checklist live in [CONTRIBUTING.md](CON
 ## Status and roadmap
 
 - **Format**: stable for v0.1. Future minor versions add fields, error codes, and rules in a backwards-compatible way.
-- **Reference implementation**: passes all 42 conformance fixtures + 309 unit/integration tests. CI green on every commit to `main`.
+- **Reference implementation**: passes all 44 conformance fixtures + 341 unit/integration tests. CI green on every commit to `main`.
 - **Distribution**: `npm publish`-ready for `@zettelgeist/cli`, `@zettelgeist/mcp-server`, `@zettelgeist/core`. Not yet pushed to a registry — install from source for now.
 - **v0.2 backlog**: see [docs/v02-backlog.md](docs/v02-backlog.md). Most v0.2 items have shipped (wiki-links, VSCode extension, editable everything, per-card delete, deriveStatus-for-all-7-values, 42-fixture conformance suite). Remaining: events catalogue, `auto_merge` flag, `.claim`-flips-status.
 

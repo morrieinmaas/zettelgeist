@@ -3,6 +3,7 @@ import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
 import {
   loadAllSpecs, loadSpec, deriveStatus, loadConfig, validateRepo,
+  scanClaimedSpecs,
   type Status, type ValidationError,
 } from '@zettelgeist/core';
 import { makeDiskFsReader } from '@zettelgeist/fs-adapters';
@@ -23,7 +24,8 @@ export const listSpecsTool: ToolDef<Record<string, never>, Array<{
     const reader = makeDiskFsReader(ctx.cwd);
     const cfg = await loadConfig(reader);
     const specs = await loadAllSpecs(reader, cfg.config.specsDir);
-    const repoState = { claimedSpecs: new Set<string>(), mergedSpecs: new Set<string>() };
+    const claimedSpecs = await scanClaimedSpecs(reader, cfg.config.specsDir);
+    const repoState = { claimedSpecs, mergedSpecs: new Set<string>() };
     return specs.map((s) => ({
       name: s.name,
       status: deriveStatus(s, repoState),

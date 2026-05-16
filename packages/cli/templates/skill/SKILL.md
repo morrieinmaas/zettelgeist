@@ -66,11 +66,44 @@ files on disk are authoritative.
 
 ### 3. Claim before mutating
 
-`claim_spec({name, agent_id})` writes a `.claim` file inside the spec
-folder. This signals to other agents that you are working on it.
-**Release with `release_spec({name})` when done**, including on error.
-A stale `.claim` does not block mutations — but it does confuse the
-next agent. Treat it like a lock you own.
+`claim_spec({name, agent_id})` writes a per-actor file `.claim-<slug>`
+inside the spec folder (slug is `agent_id` filesystem-sanitized). Two
+agents claiming the same spec from different machines create two
+distinct files — no git merge conflict. The spec is "claimed" as long
+as *any* `.claim*` file is present.
+
+**The response returns the canonical `agent_id` (the sanitized slug).
+Store it and pass it back to `release_spec` verbatim.** Sanitization is
+lossy — special characters collapse to `-`, runs deduplicate, length
+caps at 64 — so reconstructing the slug from your raw input is fragile.
+
+```
+const { agent_id } = await claim_spec({ name: "user-auth", agent_id: "alice@laptop.local" });
+// agent_id is now e.g. "alice-laptop.local" — keep it for release
+await release_spec({ name: "user-auth", agent_id });
+```
+
+**Always `release_spec` when done**, including on error. Release
+removes only your own per-actor file; other agents' claims stay. The
+response includes `removed: boolean` — `false` means nothing was
+unlinked (usually a sign your `agent_id` drifted mid-session — diagnose
+before re-claiming).
+
+If you omit `agent_id` on both calls, all three surfaces (CLI, MCP,
+VSCode) synthesize the same default from `${USER}-${pid}`, so the
+round-trip works within the same process. Don't rely on this across
+process boundaries — always pass an explicit `agent_id` (and use the
+slug from the response) for any non-trivial workflow.
+
+The legacy v0.1 single `.claim` file is still recognised on read for
+back-compat. `claim_spec` opportunistically removes any pre-existing
+legacy `.claim` so the lock semantics migrate atomically — the spec
+isn't left stuck as "claimed" after every actor releases their per-actor
+file.
+
+Claim is advisory, not exclusive — it does not block another agent's
+mutations. It signals "someone is working on this; coordinate before
+also touching it."
 
 ### 4. Mutate through the typed tools
 
@@ -109,7 +142,7 @@ the only place where prose context survives between sessions.
 
 ### 7. Release the claim
 
-`release_spec({name})` removes `.claim`. Always do this — even on
+`release_spec({name, agent_id})` removes your `.claim-<slug>`. Always do this — even on
 failure. Other agents are waiting.
 
 ## Status derivation rules (read carefully)
@@ -208,13 +241,13 @@ heading. The folder is created automatically.
 ```
 list_specs                                            # what's here
 read_spec({name})                                     # full bundle
-claim_spec({name, agent_id})                          # lock
+claim_spec({name, agent_id})                          # per-actor advisory lock (.claim-<slug>)
 tick_task({name, n}) / untick_task({name, n})         # checkbox
 set_status({name, status, reason?})                   # status (use null to clear)
 patch_frontmatter({name, patch})                      # other fm fields
 write_spec_file({name, relpath, content})             # body content
 write_handoff({name, content})                        # context for next reader
 validate_repo                                         # invariants
-release_spec({name})                                  # unlock
+release_spec({name, agent_id})                        # remove your .claim-<slug>
 regenerate_index                                      # only if INDEX got out of sync
 ```

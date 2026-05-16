@@ -1,0 +1,5 @@
+{
+  "nodes": [{ "name": "bar", "partOf": null }],
+  "edges": [],
+  "cycles": []
+}

@@ -1,0 +1,7 @@
+- [ ] 1. Add `zettelgeist merge-driver index <base> <ours> <theirs>` subcommand to CLI
+- [ ] 2. Driver writes the regenerated INDEX over `<ours>` path (per git contract)
+- [ ] 3. `zettelgeist install-hook` writes/updates `.git/config` merge section
+- [ ] 4. `zettelgeist install-hook` adds/merges `specs/INDEX.md merge=zettelgeist-index` into `.gitattributes`
+- [ ] 5. Test: simulate a merge conflict in INDEX.md, run driver, assert regenerated content matches `zettelgeist regen`
+- [ ] 6. Document the driver in CONTRIBUTING + format spec
+- [ ] 7. Changeset (patch on cli + git-hook)

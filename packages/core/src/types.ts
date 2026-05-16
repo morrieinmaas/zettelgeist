@@ -41,7 +41,12 @@ export interface Spec {
 }
 
 export interface RepoState {
-  /** Spec names that have a `.claim` file present and not stale. */
+  /**
+   * Spec names that have any claim present. Format-version 0.1 used a
+   * single `.claim` file per spec; 0.2 introduces per-actor `.claim-<id>`
+   * files to avoid merge conflicts when two machines claim concurrently.
+   * Both shapes are recognised on read; `scanClaimedSpecs()` populates this.
+   */
   claimedSpecs: ReadonlySet<string>;
   /** Spec names whose changes are merged to the default branch. */
   mergedSpecs: ReadonlySet<string>;
