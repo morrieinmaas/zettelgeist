@@ -1,0 +1,6 @@
+- [ ] 1. Implement `mergeTasksMd` in `@zettelgeist/core` (pure function: 3 strings in, 1 string + ok flag out)
+- [ ] 2. Cover with unit tests: same-tick, divergent-tick, new tasks on both sides, prose-only changes, tag union, text divergence
+- [ ] 3. Wire into `zettelgeist merge-driver tasks` CLI subcommand
+- [ ] 4. Register via `install-hook` in `.git/config` and `.gitattributes` (`specs/*/tasks.md merge=zettelgeist-tasks`)
+- [ ] 5. Conformance fixture pinning down the merge rules
+- [ ] 6. Changeset (minor bump on core + cli + git-hook)

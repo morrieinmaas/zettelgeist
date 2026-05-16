@@ -1,0 +1,13 @@
+- [ ] 1. Scaffold `packages/tui` package with Ink + react + meow (CLI parser)
+- [ ] 2. Direct in-process backend using `@zettelgeist/core`
+- [ ] 3. Optional `--remote http://host:port` flag to talk to a `zettelgeist serve` REST endpoint
+- [ ] 4. Board view (kanban with 7 status columns; hjkl + arrow nav)
+- [ ] 5. Detail view (tabs: requirements / tasks / handoff / lenses; space to tick)
+- [ ] 6. Graph view (ASCII topo layout)
+- [ ] 7. Docs view (tree + inline render)
+- [ ] 8. Command palette (?)
+- [ ] 9. Open-in-`$EDITOR` flow for raw markdown edits
+- [ ] 10. Config file support (`~/.config/zettelgeist/tui.toml`)
+- [ ] 11. Tests (vitest + ink-testing-library for component snapshots)
+- [ ] 12. README + screenshots
+- [ ] 13. Changeset (new package; minor bump on cli to add the `zettelgeist tui` shortcut OR leave it as `zg-tui` binary in its own package)

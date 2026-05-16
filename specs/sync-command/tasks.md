@@ -1,0 +1,8 @@
+- [ ] 1. `zettelgeist sync` CLI command (handlers, help text, JSON envelope)
+- [ ] 2. `--check` mode (read-only, exit code reflects drift)
+- [ ] 3. Shells out to git for fetch / rebase
+- [ ] 4. Calls `regen` post-resolve
+- [ ] 5. Returns structured summary on success (machine-readable for agents)
+- [ ] 6. Tests with fake remotes (vitest + temp repos)
+- [ ] 7. Add MCP tool `sync_repo` mirroring the CLI behavior
+- [ ] 8. Changeset (minor bump on cli + mcp-server)
