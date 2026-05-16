@@ -142,6 +142,8 @@ When there are no specs, both sections render the literal string `_No specs._` i
 
 Two conformant implementations MUST produce byte-identical `INDEX.md` for the same input repo.
 
+**v0.2 distributed-merge note (non-normative):** because `INDEX.md` is fully derived, merging two branches that both regenerated it produces a content conflict on every concurrent change. Implementations SHOULD configure `specs/INDEX.md merge=union` in `.gitattributes` so the merge produces a (transient) concatenation rather than conflict markers, AND install a `post-merge` hook that runs the regen against the now-fully-merged tree, replacing the concatenation with the correct INDEX. The v0.2 reference implementation does this automatically via `zettelgeist install-hook`. The merged INDEX is still required to match the byte-identical-rule above against the post-merge tree.
+
 ## 10. Validation errors
 
 Implementations MUST emit validation errors using these machine codes. Human-readable messages are implementation freedom.

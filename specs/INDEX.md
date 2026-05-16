@@ -6,7 +6,7 @@
 |------|--------|----------|------------|
 | events-catalogue | planned | 0/7 | — |
 | frontmatter-merge-driver | planned | 0/9 | — |
-| index-merge-driver | planned | 0/7 | — |
+| index-merge-driver | done | 9/9 | — |
 | mcp-sdk-migration | planned | 0/6 | — |
 | per-actor-claim | in-progress | 9/11 | — |
 | per-command-help | in-review | 5/5 | — |

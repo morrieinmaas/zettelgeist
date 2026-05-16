@@ -15,7 +15,8 @@ Items deferred from Plan 1 + Plan 2 + Sprint reviews. Not commitments — a trac
 - Richer non-text content in `requirements.md` (image embeds, decision tables).
 - **`.claim` file flips derived status** *(shipped 2026-05-14)* — `scanClaimedSpecs()` in core walks each spec dir and reports any present `.claim` (legacy) or `.claim-<actor>` (v0.2 per-actor) file. CLI + MCP read paths now populate `RepoState.claimedSpecs` from disk, so claimed specs derive to `in-progress` correctly.
 - **Per-actor claim files** *(shipped 2026-05-14)* — `claim_spec({name, agent_id})` now writes `.claim-<sanitized-slug>` so two machines claiming concurrently don't conflict. Legacy `.claim` still recognised on read for back-compat. See [specs/per-actor-claim/](../specs/per-actor-claim/).
-- **Distributed-conflict robustness suite** — specs landed for the remaining items: INDEX/tasks/frontmatter merge drivers, `sync` command, TUI. See `specs/{index,tasks,frontmatter}-merge-driver/`, `specs/sync-command/`, `specs/tui-surface/`.
+- **INDEX.md auto-resolved on merge** *(shipped 2026-05-16)* — `install-hook` now also writes `specs/INDEX.md merge=union` to `.gitattributes` and a `post-merge` hook that runs `regen` against the fully-merged tree, committing the result as `[zg] regen INDEX after merge`. Originally specced as a custom merge driver; abandoned because git invokes drivers per-file before applying clean adds from the other branch (driver only sees a partial tree). See [specs/index-merge-driver/](../specs/index-merge-driver/).
+- **Distributed-conflict robustness suite (in progress)** — INDEX done; remaining: `tasks-merge-driver`, `frontmatter-merge-driver`, `sync-command`, `tui-surface`. Specs are all written under `specs/`.
 
 ## Tools
 

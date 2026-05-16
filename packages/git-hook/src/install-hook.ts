@@ -1,5 +1,6 @@
 import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
+import { installMergeDrivers } from './install-merge-driver.js';
 
 export const HOOK_MARKER_BEGIN = '# >>> zettelgeist >>>';
 export const HOOK_MARKER_END = '# <<< zettelgeist <<<';
@@ -75,5 +76,12 @@ export async function installPreCommitHook(
 
   await fs.writeFile(hookPath, next, 'utf8');
   await fs.chmod(hookPath, 0o755);
+
+  // Also install the INDEX.md merge driver — same one-shot setup. Failing
+  // here doesn't undo the hook install, but it would leave INDEX.md merges
+  // back to the default "conflict markers" behavior, so we surface the
+  // error to the caller rather than swallowing it.
+  await installMergeDrivers(repoRoot);
+
   return backup ? { installed: true, backup } : { installed: true };
 }
