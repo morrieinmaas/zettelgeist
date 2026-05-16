@@ -3,7 +3,7 @@ export type { FsReader } from './loader.js';
 export { parseFrontmatter } from './frontmatter.js';
 export type { FrontmatterResult } from './frontmatter.js';
 export { parseTasks } from './tasks.js';
-export { loadSpec, loadAllSpecs, scanClaimedSpecs, sanitizeAgentId } from './loader.js';
+export { loadSpec, loadAllSpecs, scanClaimedSpecs, sanitizeAgentId, defaultAgentId } from './loader.js';
 export { deriveStatus } from './status.js';
 export { buildGraph } from './graph.js';
 export { validateRepo, compareErrors } from './validate.js';

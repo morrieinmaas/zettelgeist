@@ -10,24 +10,52 @@ export interface FsReader {
 
 const SPEC_NAME = /^[a-z0-9-]+$/;
 
+/** Max length of a `.claim-<slug>` slug segment. Picked to leave headroom
+ *  under the 255-byte filename cap on all common filesystems even when
+ *  combined with the `.claim-` prefix and any `.tmp` atomic-write suffix. */
+const MAX_SLUG_LEN = 64;
+
 /**
  * Sanitize a free-form `agent_id` into a filesystem-safe slug for use in
- * `.claim-<slug>` filenames. Keeps letters/digits/`-`/`_`/`.`; replaces
- * everything else with `-`; collapses runs of `-`; trims leading dots so
- * the file isn't doubly-hidden; falls back to `agent` if the input is
- * empty after sanitization.
+ * `.claim-<slug>` filenames. The resulting slug matches `[A-Za-z0-9._-]+`
+ * (case preserved — `Alice` and `alice` are intentionally distinct on
+ * case-sensitive filesystems), is capped at 64 characters, and is
+ * normalized (NFC) before sanitization so visually-identical inputs
+ * collide deterministically.
  *
- * Exported so CLI and MCP can both produce identical filenames for the
- * same logical actor.
+ * Falls back to `'agent'` when the input is empty or sanitizes to empty.
+ * Exported so CLI, MCP, and VSCode surfaces all produce identical
+ * filenames for the same raw `agent_id`.
  */
 export function sanitizeAgentId(raw: string | undefined): string {
   const s = (raw ?? '')
-    .toLowerCase()
-    .replace(/[^a-z0-9._-]+/g, '-')
+    .normalize('NFC')
+    .replace(/[^A-Za-z0-9._-]+/g, '-')
     .replace(/-+/g, '-')
     .replace(/^[.-]+/, '')
-    .replace(/[.-]+$/, '');
+    .replace(/[.-]+$/, '')
+    .slice(0, MAX_SLUG_LEN)
+    .replace(/[.-]+$/, ''); // re-trim in case the slice cut mid-dash-run
   return s || 'agent';
+}
+
+/**
+ * Synthesize a deterministic-but-actor-scoped default agent_id when the
+ * caller didn't provide one. Combines the OS user (`USER` on POSIX,
+ * `USERNAME` on Windows) with the process pid so two anonymous claimers
+ * on the same machine produce distinct slugs, and two anonymous claimers
+ * on different machines (different `USER`) likewise produce distinct
+ * slugs. The result is already sanitized.
+ *
+ * Returns a fresh slug per call (pid changes per process invocation).
+ *
+ * Use when a writer didn't pass `agent_id` and you want the per-actor
+ * design's distinct-filenames guarantee instead of a colliding constant.
+ */
+export function defaultAgentId(): string {
+  const user = process.env['USER'] || process.env['USERNAME'] || 'agent';
+  const pid = process.pid;
+  return sanitizeAgentId(`${user}-${pid}`);
 }
 
 /**
@@ -66,7 +94,15 @@ export async function scanClaimedSpecs(fs: FsReader, specsDir = 'specs'): Promis
     if (!entry.isDir) continue;
     if (!SPEC_NAME.test(entry.name)) continue;
     const dir = `${specsDir}/${entry.name}`;
-    const inner = await fs.readDir(dir);
+    // The spec dir can disappear between the outer readDir and this call
+    // (e.g. delete_spec running concurrently). Treat that as "not claimed"
+    // and move on, rather than 500-ing the whole list_specs request.
+    let inner: Array<{ name: string; isDir: boolean }>;
+    try {
+      inner = await fs.readDir(dir);
+    } catch {
+      continue;
+    }
     for (const f of inner) {
       if (f.isDir) continue;
       if (f.name === '.claim' || f.name.startsWith('.claim-')) {

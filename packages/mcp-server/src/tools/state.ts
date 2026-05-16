@@ -3,7 +3,7 @@ import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { runConformance, loadConfig, sanitizeAgentId } from '@zettelgeist/core';
+import { runConformance, loadConfig, sanitizeAgentId, defaultAgentId } from '@zettelgeist/core';
 import { makeDiskFsReader } from '@zettelgeist/fs-adapters';
 import { installPreCommitHook } from '@zettelgeist/git-hook';
 import type { ToolDef } from '../server.js';
@@ -24,30 +24,38 @@ export const claimSpecTool: ToolDef<z.infer<typeof claimInput>, { acknowledged: 
     const specsRoot = path.resolve(ctx.cwd, cfg.config.specsDir);
     const dir = safeJoin(specsRoot, args.name);
     await fs.mkdir(dir, { recursive: true });
-    const agentSlug = sanitizeAgentId(args.agent_id);
+    // No agent_id → synthesize USER-pid so two anonymous claimers don't
+    // collide on a constant slug. Pass the slug back so the caller can
+    // round-trip it on `release_spec`.
+    const agentSlug = args.agent_id ? sanitizeAgentId(args.agent_id) : defaultAgentId();
     const ts = new Date().toISOString();
     await fs.writeFile(
       safeJoin(dir, `.claim-${agentSlug}`),
-      `${args.agent_id ?? 'agent'}\n${ts}\n`,
+      `${args.agent_id ?? agentSlug}\n${ts}\n`,
       'utf8',
     );
+    // Migration: drop any legacy single `.claim` left over from v0.1 so the
+    // spec doesn't stay stuck as "claimed" after the per-actor releases run.
+    await fs.unlink(safeJoin(dir, '.claim')).catch((err: NodeJS.ErrnoException) => {
+      if (err.code !== 'ENOENT') throw err;
+    });
     return { acknowledged: true, agent_id: agentSlug };
   },
 };
 
 const releaseInput = z.object({ name: z.string(), agent_id: z.string().optional() });
 
-export const releaseSpecTool: ToolDef<z.infer<typeof releaseInput>, { acknowledged: true }> = {
+export const releaseSpecTool: ToolDef<z.infer<typeof releaseInput>, { acknowledged: true; removed: boolean }> = {
   name: 'release_spec',
   description:
-    'Remove the caller\'s per-actor .claim-<agent_id> file. Other actors\' claims on the same spec are preserved. Falls back to the legacy single `.claim` file when no agent_id is provided AND no per-actor file is found.',
+    'Remove the caller\'s per-actor .claim-<agent_id> file. Other actors\' claims on the same spec are preserved. When no agent_id is provided AND no per-actor file matches the synthesized default, falls back to removing the legacy single `.claim` file. Returns {removed: false} if nothing was unlinked — useful for diagnosing agent_id drift.',
   inputSchema: releaseInput,
   async handler(args, ctx) {
     const reader = makeDiskFsReader(ctx.cwd);
     const cfg = await loadConfig(reader);
     const specsRoot = path.resolve(ctx.cwd, cfg.config.specsDir);
     const specDir = safeJoin(specsRoot, args.name);
-    const agentSlug = sanitizeAgentId(args.agent_id);
+    const agentSlug = args.agent_id ? sanitizeAgentId(args.agent_id) : defaultAgentId();
     const claimPath = safeJoin(specDir, `.claim-${agentSlug}`);
     let removed = false;
     await fs.unlink(claimPath).then(() => { removed = true; }).catch((err: NodeJS.ErrnoException) => {
@@ -55,11 +63,11 @@ export const releaseSpecTool: ToolDef<z.infer<typeof releaseInput>, { acknowledg
     });
     if (!removed && !args.agent_id) {
       const legacy = safeJoin(specDir, '.claim');
-      await fs.unlink(legacy).catch((err: NodeJS.ErrnoException) => {
+      await fs.unlink(legacy).then(() => { removed = true; }).catch((err: NodeJS.ErrnoException) => {
         if (err.code !== 'ENOENT') throw err;
       });
     }
-    return { acknowledged: true };
+    return { acknowledged: true, removed };
   },
 };
 

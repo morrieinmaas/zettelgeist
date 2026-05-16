@@ -72,13 +72,34 @@ agents claiming the same spec from different machines create two
 distinct files — no git merge conflict. The spec is "claimed" as long
 as *any* `.claim*` file is present.
 
-**Always `release_spec({name, agent_id})` when done**, including on
-error. Release removes only your own per-actor file; other agents'
-claims stay. If you didn't pass `agent_id` to either call, the same
-default-slug rule applies symmetrically (so the round-trip works).
+**The response returns the canonical `agent_id` (the sanitized slug).
+Store it and pass it back to `release_spec` verbatim.** Sanitization is
+lossy — special characters collapse to `-`, runs deduplicate, length
+caps at 64 — so reconstructing the slug from your raw input is fragile.
+
+```
+const { agent_id } = await claim_spec({ name: "user-auth", agent_id: "alice@laptop.local" });
+// agent_id is now e.g. "alice-laptop.local" — keep it for release
+await release_spec({ name: "user-auth", agent_id });
+```
+
+**Always `release_spec` when done**, including on error. Release
+removes only your own per-actor file; other agents' claims stay. The
+response includes `removed: boolean` — `false` means nothing was
+unlinked (usually a sign your `agent_id` drifted mid-session — diagnose
+before re-claiming).
+
+If you omit `agent_id` on both calls, all three surfaces (CLI, MCP,
+VSCode) synthesize the same default from `${USER}-${pid}`, so the
+round-trip works within the same process. Don't rely on this across
+process boundaries — always pass an explicit `agent_id` (and use the
+slug from the response) for any non-trivial workflow.
 
 The legacy v0.1 single `.claim` file is still recognised on read for
-back-compat with older repos.
+back-compat. `claim_spec` opportunistically removes any pre-existing
+legacy `.claim` so the lock semantics migrate atomically — the spec
+isn't left stuck as "claimed" after every actor releases their per-actor
+file.
 
 Claim is advisory, not exclusive — it does not block another agent's
 mutations. It signals "someone is working on this; coordinate before

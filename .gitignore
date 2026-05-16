@@ -8,8 +8,16 @@ packages/*/src/**/*.js
 packages/*/src/**/*.d.ts
 packages/*/src/**/*.js.map
 .DS_Store
+# Per-spec claim files. v0.1 single `.claim`, v0.2 per-actor `.claim-<slug>`.
+# Both shapes are ephemeral tool state, NOT part of the spec format.
 .claim
+.claim-*
+# Whitelist: examples, demo, and conformance fixtures intentionally check
+# claim files in so the demo / fixtures reproduce on a fresh clone.
 !examples/**/.claim
+!examples/**/.claim-*
+!spec/conformance/fixtures/**/.claim
+!spec/conformance/fixtures/**/.claim-*
 .zettelgeist/regen-cache.json
 .zettelgeist/exports/
 **/.zettelgeist/regen-cache.json

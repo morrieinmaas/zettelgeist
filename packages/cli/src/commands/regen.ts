@@ -70,7 +70,11 @@ async function hashWorkingTree(repoPath: string, specsDir: string): Promise<stri
     for (const name of names) {
       // Skip junk + the generated INDEX.md itself (otherwise writing it
       // changes the tree hash and we never get a cache hit on round-trips).
-      if (name === '.git' || name === 'node_modules' || name === '.claim') continue;
+      // Skip claim files: legacy single .claim AND per-actor .claim-<slug>.
+      // They're ephemeral tool state; rolling them into the tree SHA would
+      // make every claim/release invalidate the regen cache.
+      if (name === '.git' || name === 'node_modules') continue;
+      if (name === '.claim' || name.startsWith('.claim-')) continue;
       if (relDir === '' && name === 'INDEX.md') continue;
       const abs = path.join(absDir, name);
       const rel = relDir ? `${relDir}/${name}` : name;

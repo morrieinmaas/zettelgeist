@@ -6,7 +6,7 @@ import matter from 'gray-matter';
 import yaml from 'js-yaml';
 import {
   loadAllSpecs, loadSpec, deriveStatus, loadConfig, runConformance, validateRepo,
-  scanClaimedSpecs, sanitizeAgentId,
+  scanClaimedSpecs, sanitizeAgentId, defaultAgentId,
   type Status,
 } from '@zettelgeist/core';
 import { makeDiskFsReader } from '@zettelgeist/fs-adapters';
@@ -99,7 +99,7 @@ export function makeBackend(workspaceRoot: string) {
         case 'deleteSpec':      return deleteSpec(req.args[0] as string);
         case 'regenerateIndex': return regenerateIndex();
         case 'claimSpec':       return claimSpec(req.args[0] as string, req.args[1] as string | undefined);
-        case 'releaseSpec':     return releaseSpec(req.args[0] as string);
+        case 'releaseSpec':     return releaseSpec(req.args[0] as string, req.args[1] as string | undefined);
         default: throw new Error(`unknown method: ${req.method}`);
       }
     },
@@ -368,28 +368,35 @@ export function makeBackend(workspaceRoot: string) {
     const { cwd, specsDir } = await getCtx();
     const dir = safeJoin(path.resolve(cwd, specsDir), name);
     await fs.mkdir(dir, { recursive: true });
-    const slug = sanitizeAgentId(agentId ?? 'vscode');
+    // Use the shared synthesizer instead of a per-surface literal so the
+    // CLI, MCP, and VSCode paths produce identical filenames for the same
+    // anonymous caller.
+    const slug = agentId ? sanitizeAgentId(agentId) : defaultAgentId();
     await fs.writeFile(
       safeJoin(dir, `.claim-${slug}`),
-      `${agentId ?? 'vscode'}\n${new Date().toISOString()}\n`,
+      `${agentId ?? slug}\n${new Date().toISOString()}\n`,
       'utf8',
     );
-    return { acknowledged: true as const };
+    // Migration: drop any legacy single `.claim` left over from v0.1.
+    await fs.unlink(safeJoin(dir, '.claim')).catch((err) => {
+      if (err.code !== 'ENOENT') throw err;
+    });
+    return { acknowledged: true as const, agent_id: slug };
   }
 
   async function releaseSpec(name: string, agentId?: string) {
     const { cwd, specsDir } = await getCtx();
     const specDir = safeJoin(path.resolve(cwd, specsDir), name);
-    const slug = sanitizeAgentId(agentId ?? 'vscode');
+    const slug = agentId ? sanitizeAgentId(agentId) : defaultAgentId();
     let removed = false;
     await fs.unlink(safeJoin(specDir, `.claim-${slug}`)).then(() => { removed = true; }).catch((err) => {
       if (err.code !== 'ENOENT') throw err;
     });
     if (!removed && !agentId) {
-      await fs.unlink(safeJoin(specDir, '.claim')).catch((err) => {
+      await fs.unlink(safeJoin(specDir, '.claim')).then(() => { removed = true; }).catch((err) => {
         if (err.code !== 'ENOENT') throw err;
       });
     }
-    return { acknowledged: true as const };
+    return { acknowledged: true as const, removed };
   }
 }

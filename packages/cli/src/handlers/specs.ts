@@ -5,7 +5,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import {
   loadAllSpecs, loadSpec, deriveStatus, loadConfig,
-  scanClaimedSpecs, sanitizeAgentId,
+  scanClaimedSpecs, sanitizeAgentId, defaultAgentId,
 } from '@zettelgeist/core';
 import { makeDiskFsReader } from '@zettelgeist/fs-adapters';
 import yaml from 'js-yaml';
@@ -341,25 +341,34 @@ async function patchFrontmatter(
 
 async function claimSpec(req: IncomingMessage, res: ServerResponse, ctx: SpecsRouteContext, name: string): Promise<void> {
   const body = await readBody(req) as { agent_id?: string } | null;
-  const agentSlug = sanitizeAgentId(body?.agent_id);
+  // If caller didn't supply agent_id, synthesize a USER-pid default so two
+  // anonymous claimers don't collide on a constant slug.
+  const agentSlug = body?.agent_id ? sanitizeAgentId(body.agent_id) : defaultAgentId();
   const dir = safeJoin(path.resolve(ctx.cwd, ctx.specsDir), name);
   await fs.mkdir(dir, { recursive: true });
   // v0.2: write per-actor .claim-<slug> so two concurrent claimers don't conflict.
   await fs.writeFile(
     safeJoin(dir, `.claim-${agentSlug}`),
-    `${body?.agent_id ?? 'agent'}\n${new Date().toISOString()}\n`,
+    `${body?.agent_id ?? agentSlug}\n${new Date().toISOString()}\n`,
     'utf8',
   );
+  // Migration: if a legacy single `.claim` is sitting next to us from a v0.1
+  // claim, drop it. The per-actor write supersedes the legacy lock; leaving
+  // it would keep the spec stuck as `in-progress` even after every per-actor
+  // release.
+  await fs.unlink(safeJoin(dir, '.claim')).catch((err) => {
+    if (err.code !== 'ENOENT') throw err;
+  });
   sendJson(res, 200, { acknowledged: true, agent_id: agentSlug });
 }
 
 async function releaseSpec(req: IncomingMessage, res: ServerResponse, ctx: SpecsRouteContext, name: string): Promise<void> {
   const body = await readBody(req) as { agent_id?: string } | null;
   const specDir = safeJoin(path.resolve(ctx.cwd, ctx.specsDir), name);
-  const agentSlug = sanitizeAgentId(body?.agent_id);
-  // Remove only the caller's claim. If no agent_id provided and no per-actor
-  // file exists for the synthesized default, fall through to the legacy `.claim`
-  // for back-compat with v0.1 releases.
+  const agentSlug = body?.agent_id ? sanitizeAgentId(body.agent_id) : defaultAgentId();
+  // Remove only the caller's per-actor file. If no agent_id provided AND no
+  // per-actor file matched, fall back to removing the legacy `.claim` for
+  // back-compat with releases issued by v0.1 clients.
   const claimPath = safeJoin(specDir, `.claim-${agentSlug}`);
   let removed = false;
   await fs.unlink(claimPath).then(() => { removed = true; }).catch((err) => {
@@ -367,11 +376,11 @@ async function releaseSpec(req: IncomingMessage, res: ServerResponse, ctx: Specs
   });
   if (!removed && !body?.agent_id) {
     const legacy = safeJoin(specDir, '.claim');
-    await fs.unlink(legacy).catch((err) => {
+    await fs.unlink(legacy).then(() => { removed = true; }).catch((err) => {
       if (err.code !== 'ENOENT') throw err;
     });
   }
-  sendJson(res, 200, { acknowledged: true });
+  sendJson(res, 200, { acknowledged: true, removed });
 }
 
 async function writeHandoff(req: IncomingMessage, res: ServerResponse, ctx: SpecsRouteContext, name: string): Promise<void> {
