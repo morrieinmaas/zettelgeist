@@ -13,7 +13,7 @@ You need Node 20+, pnpm 9+, and git 2.30+.
 ## Run the test suite
 
 ```bash
-pnpm -r test          # 309 unit + integration tests across all packages
+pnpm -r test          # 315 unit + integration tests across all packages
 pnpm conformance      # 42 format conformance fixtures
 pnpm -r typecheck     # all packages
 ```

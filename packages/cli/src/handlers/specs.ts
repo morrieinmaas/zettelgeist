@@ -5,6 +5,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import {
   loadAllSpecs, loadSpec, deriveStatus, loadConfig,
+  scanClaimedSpecs, sanitizeAgentId,
 } from '@zettelgeist/core';
 import { makeDiskFsReader } from '@zettelgeist/fs-adapters';
 import yaml from 'js-yaml';
@@ -109,7 +110,7 @@ async function dispatchSpecsRoute(
     return claimSpec(req, res, ctx, name);
   }
   if (rest === '/release' && req.method === 'POST') {
-    return releaseSpec(res, ctx, name);
+    return releaseSpec(req, res, ctx, name);
   }
 
   // PUT /api/specs/<name>/handoff
@@ -123,7 +124,8 @@ async function dispatchSpecsRoute(
 async function listSpecs(res: ServerResponse, ctx: SpecsRouteContext): Promise<void> {
   const reader = makeDiskFsReader(ctx.cwd);
   const specs = await loadAllSpecs(reader, ctx.specsDir);
-  const repoState = { claimedSpecs: new Set<string>(), mergedSpecs: new Set<string>() };
+  const claimedSpecs = await scanClaimedSpecs(reader, ctx.specsDir);
+  const repoState = { claimedSpecs, mergedSpecs: new Set<string>() };
   const out = specs.map((s) => {
     const counted = s.tasks.filter((t) => !t.tags.includes('#skip'));
     const checked = counted.filter((t) => t.checked).length;
@@ -339,19 +341,36 @@ async function patchFrontmatter(
 
 async function claimSpec(req: IncomingMessage, res: ServerResponse, ctx: SpecsRouteContext, name: string): Promise<void> {
   const body = await readBody(req) as { agent_id?: string } | null;
-  const agentId = body?.agent_id ?? 'agent';
+  const agentSlug = sanitizeAgentId(body?.agent_id);
   const dir = safeJoin(path.resolve(ctx.cwd, ctx.specsDir), name);
   await fs.mkdir(dir, { recursive: true });
-  await fs.writeFile(safeJoin(dir, '.claim'), `${agentId}\n${new Date().toISOString()}\n`, 'utf8');
-  sendJson(res, 200, { acknowledged: true });
+  // v0.2: write per-actor .claim-<slug> so two concurrent claimers don't conflict.
+  await fs.writeFile(
+    safeJoin(dir, `.claim-${agentSlug}`),
+    `${body?.agent_id ?? 'agent'}\n${new Date().toISOString()}\n`,
+    'utf8',
+  );
+  sendJson(res, 200, { acknowledged: true, agent_id: agentSlug });
 }
 
-async function releaseSpec(res: ServerResponse, ctx: SpecsRouteContext, name: string): Promise<void> {
+async function releaseSpec(req: IncomingMessage, res: ServerResponse, ctx: SpecsRouteContext, name: string): Promise<void> {
+  const body = await readBody(req) as { agent_id?: string } | null;
   const specDir = safeJoin(path.resolve(ctx.cwd, ctx.specsDir), name);
-  const claimPath = safeJoin(specDir, '.claim');
-  await fs.unlink(claimPath).catch((err) => {
+  const agentSlug = sanitizeAgentId(body?.agent_id);
+  // Remove only the caller's claim. If no agent_id provided and no per-actor
+  // file exists for the synthesized default, fall through to the legacy `.claim`
+  // for back-compat with v0.1 releases.
+  const claimPath = safeJoin(specDir, `.claim-${agentSlug}`);
+  let removed = false;
+  await fs.unlink(claimPath).then(() => { removed = true; }).catch((err) => {
     if (err.code !== 'ENOENT') throw err;
   });
+  if (!removed && !body?.agent_id) {
+    const legacy = safeJoin(specDir, '.claim');
+    await fs.unlink(legacy).catch((err) => {
+      if (err.code !== 'ENOENT') throw err;
+    });
+  }
   sendJson(res, 200, { acknowledged: true });
 }
 

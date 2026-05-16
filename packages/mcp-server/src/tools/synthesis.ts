@@ -4,7 +4,7 @@ import * as path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import {
-  loadAllSpecs, loadSpec, deriveStatus, loadConfig,
+  loadAllSpecs, loadSpec, deriveStatus, loadConfig, scanClaimedSpecs,
 } from '@zettelgeist/core';
 import { makeDiskFsReader } from '@zettelgeist/fs-adapters';
 import type { ToolDef } from '../server.js';
@@ -40,7 +40,8 @@ export const prepareSynthesisContextTool: ToolDef<z.infer<typeof prepareInput>, 
     const reader = makeDiskFsReader(ctx.cwd);
     const cfg = await loadConfig(reader);
     const allSpecs = await loadAllSpecs(reader, cfg.config.specsDir);
-    const repoState = { claimedSpecs: new Set<string>(), mergedSpecs: new Set<string>() };
+    const claimedSpecs = await scanClaimedSpecs(reader, cfg.config.specsDir);
+    const repoState = { claimedSpecs, mergedSpecs: new Set<string>() };
 
     let specsToInclude = allSpecs;
     if (args.scope.kind === 'spec') {

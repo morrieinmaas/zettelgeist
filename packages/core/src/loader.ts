@@ -11,6 +11,26 @@ export interface FsReader {
 const SPEC_NAME = /^[a-z0-9-]+$/;
 
 /**
+ * Sanitize a free-form `agent_id` into a filesystem-safe slug for use in
+ * `.claim-<slug>` filenames. Keeps letters/digits/`-`/`_`/`.`; replaces
+ * everything else with `-`; collapses runs of `-`; trims leading dots so
+ * the file isn't doubly-hidden; falls back to `agent` if the input is
+ * empty after sanitization.
+ *
+ * Exported so CLI and MCP can both produce identical filenames for the
+ * same logical actor.
+ */
+export function sanitizeAgentId(raw: string | undefined): string {
+  const s = (raw ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^[.-]+/, '')
+    .replace(/[.-]+$/, '');
+  return s || 'agent';
+}
+
+/**
  * Returns true if `dir` (recursively) contains at least one file whose name ends with `.md`.
  * Exported because validateRepo also needs this check to emit `E_EMPTY_SPEC`.
  */
@@ -24,6 +44,38 @@ export async function folderContainsMarkdown(fs: FsReader, dir: string): Promise
     }
   }
   return false;
+}
+
+/**
+ * Walk every spec directory under `specsDir` and report the names of specs
+ * that have at least one claim file present. Recognises both shapes:
+ *
+ * - `.claim`        — legacy single-actor (v0.1)
+ * - `.claim-<id>`   — per-actor (v0.2; multiple files coexist per spec)
+ *
+ * Returns an empty set when `specsDir` does not exist. Skips entries whose
+ * directory name fails `SPEC_NAME` (same regex used by the loader).
+ *
+ * Today this checks file presence only; stale-claim TTL is a v0.3 question.
+ */
+export async function scanClaimedSpecs(fs: FsReader, specsDir = 'specs'): Promise<Set<string>> {
+  const out = new Set<string>();
+  if (!(await fs.exists(specsDir))) return out;
+  const entries = await fs.readDir(specsDir);
+  for (const entry of entries) {
+    if (!entry.isDir) continue;
+    if (!SPEC_NAME.test(entry.name)) continue;
+    const dir = `${specsDir}/${entry.name}`;
+    const inner = await fs.readDir(dir);
+    for (const f of inner) {
+      if (f.isDir) continue;
+      if (f.name === '.claim' || f.name.startsWith('.claim-')) {
+        out.add(entry.name);
+        break;
+      }
+    }
+  }
+  return out;
 }
 
 export async function loadAllSpecs(fs: FsReader, specsDir = 'specs'): Promise<Spec[]> {

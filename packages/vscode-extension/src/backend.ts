@@ -6,6 +6,7 @@ import matter from 'gray-matter';
 import yaml from 'js-yaml';
 import {
   loadAllSpecs, loadSpec, deriveStatus, loadConfig, runConformance, validateRepo,
+  scanClaimedSpecs, sanitizeAgentId,
   type Status,
 } from '@zettelgeist/core';
 import { makeDiskFsReader } from '@zettelgeist/fs-adapters';
@@ -107,7 +108,8 @@ export function makeBackend(workspaceRoot: string) {
   async function listSpecs() {
     const { specsDir, reader } = await getCtx();
     const specs = await loadAllSpecs(reader, specsDir);
-    const repoState = { claimedSpecs: new Set<string>(), mergedSpecs: new Set<string>() };
+    const claimedSpecs = await scanClaimedSpecs(reader, specsDir);
+    const repoState = { claimedSpecs, mergedSpecs: new Set<string>() };
     return specs.map((s) => {
       const counted = s.tasks.filter((t) => !t.tags.includes('#skip'));
       const checked = counted.filter((t) => t.checked).length;
@@ -366,16 +368,28 @@ export function makeBackend(workspaceRoot: string) {
     const { cwd, specsDir } = await getCtx();
     const dir = safeJoin(path.resolve(cwd, specsDir), name);
     await fs.mkdir(dir, { recursive: true });
-    await fs.writeFile(safeJoin(dir, '.claim'), `${agentId ?? 'vscode'}\n${new Date().toISOString()}\n`, 'utf8');
+    const slug = sanitizeAgentId(agentId ?? 'vscode');
+    await fs.writeFile(
+      safeJoin(dir, `.claim-${slug}`),
+      `${agentId ?? 'vscode'}\n${new Date().toISOString()}\n`,
+      'utf8',
+    );
     return { acknowledged: true as const };
   }
 
-  async function releaseSpec(name: string) {
+  async function releaseSpec(name: string, agentId?: string) {
     const { cwd, specsDir } = await getCtx();
     const specDir = safeJoin(path.resolve(cwd, specsDir), name);
-    await fs.unlink(safeJoin(specDir, '.claim')).catch((err) => {
+    const slug = sanitizeAgentId(agentId ?? 'vscode');
+    let removed = false;
+    await fs.unlink(safeJoin(specDir, `.claim-${slug}`)).then(() => { removed = true; }).catch((err) => {
       if (err.code !== 'ENOENT') throw err;
     });
+    if (!removed && !agentId) {
+      await fs.unlink(safeJoin(specDir, '.claim')).catch((err) => {
+        if (err.code !== 'ENOENT') throw err;
+      });
+    }
     return { acknowledged: true as const };
   }
 }

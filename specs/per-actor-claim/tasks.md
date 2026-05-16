@@ -1,11 +1,11 @@
-- [ ] 1. Update `RepoState.claimedSpecs` derivation to scan for `.claim-*` files (any prefix-match)
-- [ ] 2. Update `claim_spec` MCP tool + REST handler to write `.claim-<agent_id>` instead of `.claim`
-- [ ] 3. Update `release_spec` MCP tool + REST handler to remove only the caller's `.claim-<agent_id>` file
-- [ ] 4. Back-compat: legacy single `.claim` still recognised on read
-- [ ] 5. Default agent_id rule (env+pid) documented and tested
-- [ ] 6. Conformance fixture: per-actor-claim happy path
-- [ ] 7. Conformance fixture: legacy `.claim` back-compat
-- [ ] 8. Unit tests in core, mcp-server, cli handlers
-- [ ] 9. Update format spec section §X (claims) to describe both shapes
-- [ ] 10. Update SKILL.md to reflect the change
+- [x] 1. `scanClaimedSpecs()` in core scans `.claim` and `.claim-*` (prefix-match)
+- [x] 2. `claim_spec` (CLI + MCP) writes `.claim-<sanitized-agent-id>`
+- [x] 3. `release_spec` (CLI + MCP) removes only the caller's per-actor file
+- [x] 4. Back-compat: legacy single `.claim` still recognised on read; `release_spec` without `agent_id` falls back to it
+- [x] 5. `sanitizeAgentId` in core; default slug `agent` when no id provided
+- [x] 6. Conformance fixture 43: per-actor-claim happy path
+- [x] 7. Conformance fixture 44: legacy `.claim` back-compat
+- [x] 8. Unit tests in mcp-server + cli handlers (+ updated synthesis test repoState wiring)
+- [ ] 9. Update format spec section to describe both shapes (v0.2 spec bump — TODO)
+- [x] 10. Update SKILL.md to reflect the change
 - [ ] 11. Changeset (minor bump on core, cli, mcp-server)

@@ -105,6 +105,8 @@ Status is computed from the spec's contents and the repository's git state. Impl
 
 Claim staleness is implementation-defined; v0.1 implementations SHOULD treat claims older than 24 hours as stale.
 
+**v0.2 read-time extension (back-compat):** v0.2-aware implementations also recognise per-actor claim files matching the pattern `specs/<name>/.claim-<actor>` (any filename starting with `.claim-`). Multiple per-actor files SHALL be permitted on the same spec; the spec is considered claimed as long as any non-stale `.claim` *or* `.claim-<actor>` file exists. Writers conforming to v0.2 SHOULD prefer the per-actor shape to avoid merge conflicts when two actors claim the same spec concurrently. v0.1 readers that only check for the literal `.claim` filename will miss per-actor claims but otherwise behave correctly.
+
 The "merged to the default branch" relation is implementation-supplied (see §8). v0.1 implementations MAY use git ancestry of the most recent commit touching `tasks.md` or `requirements.md`.
 
 ## 8. Spec graph

@@ -3,7 +3,7 @@ export type { FsReader } from './loader.js';
 export { parseFrontmatter } from './frontmatter.js';
 export type { FrontmatterResult } from './frontmatter.js';
 export { parseTasks } from './tasks.js';
-export { loadSpec, loadAllSpecs } from './loader.js';
+export { loadSpec, loadAllSpecs, scanClaimedSpecs, sanitizeAgentId } from './loader.js';
 export { deriveStatus } from './status.js';
 export { buildGraph } from './graph.js';
 export { validateRepo, compareErrors } from './validate.js';
@@ -13,7 +13,7 @@ export type { ZettelgeistConfig, LoadConfigResult } from './config.js';
 
 import type { FsReader } from './loader.js';
 import type { Graph, RepoState, Status, ValidationError } from './types.js';
-import { loadAllSpecs } from './loader.js';
+import { loadAllSpecs, scanClaimedSpecs } from './loader.js';
 import { deriveStatus } from './status.js';
 import { buildGraph } from './graph.js';
 import { validateRepo, compareErrors } from './validate.js';
@@ -36,7 +36,8 @@ export async function runConformance(fs: FsReader): Promise<ConformanceOutput> {
   const specsDir = cfg.config.specsDir;
 
   const specs = await loadAllSpecs(fs, specsDir);
-  const repoState: RepoState = { claimedSpecs: new Set(), mergedSpecs: new Set() };
+  const claimedSpecs = await scanClaimedSpecs(fs, specsDir);
+  const repoState: RepoState = { claimedSpecs, mergedSpecs: new Set() };
   const validation = await validateRepo(fs, specsDir);
   const graph = buildGraph(specs);
 

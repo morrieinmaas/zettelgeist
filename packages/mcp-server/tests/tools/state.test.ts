@@ -28,21 +28,38 @@ afterEach(async () => {
 });
 
 describe('stateTools', () => {
-  it('claim_spec writes a .claim file', async () => {
+  it('claim_spec writes a per-actor .claim-<slug> file', async () => {
     const result = await claimSpecTool.handler({ name: 'foo', agent_id: 'agent-x' }, { cwd: tmp });
-    expect(result).toEqual({ acknowledged: true });
-    const content = await fs.readFile(path.join(tmp, 'specs', 'foo', '.claim'), 'utf8');
+    expect(result).toEqual({ acknowledged: true, agent_id: 'agent-x' });
+    const content = await fs.readFile(path.join(tmp, 'specs', 'foo', '.claim-agent-x'), 'utf8');
     expect(content).toContain('agent-x');
   });
 
-  it('release_spec removes the .claim file (and is idempotent)', async () => {
-    await claimSpecTool.handler({ name: 'foo' }, { cwd: tmp });
-    const r1 = await releaseSpecTool.handler({ name: 'foo' }, { cwd: tmp });
+  it('two agents claiming the same spec produce two distinct files', async () => {
+    await claimSpecTool.handler({ name: 'foo', agent_id: 'alice' }, { cwd: tmp });
+    await claimSpecTool.handler({ name: 'foo', agent_id: 'bob' }, { cwd: tmp });
+    await fs.access(path.join(tmp, 'specs', 'foo', '.claim-alice'));
+    await fs.access(path.join(tmp, 'specs', 'foo', '.claim-bob'));
+  });
+
+  it('release_spec removes only the calling agent file (and is idempotent)', async () => {
+    await claimSpecTool.handler({ name: 'foo', agent_id: 'alice' }, { cwd: tmp });
+    await claimSpecTool.handler({ name: 'foo', agent_id: 'bob' }, { cwd: tmp });
+    const r1 = await releaseSpecTool.handler({ name: 'foo', agent_id: 'alice' }, { cwd: tmp });
     expect(r1).toEqual({ acknowledged: true });
-    await expect(fs.stat(path.join(tmp, 'specs', 'foo', '.claim'))).rejects.toThrow();
-    // second release is a no-op
-    const r2 = await releaseSpecTool.handler({ name: 'foo' }, { cwd: tmp });
+    await expect(fs.stat(path.join(tmp, 'specs', 'foo', '.claim-alice'))).rejects.toThrow();
+    await fs.access(path.join(tmp, 'specs', 'foo', '.claim-bob'));   // untouched
+    // second release of the same agent_id is a no-op
+    const r2 = await releaseSpecTool.handler({ name: 'foo', agent_id: 'alice' }, { cwd: tmp });
     expect(r2).toEqual({ acknowledged: true });
+  });
+
+  it('release_spec with no agent_id falls back to legacy .claim if present', async () => {
+    // Simulate a legacy v0.1 claim
+    await fs.writeFile(path.join(tmp, 'specs', 'foo', '.claim'), 'old\n', 'utf8');
+    const r = await releaseSpecTool.handler({ name: 'foo' }, { cwd: tmp });
+    expect(r).toEqual({ acknowledged: true });
+    await expect(fs.stat(path.join(tmp, 'specs', 'foo', '.claim'))).rejects.toThrow();
   });
 
   it('regenerate_index returns null when INDEX.md is already current', async () => {
