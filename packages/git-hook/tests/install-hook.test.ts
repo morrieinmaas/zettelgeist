@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { execFile } from 'node:child_process';
 import { promises as fs } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { promisify } from 'node:util';
 import {
   HOOK_BLOCK,
   HOOK_MARKER_BEGIN,
@@ -9,6 +11,8 @@ import {
   installPreCommitHook,
   mergeHookContent,
 } from '../src/install-hook.js';
+
+const execFileP = promisify(execFile);
 
 describe('mergeHookContent', () => {
   it('returns the marker block alone when input is null or empty', () => {
@@ -53,7 +57,9 @@ describe('installPreCommitHook', () => {
 
   beforeEach(async () => {
     tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'zg-git-hook-'));
-    await fs.mkdir(path.join(tmp, '.git'), { recursive: true });
+    // installPreCommitHook now also runs `git config` (to register the
+    // tasks merge driver), so the temp dir must be an actual git repo.
+    await execFileP('git', ['init', '-q'], { cwd: tmp });
   });
 
   afterEach(async () => {

@@ -27,6 +27,19 @@ tools. Do **not** invent a `.zettelgeist.yaml` to make this skill apply.
    `regenerate_index`). Anything you write below the
    `<!-- ZETTELGEIST:AUTO-GENERATED BELOW — do not edit -->` marker
    is overwritten. The region *above* the marker is yours.
+4. **`INDEX.md` is auto-resolved on merge.** `git merge` of two branches
+   that both regenerated it will not conflict. `install-hook` configures
+   `merge=union` in `.gitattributes` (transient junk content, no markers)
+   and a `post-merge` hook that runs `regen` against the fully-merged
+   tree and commits the result as `[zg] regen INDEX after merge`. If you
+   see that commit on the log after a merge, that's the hook fixing
+   things up — it's expected.
+5. **`tasks.md` merges semantically.** Two agents ticking different
+   tasks (or even the same task) on different branches won't conflict.
+   `install-hook` registers a custom merge driver: tasks are matched by
+   their text, either-side-checked wins, tags are unioned, prose is
+   preserved from `ours`. Renamed tasks appear as both versions (so
+   you can spot the rename and consolidate manually).
 
 ## The agent loop
 

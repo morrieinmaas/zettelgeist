@@ -28,6 +28,7 @@ const KNOWN_COMMANDS = new Set([
   'install-skill',
   'serve',
   'export-doc',
+  'merge-driver',
 ]);
 
 const FLAG_OPTIONS = {

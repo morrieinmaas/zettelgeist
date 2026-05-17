@@ -1,7 +1,9 @@
-- [ ] 1. Add `zettelgeist merge-driver index <base> <ours> <theirs>` subcommand to CLI
-- [ ] 2. Driver writes the regenerated INDEX over `<ours>` path (per git contract)
-- [ ] 3. `zettelgeist install-hook` writes/updates `.git/config` merge section
-- [ ] 4. `zettelgeist install-hook` adds/merges `specs/INDEX.md merge=zettelgeist-index` into `.gitattributes`
-- [ ] 5. Test: simulate a merge conflict in INDEX.md, run driver, assert regenerated content matches `zettelgeist regen`
-- [ ] 6. Document the driver in CONTRIBUTING + format spec
-- [ ] 7. Changeset (patch on cli + git-hook)
+- [x] 1. ~~`zettelgeist merge-driver index` CLI subcommand~~ — abandoned (drivers run too early; see requirements.md)
+- [x] 2. `.gitattributes` gets `specs/INDEX.md merge=union` (built-in git strategy)
+- [x] 3. `installMergeDrivers()` in @zettelgeist/git-hook smart-merges `.gitattributes` and `.git/hooks/post-merge`
+- [x] 4. `installPreCommitHook` calls `installMergeDrivers` so one-shot `install-hook` sets up everything
+- [x] 5. Stale `merge.zettelgeist-index.*` config from earlier driver-based attempts is stripped
+- [x] 6. Unit tests for `mergeGitAttributes`, `mergePostMergeContent`, idempotency, backup on conflict
+- [x] 7. End-to-end test: real `git merge` exercises union + post-merge; asserts INDEX is correctly regenerated with all merged specs
+- [x] 8. Format spec amendment + SKILL.md notes
+- [x] 9. Changeset (minor bump on git-hook + cli)

@@ -1,0 +1,85 @@
+import { promises as fs } from 'node:fs';
+import { mergeTasksMd } from '@zettelgeist/core';
+import { okEnvelope, errorEnvelope, type Envelope } from '../output.js';
+
+export const HELP = `zettelgeist merge-driver <kind> <base> <ours> <theirs> [--json]
+
+  Resolve a git merge conflict for a Zettelgeist-managed file. Invoked
+  automatically by git when the corresponding driver is configured (set up
+  by \`zettelgeist install-hook\`).
+
+  Kinds:
+    tasks    \`specs/*/tasks.md\`. Three-way merge that matches tasks by
+             text identity. Per-task: either side checked wins; both
+             un-checked from a checked base un-checks; tags union; renamed
+             tasks appear as two entries. Preserves prose structure from
+             \`ours\` (headings, blank lines, etc.).
+
+  Note: \`specs/INDEX.md\` is NOT handled by a custom driver. It uses
+  \`merge=union\` plus the \`post-merge\` hook installed by \`install-hook\`
+  to regenerate after the merge completes.
+
+  Arguments mirror git's %O/%A/%B placeholders:
+    base     temp file with the common-ancestor version (may be absent)
+    ours     temp file with our version — the driver WRITES the resolution here
+    theirs   temp file with their version (read-only)
+
+  Flags:
+    --json   Emit a JSON envelope on stdout (useful for tests).
+`;
+
+export type MergeDriverKind = 'tasks';
+const KINDS: ReadonlySet<MergeDriverKind> = new Set(['tasks']);
+
+export function isMergeDriverKind(s: string): s is MergeDriverKind {
+  return KINDS.has(s as MergeDriverKind);
+}
+
+export interface MergeDriverInput {
+  kind: MergeDriverKind;
+  basePath: string;
+  oursPath: string;
+  theirsPath: string;
+}
+
+export interface MergeDriverOk {
+  kind: MergeDriverKind;
+  resolved: true;
+  outputPath: string;
+}
+
+async function readOrEmpty(p: string): Promise<string> {
+  try {
+    return await fs.readFile(p, 'utf8');
+  } catch (err) {
+    const e = err as NodeJS.ErrnoException;
+    if (e.code === 'ENOENT') return '';
+    throw err;
+  }
+}
+
+export async function mergeDriverCommand(
+  input: MergeDriverInput,
+): Promise<Envelope<MergeDriverOk>> {
+  if (input.kind === 'tasks') {
+    return tasksDriver(input);
+  }
+  return errorEnvelope(`unknown merge driver kind: ${input.kind}`);
+}
+
+async function tasksDriver(input: MergeDriverInput): Promise<Envelope<MergeDriverOk>> {
+  const [base, ours, theirs] = await Promise.all([
+    readOrEmpty(input.basePath),
+    readOrEmpty(input.oursPath),
+    readOrEmpty(input.theirsPath),
+  ]);
+  const result = mergeTasksMd(base, ours, theirs);
+  try {
+    await fs.writeFile(input.oursPath, result.content, 'utf8');
+  } catch (err) {
+    return errorEnvelope(
+      `merge-driver: cannot write resolution to ${input.oursPath}: ${(err as Error).message}`,
+    );
+  }
+  return okEnvelope({ kind: 'tasks', resolved: true, outputPath: input.oursPath });
+}

@@ -1,6 +1,7 @@
-- [ ] 1. Implement `mergeTasksMd` in `@zettelgeist/core` (pure function: 3 strings in, 1 string + ok flag out)
-- [ ] 2. Cover with unit tests: same-tick, divergent-tick, new tasks on both sides, prose-only changes, tag union, text divergence
-- [ ] 3. Wire into `zettelgeist merge-driver tasks` CLI subcommand
-- [ ] 4. Register via `install-hook` in `.git/config` and `.gitattributes` (`specs/*/tasks.md merge=zettelgeist-tasks`)
-- [ ] 5. Conformance fixture pinning down the merge rules
-- [ ] 6. Changeset (minor bump on core + cli + git-hook)
+- [x] 1. `mergeTasksMd` in `@zettelgeist/core` — pure (3 strings → string + ok). Matches tasks by **text identity** rather than 1-indexed position (more robust against earlier-in-file additions; renames look like delete+add).
+- [x] 2. 19 unit tests covering: divergent ticks, same-tick, additions on both sides, tag union, rename semantics, base-empty, numeric-prefix stripping, prose preservation, un-tick-both-from-checked-base, edge cases
+- [x] 3. `zettelgeist merge-driver tasks <base> <ours> <theirs>` CLI subcommand
+- [x] 4. `installMergeDrivers` (in @zettelgeist/git-hook) registers `merge.zettelgeist-tasks.driver` in `.git/config` and adds `specs/*/tasks.md merge=zettelgeist-tasks` to the `.gitattributes` marker block
+- [x] 5. End-to-end git merge tests (CLI package): conflicting ticks resolve cleanly, same-task ticks dedupe
+- [ ] ~~Conformance fixture~~ — tool-level behavior, not format-level. Unit-test coverage is the right place. Removed from this spec.
+- [x] 6. Changeset (minor bump on core + cli + git-hook)
