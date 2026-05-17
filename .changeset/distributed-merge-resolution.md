@@ -1,6 +1,5 @@
 ---
 "@zettelgeist/core": minor
-"@zettelgeist/git-hook": minor
 "@zettelgeist/cli": minor
 ---
 
