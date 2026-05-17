@@ -10,6 +10,10 @@ const dist = path.join(root, 'dist');
 await fs.rm(dist, { recursive: true, force: true });
 await fs.mkdir(dist, { recursive: true });
 
+// Inject the package version at build time so help banner / future
+// `--version` output always matches the actual published version.
+const pkg = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8'));
+
 // Bundle the CLI binary. Internal workspace + own modules get inlined; npm deps stay external.
 await esbuild.build({
   entryPoints: [path.join(root, 'src/bin.ts')],
@@ -21,6 +25,9 @@ await esbuild.build({
   sourcemap: 'linked',
   minify: false,
   banner: { js: '#!/usr/bin/env node\n' },
+  define: {
+    __ZG_CLI_VERSION__: JSON.stringify(pkg.version),
+  },
   // Externalize npm deps so they're loaded from node_modules at runtime
   external: [
     '@modelcontextprotocol/sdk',

@@ -9,6 +9,8 @@ export interface CommandFlags {
   'no-open'?: boolean;
   template?: string;
   scope?: string;
+  'allow-dirty'?: boolean;
+  view?: string;
 }
 
 export type Invocation =
@@ -29,6 +31,8 @@ const KNOWN_COMMANDS = new Set([
   'serve',
   'export-doc',
   'merge-driver',
+  'sync',
+  'tui',
 ]);
 
 const FLAG_OPTIONS = {
@@ -40,6 +44,8 @@ const FLAG_OPTIONS = {
   'no-open': { type: 'boolean' as const },
   template:  { type: 'string'  as const },
   scope:     { type: 'string'  as const },
+  'allow-dirty': { type: 'boolean' as const },
+  view:      { type: 'string'  as const },
 };
 
 export function parseInvocation(argv: string[]): Invocation {
@@ -69,6 +75,8 @@ export function parseInvocation(argv: string[]): Invocation {
     ...(values['no-open'] !== undefined ? { 'no-open': values['no-open'] } : {}),
     ...(values.template !== undefined ? { template: values.template } : {}),
     ...(values.scope !== undefined ? { scope: values.scope } : {}),
+    ...(values['allow-dirty'] !== undefined ? { 'allow-dirty': values['allow-dirty'] } : {}),
+    ...(values.view !== undefined ? { view: values.view } : {}),
   };
 
   return { kind: 'command', name: first, args: positionals, flags };
