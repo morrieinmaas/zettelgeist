@@ -1,10 +1,16 @@
 {
   "name": "@zettelgeist/cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "license": "Apache-2.0",
   "author": "Mo <motechnix@gmail.com>",
   "description": "Zettelgeist CLI: regen, validate, install-hook, serve, export-doc commands.",
-  "keywords": ["zettelgeist", "spec-driven-development", "markdown", "project-management", "cli"],
+  "keywords": [
+    "zettelgeist",
+    "spec-driven-development",
+    "markdown",
+    "project-management",
+    "cli"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/morrieinmaas/zettelgeist.git",
@@ -16,8 +22,13 @@
     "access": "public"
   },
   "type": "module",
-  "bin": { "zettelgeist": "./dist/bin.js" },
-  "files": ["dist", "README.md"],
+  "bin": {
+    "zettelgeist": "./dist/bin.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "node scripts/bundle.mjs && chmod +x dist/bin.js && cp -r templates dist/templates && node scripts/copy-viewer.mjs",
     "typecheck": "tsc -p tsconfig.json",

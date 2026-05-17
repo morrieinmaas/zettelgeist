@@ -1,10 +1,18 @@
 {
   "name": "@zettelgeist/tui",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "license": "Apache-2.0",
   "author": "Mo <motechnix@gmail.com>",
   "description": "Zettelgeist TUI: terminal-native spec board, detail view, dependency graph, and docs browser.",
-  "keywords": ["zettelgeist", "spec-driven-development", "markdown", "project-management", "tui", "terminal", "kanban"],
+  "keywords": [
+    "zettelgeist",
+    "spec-driven-development",
+    "markdown",
+    "project-management",
+    "tui",
+    "terminal",
+    "kanban"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/morrieinmaas/zettelgeist.git",
@@ -16,8 +24,13 @@
     "access": "public"
   },
   "type": "module",
-  "bin": { "zg-tui": "./dist/bin.js" },
-  "files": ["dist", "README.md"],
+  "bin": {
+    "zg-tui": "./dist/bin.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "node scripts/bundle.mjs && chmod +x dist/bin.js",
     "typecheck": "tsc -p tsconfig.json",
