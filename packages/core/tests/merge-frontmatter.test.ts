@@ -253,6 +253,45 @@ describe('mergeFrontmatter — edge cases (gap-fill)', () => {
     expect(r.content).not.toContain('part_of: foo');
   });
 
+  it('emits a conflict when ours clears a scalar while theirs changes it differently', () => {
+    // Spec §9.3: "both changed differently → conflict marker". An
+    // explicit clear IS a change. The earlier "non-empty wins over
+    // empty" shortcut would silently take theirs, dropping ours'
+    // unblock intent. The fix is to detect that we're past the base-
+    // equality short-circuit (so both sides changed) and conflict
+    // regardless of whether one change is a clear.
+    const base = wrap('blocked_by: idp\n');
+    const ours = wrap('blocked_by: ""\n');       // ours: clear
+    const theirs = wrap('blocked_by: keys\n');   // theirs: different non-empty
+    const r = mergeFrontmatter(base, ours, theirs);
+    expect(r.ok).toBe(false);
+    expect(r.content).toContain('<<<<<<< ours: blocked_by');
+    expect(r.content).toContain('keys');
+  });
+
+  it('emits a conflict when theirs clears a scalar while ours changes it differently', () => {
+    // Mirror of the above — the clear can come from either side.
+    const base = wrap('part_of: parent\n');
+    const ours = wrap('part_of: new-parent\n'); // ours: different non-empty
+    const theirs = wrap('part_of: ""\n');       // theirs: clear
+    const r = mergeFrontmatter(base, ours, theirs);
+    expect(r.ok).toBe(false);
+    expect(r.content).toContain('<<<<<<< ours: part_of');
+    expect(r.content).toContain('new-parent');
+  });
+
+  it('both sides clearing the same scalar agree: drop the key, no conflict', () => {
+    // Semantic agreement (both expressed "no value"). Even though one
+    // side uses `""` and the other omits the key entirely, both intend
+    // the same thing — no need to interrupt the user.
+    const base = wrap('blocked_by: idp\n');
+    const ours = wrap('blocked_by: ""\n');
+    const theirs = wrap(''); // key removed entirely
+    const r = mergeFrontmatter(base, ours, theirs);
+    expect(r.ok).toBe(true);
+    expect(r.content).not.toContain('blocked_by');
+  });
+
   it('still emits a conflict when both sides change a scalar differently from base', () => {
     // Make sure the reorder didn't break the conflict path for the
     // "both changed, differently, both non-empty" case.

@@ -150,10 +150,26 @@ function mergeFrontmatterObjects(
           continue;
         }
       }
-      // No base, or both sides changed. If only one side has a value, that
-      // side wins (e.g., base absent + ours sets + theirs absent = take
-      // ours). If both have different non-empty values, conflict.
+      // Both sides converged to empty/absent: semantic agreement even
+      // when the textual form differs (`undefined` vs `""`). Drop the
+      // key with no conflict — both sides explicitly said "no value".
       if (isEmpty(o) && isEmpty(t)) continue;
+
+      if (b !== undefined) {
+        // We got here past the base-equality short-circuit, so neither
+        // side is unchanged from base — both sides changed differently.
+        // Per spec §9.3 that's a conflict, REGARDLESS of whether one of
+        // the changes happens to be a clear. The "non-empty wins over
+        // empty" shortcut below would silently drop one side's deliberate
+        // change (clear or otherwise) — same data-loss bug class as the
+        // earlier base-ordering issue, just one level deeper.
+        conflicts.push({ key, ours: o, theirs: t });
+        result[key] = o;
+        continue;
+      }
+
+      // No base. One side adds a value to a previously-absent key while
+      // the other doesn't (or both add different values).
       if (isEmpty(o)) { result[key] = t; continue; }
       if (isEmpty(t)) { result[key] = o; continue; }
       conflicts.push({ key, ours: o, theirs: t });

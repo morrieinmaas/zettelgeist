@@ -331,14 +331,25 @@ export async function syncCommand(input: SyncInput): Promise<Envelope<SyncOk>> {
  * Regenerate INDEX.md against the current working tree, commit if changed.
  * Returns:
  *  - `committed: true`     when a new INDEX commit landed
- *  - `commitFailed: true`  when regen produced a change but the commit
- *    step failed — caller MUST surface this. Silent failure would leave
- *    a dirty INDEX in the working tree and confuse subsequent commands.
+ *  - `commitFailed: true`  when EITHER the regen itself failed (e.g., the
+ *    merged tree has a cycle that `runConformance` can't process) OR
+ *    regen produced a change but the `git add`/`git commit` step failed.
+ *    Caller MUST surface this. Silent failure would leave the working
+ *    tree with a stale INDEX (or a dirty one) and confuse subsequent
+ *    commands.
  */
 async function regenIndex(cwd: string): Promise<{ committed: boolean; commitFailed: boolean }> {
   const { regenCommand } = await import('./regen.js');
   const result = await regenCommand({ path: cwd, check: false });
-  if (!result.ok) return { committed: false, commitFailed: false };
+  if (!result.ok) {
+    // Regen itself failed (e.g., post-rebase tree has a cycle that
+    // `runConformance` can't process). The merged tree on disk is fine,
+    // but INDEX wasn't refreshed. Surface this as `commitFailed:true` so
+    // the CLI exits non-zero and the user knows to inspect the working
+    // tree — silent failure leaves a stale INDEX and contradicts the
+    // docstring's promise above.
+    return { committed: false, commitFailed: true };
+  }
   if (!result.data.changed) return { committed: false, commitFailed: false };
 
   // regenCommand returns `path` as an already-repo-relative posix path
