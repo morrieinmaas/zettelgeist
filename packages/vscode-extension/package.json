@@ -107,13 +107,21 @@
         "zettelgeist.theme": {
           "type": "string",
           "default": "auto",
-          "enum": ["auto", "light", "dark"],
+          "enum": [
+            "auto",
+            "light",
+            "dark"
+          ],
           "description": "Viewer theme. `auto` follows the VSCode color theme."
         },
         "zettelgeist.defaultView": {
           "type": "string",
           "default": "board",
-          "enum": ["board", "graph", "docs"],
+          "enum": [
+            "board",
+            "graph",
+            "docs"
+          ],
           "enumDescriptions": [
             "Open the kanban board first",
             "Open the dependency graph first",

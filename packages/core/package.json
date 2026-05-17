@@ -1,10 +1,15 @@
 {
   "name": "@zettelgeist/core",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "license": "Apache-2.0",
   "author": "Mo <motechnix@gmail.com>",
   "description": "Format core for Zettelgeist: parse, derive, validate, regenerate INDEX.md.",
-  "keywords": ["zettelgeist", "spec-driven-development", "markdown", "project-management"],
+  "keywords": [
+    "zettelgeist",
+    "spec-driven-development",
+    "markdown",
+    "project-management"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/morrieinmaas/zettelgeist.git",
@@ -24,7 +29,10 @@
       "types": "./dist/index.d.ts"
     }
   },
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json",
