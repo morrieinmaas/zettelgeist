@@ -49,7 +49,13 @@ export interface MergeDriverInput {
 
 export interface MergeDriverOk {
   kind: MergeDriverKind;
-  resolved: true;
+  /**
+   * True iff the merge produced no conflict markers. When false, the
+   * driver wrote a file containing `<<<<<<<` markers and the CLI exits
+   * non-zero so git records the file as conflicted (per git's merge-driver
+   * contract: exit 0 = clean, non-zero = conflict).
+   */
+  cleanlyResolved: boolean;
   outputPath: string;
 }
 
@@ -86,5 +92,9 @@ export async function mergeDriverCommand(
       `merge-driver: cannot write resolution to ${input.oursPath}: ${(err as Error).message}`,
     );
   }
-  return okEnvelope({ kind: input.kind, resolved: true, outputPath: input.oursPath });
+  return okEnvelope({
+    kind: input.kind,
+    cleanlyResolved: result.ok,
+    outputPath: input.oursPath,
+  });
 }

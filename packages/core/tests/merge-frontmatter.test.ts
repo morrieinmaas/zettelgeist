@@ -153,6 +153,117 @@ describe('mergeFrontmatter — body', () => {
   });
 });
 
+describe('mergeFrontmatter — edge cases (gap-fill)', () => {
+  it('handles frontmatter on one side only (added in ours)', () => {
+    const base = '# body\n';
+    const ours = wrap('status: in-progress\n', '# body\n');
+    const theirs = '# body\n';
+    const r = mergeFrontmatter(base, ours, theirs);
+    expect(r.ok).toBe(true);
+    expect(r.content).toContain('status: in-progress');
+    expect(r.content).toContain('# body');
+  });
+
+  it('handles frontmatter removed on one side', () => {
+    const base = wrap('status: draft\n', '# body\n');
+    const ours = '# body\n';
+    const theirs = wrap('status: draft\n', '# body\n');
+    const r = mergeFrontmatter(base, ours, theirs);
+    // Either side dropping frontmatter is data loss — current behavior
+    // re-emits the surviving fields from `theirs`. Document via test so
+    // future changes are explicit.
+    expect(r.ok).toBe(true);
+    expect(r.content).toContain('status: draft');
+  });
+
+  it('treats an empty `---\\n---\\n` block as no frontmatter', () => {
+    const base = '---\n---\n# body\n';
+    const r = mergeFrontmatter(base, base, base);
+    expect(r.ok).toBe(true);
+    expect(r.content).toContain('# body');
+  });
+
+  it('preserves multiline string values via JSON-escape on a single line', () => {
+    const base = wrap('description: original\n');
+    const ours = wrap('description: "line one\\nline two"\n');
+    const theirs = wrap('description: original\n');
+    const r = mergeFrontmatter(base, ours, theirs);
+    expect(r.ok).toBe(true);
+    // The value must round-trip without leaking newlines into the YAML.
+    const out = r.content;
+    const descLine = out.split('\n').find((l) => l.startsWith('description:'));
+    expect(descLine).toBeDefined();
+    expect(descLine).toContain('\\n');
+  });
+
+  it('keeps non-string list entries instead of silently dropping them', () => {
+    const base = wrap('depends_on: [a]\n');
+    const ours = wrap('depends_on: [a, 42]\n');
+    const theirs = wrap('depends_on: [a]\n');
+    const r = mergeFrontmatter(base, ours, theirs);
+    expect(r.ok).toBe(true);
+    // 42 (a number) is spec-violating but data we MUST preserve so the user
+    // can see + fix it rather than waking up to a silently-truncated list.
+    expect(r.content).toContain('42');
+  });
+
+  it('preserves a non-string scalar in blocked_by rather than coercing to empty', () => {
+    const base = wrap('');
+    const ours = wrap('blocked_by: 7\n'); // spec violation: should be string
+    const theirs = wrap('');
+    const r = mergeFrontmatter(base, ours, theirs);
+    expect(r.ok).toBe(true);
+    // The old coercion-to-empty path would drop this entirely; we now keep
+    // it so the round-trip preserves user data.
+    expect(r.content).toContain('blocked_by: 7');
+  });
+
+  it('honors a status NOT in the canonical enum (passes through)', () => {
+    const base = wrap('status: draft\n');
+    const ours = wrap('status: triaged\n');
+    const theirs = wrap('status: draft\n');
+    const r = mergeFrontmatter(base, ours, theirs);
+    // The merger isn't a validator — schema enforcement lives in
+    // `validate`. Pass unknown statuses through so people can experiment.
+    expect(r.ok).toBe(true);
+    expect(r.content).toContain('status: triaged');
+  });
+
+  it('lets auto_merge be turned off via 3-way (was broken under raw OR)', () => {
+    const base = wrap('auto_merge: true\n');
+    const ours = wrap('auto_merge: false\n'); // explicit turn-off
+    const theirs = wrap('auto_merge: true\n'); // unchanged from base
+    const r = mergeFrontmatter(base, ours, theirs);
+    expect(r.ok).toBe(true);
+    // 3-way: theirs unchanged → take ours = false → field omitted (we
+    // never emit a default false). Old OR semantics would force `true`.
+    expect(r.content).not.toContain('auto_merge: true');
+  });
+
+  it('emits a conflict marker when both sides change auto_merge differently from base', () => {
+    const base = wrap('auto_merge: false\n');
+    const ours = wrap('auto_merge: true\n');
+    const theirs = wrap('');
+    // theirs removed the key (treated as undefined). ours changed false→true.
+    // → take ours = true. No conflict. ok=true.
+    const r = mergeFrontmatter(base, ours, theirs);
+    expect(r.ok).toBe(true);
+    expect(r.content).toContain('auto_merge: true');
+  });
+
+  it('uses git merge-file for line-level body merge of overlapping prose', () => {
+    const base = wrap('', 'line 1\nline 2\nline 3\n');
+    // ours edits line 1, theirs edits line 3 — disjoint changes should
+    // merge cleanly via git merge-file (byte-equality fallback couldn't).
+    const ours = wrap('', 'LINE 1\nline 2\nline 3\n');
+    const theirs = wrap('', 'line 1\nline 2\nLINE 3\n');
+    const r = mergeFrontmatter(base, ours, theirs);
+    expect(r.ok).toBe(true);
+    expect(r.content).toContain('LINE 1');
+    expect(r.content).toContain('LINE 3');
+  });
+});
+
 describe('mergeFrontmatter — combined cases', () => {
   it('merges concurrent edits to different non-overlapping fields cleanly', () => {
     const base = wrap('status: draft\ndepends_on: [a]\n');

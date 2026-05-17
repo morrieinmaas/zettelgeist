@@ -31,20 +31,49 @@ export function GraphView({ graph }: GraphViewProps) {
     adj.get(e.from)!.push(e.to);
   }
 
+  // Iterative DFS via an explicit stack. Recursion would blow JS's call
+  // stack on graphs with deep dependency chains (~10k frames on V8); the
+  // graph is bounded in practice but TUIs running against giant monorepos
+  // are exactly where we don't want a crash.
   const depth = new Map<string, number>();
-  const visiting = new Set<string>();
-  function dfs(node: string): number {
-    if (depth.has(node)) return depth.get(node)!;
-    if (visiting.has(node)) return 0; // cycle — bail
-    visiting.add(node);
-    const deps = adj.get(node) ?? [];
-    let d = 0;
-    for (const dep of deps) d = Math.max(d, dfs(dep) + 1);
-    visiting.delete(node);
-    depth.set(node, d);
-    return d;
+  type Frame = { node: string; childIdx: number; maxChildDepth: number };
+  const onStack = new Set<string>();
+  for (const root of graph.nodes) {
+    if (depth.has(root.name)) continue;
+    const stack: Frame[] = [{ node: root.name, childIdx: 0, maxChildDepth: 0 }];
+    onStack.add(root.name);
+    while (stack.length > 0) {
+      const frame = stack[stack.length - 1]!;
+      const children = adj.get(frame.node) ?? [];
+      if (frame.childIdx >= children.length) {
+        depth.set(frame.node, frame.maxChildDepth);
+        onStack.delete(frame.node);
+        stack.pop();
+        // Bubble the result into the parent's max-child accumulator.
+        const parent = stack[stack.length - 1];
+        if (parent) {
+          parent.maxChildDepth = Math.max(
+            parent.maxChildDepth,
+            frame.maxChildDepth + 1,
+          );
+        }
+        continue;
+      }
+      const child = children[frame.childIdx++]!;
+      if (depth.has(child)) {
+        // Already settled — fold its value in immediately.
+        frame.maxChildDepth = Math.max(frame.maxChildDepth, depth.get(child)! + 1);
+        continue;
+      }
+      if (onStack.has(child)) {
+        // Cycle. Treat the cycle-touching edge as contributing 0 (matches
+        // the old recursive behavior that just bailed).
+        continue;
+      }
+      onStack.add(child);
+      stack.push({ node: child, childIdx: 0, maxChildDepth: 0 });
+    }
   }
-  for (const n of graph.nodes) dfs(n.name);
 
   const byDepth = new Map<number, string[]>();
   for (const [name, d] of depth) {

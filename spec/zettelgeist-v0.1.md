@@ -142,11 +142,33 @@ When there are no specs, both sections render the literal string `_No specs._` i
 
 Two conformant implementations MUST produce byte-identical `INDEX.md` for the same input repo.
 
-**v0.2 distributed-merge note (non-normative):** because `INDEX.md` is fully derived, merging two branches that both regenerated it produces a content conflict on every concurrent change. Implementations SHOULD configure `specs/INDEX.md merge=union` in `.gitattributes` so the merge produces a (transient) concatenation rather than conflict markers, AND install a `post-merge` hook that runs the regen against the now-fully-merged tree, replacing the concatenation with the correct INDEX. The v0.2 reference implementation does this automatically via `zettelgeist install-hook`. The merged INDEX is still required to match the byte-identical-rule above against the post-merge tree.
+### 9.1 INDEX.md merge (v0.2, non-normative)
+
+Because `INDEX.md` is fully derived, merging two branches that both regenerated it produces a content conflict on every concurrent change. Implementations SHOULD configure `specs/INDEX.md merge=union` in `.gitattributes` so the merge produces a (transient) concatenation rather than conflict markers, AND install a `post-merge` hook that runs the regen against the now-fully-merged tree, replacing the concatenation with the correct INDEX. The v0.2 reference implementation does this automatically via `zettelgeist install-hook`. The merged INDEX is still required to match the byte-identical rule above against the post-merge tree.
+
+### 9.2 `tasks.md` merge (v0.2, non-normative)
 
 For `specs/*/tasks.md`, v0.2 implementations SHOULD configure a semantic three-way merge. Tasks are matched by their cleaned text (after numeric-prefix and known-tag stripping per §6); per matched task: either side checked → checked (commutative), both un-checked from a checked base → un-checked, tags are unioned, prose structure from `ours` is preserved. Renamed tasks coexist as two entries (delete-and-add semantics). The v0.2 reference implementation ships this as the `zettelgeist merge-driver tasks` driver wired into `.git/config` by `install-hook`, with `specs/*/tasks.md merge=zettelgeist-tasks` in `.gitattributes`. Unlike INDEX, the tasks driver does not depend on any other file's state, so the per-file driver approach works correctly.
 
-For `specs/*/requirements.md`, v0.2 implementations SHOULD configure a per-field three-way merge of the YAML frontmatter block: `status` (the seven values) → identical wins, divergent emits a conflict marker; `depends_on` and `replaces` (lists) → set union; `blocked_by`, `part_of`, `merged_into` (scalars) → identical wins, one-empty + one-non-empty takes the non-empty, both-non-empty divergent emits a conflict marker; `auto_merge` (boolean) → logical OR; unknown keys → identical wins, divergent emits a conflict marker. The body below the closing `---` is text-merged with standard conflict markers when both sides diverge from base. Conflict markers in the YAML region use `# <<<<<<< ours: <key>` comment syntax so the file remains parseable enough for editors. The v0.2 reference implementation ships this as the `zettelgeist merge-driver frontmatter` driver.
+### 9.3 `requirements.md` frontmatter merge (v0.2, non-normative)
+
+For `specs/*/requirements.md`, v0.2 implementations SHOULD configure a per-field three-way merge of the YAML frontmatter block. The rules below are **3-way** (base, ours, theirs): "unchanged from base" means a side did not modify the field; the other side wins. "Both changed differently" means both sides modified the field to different values; this emits a conflict marker.
+
+| Field | Rule |
+| --- | --- |
+| `status` (the seven values from §7) | 3-way; both changed differently → conflict marker |
+| `depends_on`, `replaces` (lists) | set union with first-occurrence order preservation; spec-violating non-string entries are preserved, not dropped |
+| `blocked_by`, `part_of`, `merged_into` (scalars) | 3-way; missing / empty wins-over-non-empty; both changed differently → conflict marker |
+| `auto_merge` (boolean) | 3-way (NOT raw logical OR) — symmetric, so either side can flip `true → false` if the other is unchanged |
+| Unknown keys | opaque 3-way with structural equality (`deepEqual`); nested objects compared structurally and round-tripped |
+
+The `auto_merge` rule deserves a note: an earlier draft specified logical OR, which made `auto_merge: true` impossible to turn off once committed to base. 3-way semantics restore symmetry — turning `auto_merge` off works the same as turning any other scalar off.
+
+For unknown keys, the merger does NOT attempt structural sub-merges of nested objects: an object value is treated as an atomic unit, compared with the other side via `deepEqual`, and either passed through or emitted as a conflict block. This keeps the merger predictable on schema extensions the spec doesn't know about.
+
+The body below the closing `---` is merged via a textual three-way merge (the reference implementation uses `git merge-file -p`). When both sides change overlapping lines, standard `<<<<<<<` markers are emitted. Conflict markers in the YAML region use `# <<<<<<< ours: <key>` comment syntax so the file remains parseable enough for editors. The v0.2 reference implementation ships this as the `zettelgeist merge-driver frontmatter` driver.
+
+The driver's exit code follows git's contract: 0 = clean resolution (no markers); non-zero = the file contains conflict markers and git MUST treat it as conflicted (rebase / merge pauses for the user). Implementations that don't propagate the exit code will leak unresolved conflict markers into commits.
 
 ## 10. Validation errors
 

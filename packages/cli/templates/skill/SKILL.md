@@ -40,18 +40,32 @@ tools. Do **not** invent a `.zettelgeist.yaml` to make this skill apply.
    their text, either-side-checked wins, tags are unioned, prose is
    preserved from `ours`. Renamed tasks appear as both versions (so
    you can spot the rename and consolidate manually).
-6. **Frontmatter merges per-field.** `requirements.md`'s YAML block
-   merges field-by-field: `status` (conflict marker on divergence),
-   `depends_on`/`replaces` (set union), `blocked_by`/`part_of`/`merged_into`
-   (one-empty + one-non-empty → non-empty; both-different → conflict),
-   `auto_merge` (logical OR). Body text below `---` uses standard
-   text-merge. Conflict markers in YAML use `# <<<<<<<` comment syntax
-   so the file stays parseable.
+6. **Frontmatter merges per-field, 3-way.** `requirements.md`'s YAML
+   block merges field-by-field with 3-way semantics: `status` (conflict
+   marker on divergent change), `depends_on` / `replaces` (set union;
+   non-string entries preserved, not dropped), `blocked_by` / `part_of`
+   / `merged_into` (3-way; missing wins-over-non-empty; both changed
+   differently → conflict), `auto_merge` (3-way — turning it off works).
+   Body text below `---` uses `git merge-file` for line-level three-way
+   merge. Conflict markers in YAML use `# <<<<<<<` comment syntax so
+   the file stays parseable.
 7. **`zettelgeist sync`** is the safe way to bring your local branch up
    to date. Wraps `git fetch && git rebase` and lets the merge drivers
    above auto-resolve. Use `zettelgeist sync --check` before a mutating
    action to detect drift without modifying the working tree (exits
    non-zero if a sync is needed).
+   <br>**Sync envelope** (read this before parsing the output):
+   <br>`{ ok, data: { status, commitsBehind, commitsAhead, indexRegenerated, indexCommitFailed? } }`
+   where `status ∈ { up-to-date, fast-forwarded, rebased, needs-sync,
+   no-upstream, not-a-repo, detached-head }`. `commitsBehind` /
+   `commitsAhead` are the rev-counts that motivated the action.
+   `indexRegenerated` is `true` when sync committed a new INDEX as a
+   follow-up; `indexCommitFailed` is `true` when regen produced a diff
+   but the commit failed (working tree is dirty — you MUST handle this).
+   On rebase conflicts the drivers can't resolve, sync returns `ok:
+   false` and LEAVES the rebase in progress; the error message lists
+   the conflicted files and explains `git rebase --continue` /
+   `--abort`.
 8. **`zg-tui`** is the terminal-native surface for when you're outside
    VS Code and a browser is overkill. Board, detail, graph, docs +
    command palette (`?`). Runs in-process — no separate server needed.

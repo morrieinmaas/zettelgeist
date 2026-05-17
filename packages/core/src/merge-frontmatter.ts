@@ -1,32 +1,37 @@
 import yaml from 'js-yaml';
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import { parseFrontmatter } from './frontmatter.js';
 
 /**
- * Three-way merge for a `requirements.md` body. The frontmatter block (YAML
+ * Three-way merge for a `requirements.md` file. The frontmatter block (YAML
  * between two `---` fences) is merged field-by-field; the body (everything
- * after the closing fence) is delegated to a standard text-merge.
+ * after the closing fence) is delegated to `git merge-file -p` for proper
+ * line-level three-way merge.
  *
- * Per-field rules (per the frontmatter-merge-driver spec):
+ * Per-field rules (per the frontmatter-merge-driver spec — see
+ * `spec/zettelgeist-v0.1.md` §9.2):
  *
- * | Field                                | Rule                                                      |
- * | ------------------------------------ | --------------------------------------------------------- |
- * | `status` (7 valid values)            | both same → that; different → conflict marker             |
- * | `depends_on`, `replaces` (lists)     | set union, sorted                                         |
- * | `blocked_by`, `part_of`, `merged_into` (strings) | both same → that; one empty → non-empty; both differ → conflict |
- * | `auto_merge` (boolean)               | logical OR                                                |
- * | Unknown keys                         | one side only → that; both equal → that; differ → conflict |
+ * | Field                                            | Rule                                      |
+ * | ------------------------------------------------ | ----------------------------------------- |
+ * | `status`                                         | 3-way: unchanged side loses, differing change → conflict marker |
+ * | `depends_on`, `replaces` (lists)                 | set union (preserves first occurrence)    |
+ * | `blocked_by`, `part_of`, `merged_into` (scalars) | 3-way; missing wins-over-empty; differing change → conflict     |
+ * | `auto_merge` (boolean)                           | 3-way (NOT raw OR — allows turn-off)      |
+ * | Unknown scalar/list/object keys                  | 3-way with `deepEqual`; differing change → conflict marker      |
  *
- * On conflict, the offending field is emitted as YAML comments with marker
- * lines so the file is still valid-enough YAML to parse, and a human can
- * see what diverged in their editor.
+ * On conflict, the offending field is emitted with `# <<<<<<<` /
+ * `# =======` / `# >>>>>>>` comment lines so the file remains valid YAML
+ * (the comments don't disturb the parser) but a human can resolve in their
+ * editor. The body uses `git merge-file`'s standard conflict markers
+ * (no comment prefix; they break YAML parsing if they leak into the
+ * frontmatter, but the body is post-frontmatter so this is fine).
  *
- * For the body, we delegate to a textual three-way merge: if both sides
- * made the same change → that; if only one changed → that side; if both
- * changed differently → emit standard `<<<<<<< / ======= / >>>>>>>` markers.
- *
- * Returns `ok: false` if any field or the body needed conflict markers; the
- * caller (CLI driver dispatch) returns exit 0 either way so git accepts the
- * resolution — the markers are for the human to inspect in `git status`.
+ * Returns `ok: true` iff the merge produced no markers anywhere — used by
+ * the CLI driver to decide the exit code (per git's merge-driver contract:
+ * exit 0 = clean, non-zero = conflicted).
  */
 export function mergeFrontmatter(
   base: string,
@@ -42,9 +47,7 @@ export function mergeFrontmatter(
 
   const ok = fmResult.ok && bodyResult.ok;
 
-  // Re-emit as a normal requirements.md.
   if (!hadFrontmatter(ours) && !hadFrontmatter(theirs) && !hadFrontmatter(base)) {
-    // No frontmatter to speak of — just body merge.
     return { content: bodyResult.content, ok };
   }
 
@@ -103,22 +106,19 @@ function mergeFrontmatterObjects(
     const b = base[key];
 
     if (key === 'status') {
-      if (o === undefined && t === undefined) continue;
-      if (o === undefined) { result[key] = t; continue; }
-      if (t === undefined) { result[key] = o; continue; }
-      if (o === t) { result[key] = o; continue; }
-      // Both set, different. Use base as tiebreaker: side that changed wins.
-      if (b !== undefined && o === b) { result[key] = t; continue; }
-      if (b !== undefined && t === b) { result[key] = o; continue; }
-      // Both changed differently from base (or no base). Conflict.
+      const r = threeWayScalar(b, o, t);
+      if (r.kind === 'absent') continue;
+      if (r.kind === 'ok') { result[key] = r.value; continue; }
       conflicts.push({ key, ours: o, theirs: t });
-      result[key] = o; // keep ours in the body; marker emitted below
+      result[key] = o; // keep ours; marker emitted on render
       continue;
     }
 
     if (LIST_FIELDS.has(key)) {
-      const oList = toStringList(o);
-      const tList = toStringList(t);
+      // Preserve non-string entries — they're spec-violating but dropping
+      // them silently destroys data. Render emits whatever js-yaml can.
+      const oList = toList(o);
+      const tList = toList(t);
       const merged = unionPreserveFirstOrder(oList, tList);
       if (merged.length === 0) continue;
       result[key] = merged;
@@ -126,28 +126,38 @@ function mergeFrontmatterObjects(
     }
 
     if (SINGLE_STRING_FIELDS.has(key)) {
-      const oS = toStringOrEmpty(o);
-      const tS = toStringOrEmpty(t);
-      if (oS === '' && tS === '') continue;
-      if (oS === tS) { result[key] = oS; continue; }
-      if (oS === '') { result[key] = tS; continue; }
-      if (tS === '') { result[key] = oS; continue; }
-      // Both non-empty, different — conflict.
-      conflicts.push({ key, ours: oS, theirs: tS });
-      result[key] = oS;
+      // 3-way over the raw value; don't coerce non-strings to empty (data
+      // loss). "Empty" means undefined or the literal empty string.
+      if (isEmpty(o) && isEmpty(t)) continue;
+      if (isEmpty(o)) { result[key] = t; continue; }
+      if (isEmpty(t)) { result[key] = o; continue; }
+      if (deepEqual(o, t)) { result[key] = o; continue; }
+      if (b !== undefined && deepEqual(o, b)) { result[key] = t; continue; }
+      if (b !== undefined && deepEqual(t, b)) { result[key] = o; continue; }
+      conflicts.push({ key, ours: o, theirs: t });
+      result[key] = o;
       continue;
     }
 
     if (key === 'auto_merge') {
-      const oB = Boolean(o);
-      const tB = Boolean(t);
-      const merged = oB || tB;
-      if (!merged) continue; // don't emit a default false
-      result[key] = true;
+      // 3-way: unchanged side loses; both changed differently → conflict.
+      // Pure OR would make `auto_merge: true` impossible to turn off once
+      // committed to base; 3-way semantics restore symmetry.
+      const oB = typeof o === 'boolean' ? o : undefined;
+      const tB = typeof t === 'boolean' ? t : undefined;
+      const bB = typeof b === 'boolean' ? b : undefined;
+      if (oB === undefined && tB === undefined) continue;
+      if (oB === undefined) { if (tB) result[key] = true; continue; }
+      if (tB === undefined) { if (oB) result[key] = true; continue; }
+      if (oB === tB) { if (oB) result[key] = true; continue; }
+      if (bB !== undefined && oB === bB) { if (tB) result[key] = true; continue; }
+      if (bB !== undefined && tB === bB) { if (oB) result[key] = true; continue; }
+      conflicts.push({ key, ours: oB, theirs: tB });
+      if (oB) result[key] = true;
       continue;
     }
 
-    // Unknown key: opaque equality check.
+    // Unknown key: opaque 3-way with deepEqual.
     if (o === undefined && t === undefined) continue;
     if (o === undefined) { result[key] = t; continue; }
     if (t === undefined) { result[key] = o; continue; }
@@ -161,9 +171,26 @@ function mergeFrontmatterObjects(
   return { data: result, conflicts, ok: conflicts.length === 0 };
 }
 
+type ScalarMergeOutcome =
+  | { kind: 'absent' }
+  | { kind: 'ok'; value: unknown }
+  | { kind: 'conflict' };
+
+function threeWayScalar(b: unknown, o: unknown, t: unknown): ScalarMergeOutcome {
+  if (o === undefined && t === undefined) return { kind: 'absent' };
+  if (o === undefined) return { kind: 'ok', value: t };
+  if (t === undefined) return { kind: 'ok', value: o };
+  if (deepEqual(o, t)) return { kind: 'ok', value: o };
+  if (b !== undefined && deepEqual(o, b)) return { kind: 'ok', value: t };
+  if (b !== undefined && deepEqual(t, b)) return { kind: 'ok', value: o };
+  return { kind: 'conflict' };
+}
+
+function isEmpty(v: unknown): boolean {
+  return v === undefined || v === '';
+}
+
 function renderFrontmatter(r: FmMergeResult): string {
-  // Render with deterministic key ordering: known keys first in canonical
-  // order, then unknown keys alphabetically.
   const KNOWN_ORDER = [
     'status', 'blocked_by', 'depends_on', 'replaces',
     'part_of', 'merged_into', 'auto_merge',
@@ -180,7 +207,7 @@ function renderFrontmatter(r: FmMergeResult): string {
       lines.push(`# <<<<<<< ours: ${key}`);
       lines.push(emitYamlPair(key, c.ours));
       lines.push(`# =======`);
-      lines.push(`# theirs: ${formatScalar(c.theirs)}`);
+      lines.push(`# theirs: ${formatScalarSingleLine(c.theirs)}`);
       lines.push(`# >>>>>>> theirs`);
       continue;
     }
@@ -193,43 +220,56 @@ function renderFrontmatter(r: FmMergeResult): string {
 function emitYamlPair(key: string, value: unknown): string {
   if (Array.isArray(value)) {
     if (value.length === 0) return `${key}: []`;
-    return `${key}: [${value.map((v) => formatScalar(v)).join(', ')}]`;
+    return `${key}: [${value.map((v) => formatScalarSingleLine(v)).join(', ')}]`;
   }
-  return `${key}: ${formatScalar(value)}`;
+  if (value !== null && typeof value === 'object') {
+    // Nested objects under unknown keys — emit as a flow mapping so the
+    // file stays single-line per key and the parser can round-trip it.
+    return `${key}: ${yaml.dump(value, { flowLevel: 0, lineWidth: -1 }).trimEnd()}`;
+  }
+  return `${key}: ${formatScalarSingleLine(value)}`;
 }
 
-function formatScalar(v: unknown): string {
+/**
+ * Always returns a single line — multiline strings are JSON-escaped so they
+ * fit on one YAML line. This keeps conflict markers parseable as YAML and
+ * prevents block-scalar styles from leaking newlines into our `# theirs:`
+ * comment line (which would break out of the comment).
+ */
+function formatScalarSingleLine(v: unknown): string {
+  if (v === null) return '~';
   if (typeof v === 'string') {
-    // Quote when needed: contains special YAML characters or is empty.
-    if (v === '' || /[:#\n"'\[\]{}>|@`*&!%]/.test(v) || /^\s|\s$/.test(v)) {
+    // Quote when the string contains YAML special chars, control chars,
+    // a newline, leading/trailing whitespace, or is empty.
+    if (v === '' || /[:#"'\[\]{}>|@`*&!%]/.test(v) || /[\n\r\t]/.test(v) || /^\s|\s$/.test(v)) {
       return JSON.stringify(v);
     }
     return v;
   }
   if (typeof v === 'boolean') return String(v);
   if (typeof v === 'number') return String(v);
-  // Fallback: YAML serialise, strip trailing newline.
-  return yaml.dump(v).trimEnd();
+  // Arrays / objects: serialise as flow style; -1 line-width disables
+  // wrapping (no line breaks).
+  return yaml.dump(v, { flowLevel: 0, lineWidth: -1 }).trimEnd();
 }
 
-function toStringList(v: unknown): string[] {
+function toList(v: unknown): unknown[] {
   if (!Array.isArray(v)) return [];
-  return v.filter((x): x is string => typeof x === 'string');
+  return v.slice();
 }
 
-function toStringOrEmpty(v: unknown): string {
-  if (typeof v !== 'string') return '';
-  return v.trim();
-}
-
-function unionPreserveFirstOrder(a: string[], b: string[]): string[] {
+function unionPreserveFirstOrder(a: unknown[], b: unknown[]): unknown[] {
   const seen = new Set<string>();
-  const out: string[] = [];
-  for (const s of a) {
-    if (!seen.has(s)) { out.push(s); seen.add(s); }
-  }
-  for (const s of b) {
-    if (!seen.has(s)) { out.push(s); seen.add(s); }
+  const out: unknown[] = [];
+  for (const x of [...a, ...b]) {
+    // Identity by JSON serialisation — primitives compare by value, objects
+    // by structure. Avoids `Set<unknown>` reference-equality which would
+    // double-count `{a:1}` from two parses.
+    const key = JSON.stringify(x);
+    if (!seen.has(key)) {
+      out.push(x);
+      seen.add(key);
+    }
   }
   return out;
 }
@@ -256,20 +296,56 @@ function deepEqual(a: unknown, b: unknown): boolean {
 interface BodyMergeResult { content: string; ok: boolean; }
 
 function mergeBody(base: string, ours: string, theirs: string): BodyMergeResult {
+  // Cheap exits first: byte-equal cases don't need to fork git.
   if (ours === theirs) return { content: ours, ok: true };
   if (ours === base) return { content: theirs, ok: true };
   if (theirs === base) return { content: ours, ok: true };
-  // Both sides diverged from base differently. Emit standard conflict
-  // markers; the caller treats this as ok:false. A real-world driver would
-  // shell out to `git merge-file` here for line-level merge, but emitting
-  // a clear conflict marker keeps this function pure + deterministic and
-  // works for the tests. Users editing requirements.md prose simultaneously
-  // is a real human-needs-to-resolve case.
-  const markers =
-    `<<<<<<< ours\n${ours.replace(/\n$/, '')}\n=======\n${theirs.replace(/\n$/, '')}\n>>>>>>> theirs\n`;
-  return { content: markers, ok: false };
-}
 
-// `js-yaml` is also already a dependency of @zettelgeist/core via
-// loadConfig; no new dep added.
-void yaml;
+  // Real three-way merge via `git merge-file -p`. We write the three sides
+  // to a tempdir because git merge-file requires file paths; sync exec
+  // keeps the API synchronous to match the rest of the merge pipeline.
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'zg-mergebody-'));
+  try {
+    const oursPath = path.join(dir, 'ours');
+    const basePath = path.join(dir, 'base');
+    const theirsPath = path.join(dir, 'theirs');
+    writeFileSync(oursPath, ours, 'utf8');
+    writeFileSync(basePath, base, 'utf8');
+    writeFileSync(theirsPath, theirs, 'utf8');
+    try {
+      const out = execFileSync(
+        'git',
+        [
+          'merge-file', '-p',
+          '-L', 'ours', '-L', 'base', '-L', 'theirs',
+          oursPath, basePath, theirsPath,
+        ],
+        { encoding: 'utf8' },
+      );
+      return { content: out, ok: true };
+    } catch (err) {
+      // git merge-file returns the number of unresolved conflicts as exit
+      // code; with `-p` the merged content (with `<<<<<<<`/`=======`/
+      // `>>>>>>>` markers) is on stdout. Surface that as ok:false so the
+      // driver can propagate to git as a conflicted file.
+      const e = err as { stdout?: Buffer | string; status?: number };
+      const stdout = typeof e.stdout === 'string'
+        ? e.stdout
+        : e.stdout instanceof Buffer
+          ? e.stdout.toString('utf8')
+          : '';
+      if (typeof e.status === 'number' && e.status > 0 && stdout !== '') {
+        return { content: stdout, ok: false };
+      }
+      // Real failure (git missing, IO error, etc.) — fall back to a
+      // hand-rolled marker block. ok:false ensures the driver fails closed.
+      const fallback =
+        `<<<<<<< ours\n${ours.replace(/\n$/, '')}\n` +
+        `=======\n${theirs.replace(/\n$/, '')}\n` +
+        `>>>>>>> theirs\n`;
+      return { content: fallback, ok: false };
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}

@@ -37,7 +37,23 @@ async function main(): Promise<number> {
   // `render` returns a controller with `.waitUntilExit()` — we await that so
   // the process stays alive until the user quits via `q` / `Ctrl-C`.
   const instance = render(<App cwd={cwd} initialView={initialView} />);
-  await instance.waitUntilExit();
+
+  // Belt-and-braces: Ink already converts Ctrl-C inside the alternate
+  // screen into a clean unmount, but if the parent shell sends SIGINT
+  // before Ink takes over (e.g., during the async load), `instance.unmount()`
+  // restores the terminal. Without this, an aborted boot leaves the TTY
+  // in a half-initialised state.
+  const onSignal = (): void => {
+    try { instance.unmount(); } catch { /* already unmounted */ }
+  };
+  process.once('SIGINT', onSignal);
+  process.once('SIGTERM', onSignal);
+  try {
+    await instance.waitUntilExit();
+  } finally {
+    process.off('SIGINT', onSignal);
+    process.off('SIGTERM', onSignal);
+  }
   return 0;
 }
 

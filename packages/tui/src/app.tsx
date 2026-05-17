@@ -49,28 +49,33 @@ export function App({ cwd, initialView = 'board' }: AppProps) {
     return () => { cancelled = true; };
   }, [backend]);
 
-  useInput((input, key) => {
-    if (paletteOpen) return; // palette handles its own input
-    if (input === '?') {
-      setPaletteOpen(true);
-      return;
-    }
-    if (input === 'q' || (key.ctrl && input === 'c')) {
-      exit();
-      return;
-    }
-    if (key.tab) {
-      const order: View[] = ['board', 'detail', 'graph', 'docs'];
-      const idx = order.indexOf(view);
-      setView(order[(idx + 1) % order.length] ?? 'board');
-      return;
-    }
-    // Number shortcuts
-    if (input === '1') setView('board');
-    if (input === '2') setView('detail');
-    if (input === '3') setView('graph');
-    if (input === '4') setView('docs');
-  });
+  // Global navigation. Gated by `isActive` so the palette is the SOLE
+  // input consumer while open — the inner views are also passed
+  // `inputDisabled` so their useInput hooks go inert. This is the only
+  // place that decides which layer "owns" the keyboard.
+  useInput(
+    (input, key) => {
+      if (input === '?') {
+        setPaletteOpen(true);
+        return;
+      }
+      if (input === 'q' || (key.ctrl && input === 'c')) {
+        exit();
+        return;
+      }
+      if (key.tab) {
+        const order: View[] = ['board', 'detail', 'graph', 'docs'];
+        const idx = order.indexOf(view);
+        setView(order[(idx + 1) % order.length] ?? 'board');
+        return;
+      }
+      if (input === '1') setView('board');
+      if (input === '2') setView('detail');
+      if (input === '3') setView('graph');
+      if (input === '4') setView('docs');
+    },
+    { isActive: !paletteOpen },
+  );
 
   if (loading) {
     return <Box><Text color="gray">Loading {cwd}...</Text></Box>;
@@ -91,6 +96,7 @@ export function App({ cwd, initialView = 'board' }: AppProps) {
         {view === 'board' && (
           <BoardView
             specs={specs}
+            inputDisabled={paletteOpen}
             onOpen={async (name) => {
               const d = await backend.readDetail(name);
               setOpenSpec(d);
@@ -102,6 +108,7 @@ export function App({ cwd, initialView = 'board' }: AppProps) {
           <DetailView
             spec={openSpec}
             specs={specs}
+            inputDisabled={paletteOpen}
             onOpen={async (name) => {
               const d = await backend.readDetail(name);
               setOpenSpec(d);
@@ -113,6 +120,7 @@ export function App({ cwd, initialView = 'board' }: AppProps) {
           <DocsView
             docs={docs}
             openDoc={openDoc}
+            inputDisabled={paletteOpen}
             onOpen={async (rel) => {
               const content = await backend.readDoc(rel);
               setOpenDoc({ rel, content });

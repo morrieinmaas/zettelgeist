@@ -6,7 +6,7 @@ export { parseTasks } from './tasks.js';
 export { mergeTasksMd } from './merge-tasks.js';
 export { mergeFrontmatter } from './merge-frontmatter.js';
 export { loadSpec, loadAllSpecs, scanClaimedSpecs, sanitizeAgentId, defaultAgentId } from './loader.js';
-export { deriveStatus } from './status.js';
+export { deriveStatus, STATUSES } from './status.js';
 export { buildGraph } from './graph.js';
 export { validateRepo, compareErrors } from './validate.js';
 export { regenerateIndex } from './regen.js';

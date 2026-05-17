@@ -9,31 +9,36 @@ export interface DetailViewProps {
   spec: SpecDetail | null;
   specs: SpecRow[];
   onOpen: (name: string) => void;
+  /** When true, the view stops consuming key input (palette is open). */
+  inputDisabled?: boolean;
 }
 
-export function DetailView({ spec, specs, onOpen }: DetailViewProps) {
+export function DetailView({ spec, specs, onOpen, inputDisabled = false }: DetailViewProps) {
   const [tab, setTab] = useState<Tab>('requirements');
   const [pickerIdx, setPickerIdx] = useState(0);
 
-  useInput((input, key) => {
-    if (!spec) {
-      if (key.upArrow || input === 'k') setPickerIdx((i) => Math.max(0, i - 1));
-      else if (key.downArrow || input === 'j') {
-        setPickerIdx((i) => Math.min(specs.length - 1, i + 1));
-      } else if (key.return) {
-        const target = specs[pickerIdx];
-        if (target) onOpen(target.name);
+  useInput(
+    (input, key) => {
+      if (!spec) {
+        if (key.upArrow || input === 'k') setPickerIdx((i) => Math.max(0, i - 1));
+        else if (key.downArrow || input === 'j') {
+          setPickerIdx((i) => Math.min(specs.length - 1, i + 1));
+        } else if (key.return) {
+          const target = specs[pickerIdx];
+          if (target) onOpen(target.name);
+        }
+        return;
       }
-      return;
-    }
-    if (input === 'h' || key.leftArrow) {
-      const idx = TABS.indexOf(tab);
-      setTab(TABS[Math.max(0, idx - 1)] ?? tab);
-    } else if (input === 'l' || key.rightArrow) {
-      const idx = TABS.indexOf(tab);
-      setTab(TABS[Math.min(TABS.length - 1, idx + 1)] ?? tab);
-    }
-  });
+      if (input === 'h' || key.leftArrow) {
+        const idx = TABS.indexOf(tab);
+        setTab(TABS[Math.max(0, idx - 1)] ?? tab);
+      } else if (input === 'l' || key.rightArrow) {
+        const idx = TABS.indexOf(tab);
+        setTab(TABS[Math.min(TABS.length - 1, idx + 1)] ?? tab);
+      }
+    },
+    { isActive: !inputDisabled },
+  );
 
   if (!spec) {
     return (

@@ -5,8 +5,12 @@ import { promisify } from 'node:util';
 
 const execFileP = promisify(execFile);
 
-export const GITATTRS_MARKER_BEGIN = '# >>> zettelgeist >>>';
-export const GITATTRS_MARKER_END = '# <<< zettelgeist <<<';
+// Differentiated marker pair: .gitattributes uses `gitattributes` in the
+// tag, the post-merge hook uses `post-merge`. They MUST NOT collide —
+// otherwise our smart-merge could rip out the wrong block if a user
+// happens to paste content from one file into the other.
+export const GITATTRS_MARKER_BEGIN = '# >>> zettelgeist:gitattributes >>>';
+export const GITATTRS_MARKER_END = '# <<< zettelgeist:gitattributes <<<';
 
 /**
  * The block written into `.gitattributes`. Wrapped in marker comments so we
@@ -38,27 +42,41 @@ export const GITATTRS_BLOCK =
   'specs/*/requirements.md merge=zettelgeist-frontmatter\n' +
   GITATTRS_MARKER_END;
 
+// Pre-v0.2.1 marker pair (un-namespaced). We still recognise it so
+// re-installing on top of an older install replaces the old block in
+// place rather than orphaning it. Going forward, new installs always
+// write the namespaced markers above.
+const LEGACY_GITATTRS_MARKER_BEGIN = '# >>> zettelgeist >>>';
+const LEGACY_GITATTRS_MARKER_END = '# <<< zettelgeist <<<';
+
 /**
  * Smart-merge our block into an existing `.gitattributes`. Idempotent —
  * re-installing finds the marker pair and replaces the region between them.
+ * Also picks up the legacy un-namespaced pair so older installs upgrade
+ * cleanly.
  */
 export function mergeGitAttributes(existing: string | null): string {
   if (existing === null || existing === '') return GITATTRS_BLOCK + '\n';
 
-  const beginIdx = existing.indexOf(GITATTRS_MARKER_BEGIN);
-  const endIdx = existing.indexOf(GITATTRS_MARKER_END);
-  if (beginIdx !== -1 && endIdx !== -1 && endIdx > beginIdx) {
-    const before = existing.slice(0, beginIdx);
-    const after = existing.slice(endIdx + GITATTRS_MARKER_END.length);
-    return before + GITATTRS_BLOCK + after;
+  for (const [begin, end] of [
+    [GITATTRS_MARKER_BEGIN, GITATTRS_MARKER_END],
+    [LEGACY_GITATTRS_MARKER_BEGIN, LEGACY_GITATTRS_MARKER_END],
+  ] as const) {
+    const beginIdx = existing.indexOf(begin);
+    const endIdx = existing.indexOf(end);
+    if (beginIdx !== -1 && endIdx !== -1 && endIdx > beginIdx) {
+      const before = existing.slice(0, beginIdx);
+      const after = existing.slice(endIdx + end.length);
+      return before + GITATTRS_BLOCK + after;
+    }
   }
 
   const sep = existing.endsWith('\n') ? '' : '\n';
   return existing + sep + GITATTRS_BLOCK + '\n';
 }
 
-export const POST_MERGE_MARKER_BEGIN = '# >>> zettelgeist >>>';
-export const POST_MERGE_MARKER_END = '# <<< zettelgeist <<<';
+export const POST_MERGE_MARKER_BEGIN = '# >>> zettelgeist:post-merge >>>';
+export const POST_MERGE_MARKER_END = '# <<< zettelgeist:post-merge <<<';
 
 /**
  * Body of `.git/hooks/post-merge`. Fires after `git merge` completes
@@ -87,15 +105,24 @@ export const POST_MERGE_BLOCK =
 
 const SHEBANG_RE = /^#!\s*\/[^\n]*\n/;
 
+// Same legacy-marker treatment as .gitattributes — see comment above.
+const LEGACY_POST_MERGE_MARKER_BEGIN = '# >>> zettelgeist >>>';
+const LEGACY_POST_MERGE_MARKER_END = '# <<< zettelgeist <<<';
+
 export function mergePostMergeContent(existing: string | null): string {
   if (existing === null || existing === '') return POST_MERGE_BLOCK + '\n';
 
-  const beginIdx = existing.indexOf(POST_MERGE_MARKER_BEGIN);
-  const endIdx = existing.indexOf(POST_MERGE_MARKER_END);
-  if (beginIdx !== -1 && endIdx !== -1 && endIdx > beginIdx) {
-    const before = existing.slice(0, beginIdx);
-    const after = existing.slice(endIdx + POST_MERGE_MARKER_END.length);
-    return before + POST_MERGE_BLOCK + after;
+  for (const [begin, end] of [
+    [POST_MERGE_MARKER_BEGIN, POST_MERGE_MARKER_END],
+    [LEGACY_POST_MERGE_MARKER_BEGIN, LEGACY_POST_MERGE_MARKER_END],
+  ] as const) {
+    const beginIdx = existing.indexOf(begin);
+    const endIdx = existing.indexOf(end);
+    if (beginIdx !== -1 && endIdx !== -1 && endIdx > beginIdx) {
+      const before = existing.slice(0, beginIdx);
+      const after = existing.slice(endIdx + end.length);
+      return before + POST_MERGE_BLOCK + after;
+    }
   }
 
   const shebangMatch = existing.match(SHEBANG_RE);

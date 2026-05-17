@@ -4,9 +4,15 @@ function isCounted(task: Task): boolean {
   return !task.tags.includes('#skip');
 }
 
-const VALID_STATUSES = new Set<Status>([
+/**
+ * The 7 canonical lifecycle statuses, in board / column order. Exported so
+ * UIs (web viewer, TUI, MCP clients) render columns in the same order.
+ */
+export const STATUSES = [
   'draft', 'planned', 'in-progress', 'in-review', 'done', 'blocked', 'cancelled',
-]);
+] as const satisfies readonly Status[];
+
+const VALID_STATUSES = new Set<Status>(STATUSES);
 
 export function deriveStatus(spec: Spec, repo: RepoState): Status {
   // Frontmatter `status:` is an explicit override for ALL statuses, not just

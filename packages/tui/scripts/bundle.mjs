@@ -24,11 +24,14 @@ await esbuild.build({
   external: [
     // Keep these external — they have native + lifecycle quirks that don't
     // bundle cleanly; npm install resolves them in node_modules at runtime.
+    // Ink's own native layout dep (`yoga-layout`) is reached transitively
+    // through `ink` (which IS external), so we don't need to name it here.
+    // Earlier versions listed `yoga-wasm-web` but that's a different package
+    // and not on our dependency graph.
     'ink',
     'react',
     'gray-matter',
     'js-yaml',
-    'yoga-wasm-web',
   ],
   logLevel: 'info',
 });
