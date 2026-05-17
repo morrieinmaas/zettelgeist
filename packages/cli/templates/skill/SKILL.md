@@ -44,8 +44,9 @@ tools. Do **not** invent a `.zettelgeist.yaml` to make this skill apply.
    block merges field-by-field with 3-way semantics: `status` (conflict
    marker on divergent change), `depends_on` / `replaces` (set union;
    non-string entries preserved, not dropped), `blocked_by` / `part_of`
-   / `merged_into` (3-way; missing wins-over-non-empty; both changed
-   differently → conflict), `auto_merge` (3-way — turning it off works).
+   / `merged_into` (3-way; unchanged-from-base side loses, including
+   when the change IS an explicit clear; both changed differently →
+   conflict), `auto_merge` (3-way — turning it off works).
    Body text below `---` uses `git merge-file` for line-level three-way
    merge. Conflict markers in YAML use `# <<<<<<<` comment syntax so
    the file stays parseable.

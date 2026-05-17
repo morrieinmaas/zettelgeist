@@ -158,7 +158,7 @@ For `specs/*/requirements.md`, v0.2 implementations SHOULD configure a per-field
 | --- | --- |
 | `status` (the seven values from §7) | 3-way; both changed differently → conflict marker |
 | `depends_on`, `replaces` (lists) | set union with first-occurrence order preservation; spec-violating non-string entries are preserved, not dropped |
-| `blocked_by`, `part_of`, `merged_into` (scalars) | 3-way; missing / empty wins-over-non-empty; both changed differently → conflict marker |
+| `blocked_by`, `part_of`, `merged_into` (scalars) | 3-way: both same → that; one side unchanged from base → take the other (including an explicit clear); both changed differently → conflict marker |
 | `auto_merge` (boolean) | 3-way (NOT raw logical OR) — symmetric, so either side can flip `true → false` if the other is unchanged |
 | Unknown keys | opaque 3-way with structural equality (`deepEqual`); nested objects compared structurally and round-tripped |
 

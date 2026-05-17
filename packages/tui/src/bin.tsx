@@ -4,6 +4,11 @@ import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
 import { App, type View } from './app.js';
 
+// Replaced at bundle time via esbuild's `define` (see scripts/bundle.mjs).
+// The fallback value is only used when running directly from source
+// (e.g., in tests via vitest, which doesn't go through esbuild bundling).
+declare const __ZG_TUI_VERSION__: string;
+
 async function main(): Promise<number> {
   const argv = process.argv.slice(2);
   if (argv.includes('--help') || argv.includes('-h')) {
@@ -11,7 +16,7 @@ async function main(): Promise<number> {
     return 0;
   }
   if (argv.includes('--version')) {
-    process.stdout.write('zg-tui 0.1.0\n');
+    process.stdout.write(`zg-tui ${__ZG_TUI_VERSION__}\n`);
     return 0;
   }
 

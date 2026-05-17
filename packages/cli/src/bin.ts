@@ -10,7 +10,10 @@ import { HELP as MERGE_DRIVER_HELP } from './commands/merge-driver.js';
 import { HELP as SYNC_HELP } from './commands/sync.js';
 import { HELP as TUI_HELP } from './commands/tui.js';
 
-const HELP = `zettelgeist v0.1
+// Replaced at bundle time via esbuild's `define` (see scripts/bundle.mjs).
+declare const __ZG_CLI_VERSION__: string;
+
+const HELP = `zettelgeist v${__ZG_CLI_VERSION__}
 
 Usage:
   zettelgeist <command> [options]
@@ -177,7 +180,9 @@ async function main(): Promise<number> {
         return 2;
       }
       if (!isMergeDriverKind(kind)) {
-        process.stderr.write(`merge-driver: unknown kind '${kind}' (supported: tasks)\n`);
+        process.stderr.write(
+          `merge-driver: unknown kind '${kind}' (supported: tasks, frontmatter)\n`,
+        );
         return 2;
       }
       const env = await mergeDriverCommand({ kind, basePath, oursPath, theirsPath });

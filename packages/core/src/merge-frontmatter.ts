@@ -18,7 +18,7 @@ import { parseFrontmatter } from './frontmatter.js';
  * | ------------------------------------------------ | ----------------------------------------- |
  * | `status`                                         | 3-way: unchanged side loses, differing change → conflict marker |
  * | `depends_on`, `replaces` (lists)                 | set union (preserves first occurrence)    |
- * | `blocked_by`, `part_of`, `merged_into` (scalars) | 3-way; missing wins-over-empty; differing change → conflict     |
+ * | `blocked_by`, `part_of`, `merged_into` (scalars) | 3-way; an explicit clear (set to empty) is honored if the other side is unchanged from base; differing change → conflict |
  * | `auto_merge` (boolean)                           | 3-way (NOT raw OR — allows turn-off)      |
  * | Unknown scalar/list/object keys                  | 3-way with `deepEqual`; differing change → conflict marker      |
  *
@@ -128,12 +128,34 @@ function mergeFrontmatterObjects(
     if (SINGLE_STRING_FIELDS.has(key)) {
       // 3-way over the raw value; don't coerce non-strings to empty (data
       // loss). "Empty" means undefined or the literal empty string.
+      //
+      // ORDER MATTERS: base-equality MUST be checked before the "non-empty
+      // wins over empty" shortcut. Otherwise clearing a scalar (e.g.,
+      // unblocking a spec via `blocked_by: ""`) gets silently reverted when
+      // the other side is unchanged from base — the non-empty unchanged-base
+      // value would "win" against the explicit clear, dropping user intent.
+      if (deepEqual(o, t)) {
+        if (!isEmpty(o)) result[key] = o;
+        continue;
+      }
+      if (b !== undefined) {
+        const oUnchanged = deepEqual(o, b);
+        const tUnchanged = deepEqual(t, b);
+        if (oUnchanged && !tUnchanged) {
+          if (!isEmpty(t)) result[key] = t;
+          continue;
+        }
+        if (tUnchanged && !oUnchanged) {
+          if (!isEmpty(o)) result[key] = o;
+          continue;
+        }
+      }
+      // No base, or both sides changed. If only one side has a value, that
+      // side wins (e.g., base absent + ours sets + theirs absent = take
+      // ours). If both have different non-empty values, conflict.
       if (isEmpty(o) && isEmpty(t)) continue;
       if (isEmpty(o)) { result[key] = t; continue; }
       if (isEmpty(t)) { result[key] = o; continue; }
-      if (deepEqual(o, t)) { result[key] = o; continue; }
-      if (b !== undefined && deepEqual(o, b)) { result[key] = t; continue; }
-      if (b !== undefined && deepEqual(t, b)) { result[key] = o; continue; }
       conflicts.push({ key, ours: o, theirs: t });
       result[key] = o;
       continue;

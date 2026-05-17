@@ -10,6 +10,12 @@ const dist = path.join(root, 'dist');
 await fs.rm(dist, { recursive: true, force: true });
 await fs.mkdir(dist, { recursive: true });
 
+// Inject the package version at build time so `zg-tui --version` always
+// reports the actual published version. Reading package.json at runtime
+// would work but means the bundled binary depends on its sibling
+// package.json being shipped — easier to bake it in.
+const pkg = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8'));
+
 await esbuild.build({
   entryPoints: [path.join(root, 'src/bin.tsx')],
   bundle: true,
@@ -21,6 +27,9 @@ await esbuild.build({
   minify: false,
   banner: { js: '#!/usr/bin/env node\n' },
   jsx: 'transform',
+  define: {
+    __ZG_TUI_VERSION__: JSON.stringify(pkg.version),
+  },
   external: [
     // Keep these external — they have native + lifecycle quirks that don't
     // bundle cleanly; npm install resolves them in node_modules at runtime.

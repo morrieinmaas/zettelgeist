@@ -51,7 +51,7 @@
 
   - `status` (the 7 valid values): 3-way merge — both same → that, one side unchanged from base → take the other, both changed differently → conflict marker (emitted as YAML comments so the file stays parseable).
   - `depends_on` / `replaces` (lists): set union with first-occurrence order preservation; non-string entries are kept rather than silently dropped (data preservation over schema enforcement).
-  - `blocked_by` / `part_of` / `merged_into` (scalars): 3-way; missing/empty wins-over-non-empty; divergent change → conflict marker. Non-string values are preserved instead of coerced to empty.
+  - `blocked_by` / `part_of` / `merged_into` (scalars): 3-way — both same → that; one side unchanged from base → take the other (including an explicit clear, so unblocking a spec actually works); divergent change → conflict marker. Non-string values are preserved instead of coerced to empty.
   - `auto_merge` (boolean): 3-way (NOT raw OR) — so a side wanting to turn off `auto_merge` actually can, even when the other side hasn't touched it.
   - Unknown keys: opaque 3-way with structural equality; nested objects compared via `deepEqual` and round-tripped via `js-yaml` flow style.
 

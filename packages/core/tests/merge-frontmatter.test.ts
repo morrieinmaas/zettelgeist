@@ -229,6 +229,43 @@ describe('mergeFrontmatter — edge cases (gap-fill)', () => {
     expect(r.content).toContain('status: triaged');
   });
 
+  it('honors an explicit clear of blocked_by when the other side is unchanged from base', () => {
+    // Regression: an earlier ordering had non-empty-wins-over-empty
+    // running BEFORE the base-equality check, so this clear would be
+    // silently reverted to the unchanged-from-base value. The 3-way
+    // rule must respect "the side that changed wins" — including when
+    // the change IS the clear.
+    const base = wrap('blocked_by: idp\n');
+    const ours = wrap('blocked_by: ""\n');         // ours: explicit clear
+    const theirs = wrap('blocked_by: idp\n');      // theirs: unchanged
+    const r = mergeFrontmatter(base, ours, theirs);
+    expect(r.ok).toBe(true);
+    expect(r.content).not.toContain('blocked_by: idp');
+  });
+
+  it('honors an explicit clear of part_of from theirs when ours is unchanged', () => {
+    // Symmetric to the previous test — the clear can come from either side.
+    const base = wrap('part_of: foo\n');
+    const ours = wrap('part_of: foo\n');           // ours: unchanged
+    const theirs = wrap('part_of: ""\n');          // theirs: clear
+    const r = mergeFrontmatter(base, ours, theirs);
+    expect(r.ok).toBe(true);
+    expect(r.content).not.toContain('part_of: foo');
+  });
+
+  it('still emits a conflict when both sides change a scalar differently from base', () => {
+    // Make sure the reorder didn't break the conflict path for the
+    // "both changed, differently, both non-empty" case.
+    const base = wrap('blocked_by: idp\n');
+    const ours = wrap('blocked_by: api-keys\n');
+    const theirs = wrap('blocked_by: db-schema\n');
+    const r = mergeFrontmatter(base, ours, theirs);
+    expect(r.ok).toBe(false);
+    expect(r.content).toContain('<<<<<<< ours: blocked_by');
+    expect(r.content).toContain('api-keys');
+    expect(r.content).toContain('db-schema');
+  });
+
   it('lets auto_merge be turned off via 3-way (was broken under raw OR)', () => {
     const base = wrap('auto_merge: true\n');
     const ours = wrap('auto_merge: false\n'); // explicit turn-off
