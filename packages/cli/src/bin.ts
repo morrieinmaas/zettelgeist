@@ -48,7 +48,16 @@ const COMMAND_HELP: Record<string, string> = {
 };
 
 async function main(): Promise<number> {
-  const inv = parseInvocation(process.argv.slice(2));
+  // `--version` short-circuits before the router so it works without
+  // configuring it as a "command" (matches the convention every other
+  // npm CLI follows).
+  const argv = process.argv.slice(2);
+  if (argv.includes('--version') || argv.includes('-v')) {
+    process.stdout.write(`zettelgeist ${__ZG_CLI_VERSION__}\n`);
+    return 0;
+  }
+
+  const inv = parseInvocation(argv);
 
   if (inv.kind === 'help') {
     const text = (inv.topic && COMMAND_HELP[inv.topic]) || HELP;

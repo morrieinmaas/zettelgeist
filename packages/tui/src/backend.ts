@@ -2,7 +2,7 @@ import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
 import {
   loadAllSpecs, loadSpec, loadConfig, deriveStatus, buildGraph,
-  scanClaimedSpecs, parseFrontmatter,
+  scanClaimedSpecs,
   type Spec, type Status, type Graph,
 } from '@zettelgeist/core';
 import { makeDiskFsReader } from '@zettelgeist/fs-adapters';
@@ -120,9 +120,5 @@ async function walkMarkdown(dir: string): Promise<string[]> {
 function stringOrNull(v: unknown): string | null {
   return typeof v === 'string' && v.trim() !== '' ? v.trim() : null;
 }
-
-// Suppress unused-warning for the parseFrontmatter import — kept here as
-// a convenience re-export for future feature extension.
-export { parseFrontmatter };
 
 export type { Spec, Status, Graph };

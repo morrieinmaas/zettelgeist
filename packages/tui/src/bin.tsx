@@ -4,9 +4,10 @@ import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
 import { App, type View } from './app.js';
 
-// Replaced at bundle time via esbuild's `define` (see scripts/bundle.mjs).
-// The fallback value is only used when running directly from source
-// (e.g., in tests via vitest, which doesn't go through esbuild bundling).
+// Replaced at bundle time via esbuild's `define` (see scripts/bundle.mjs);
+// never read from source — `package.json`'s `bin` only points at
+// `dist/bin.js`, so the only way this symbol is reached at runtime is
+// after esbuild has substituted a literal string here.
 declare const __ZG_TUI_VERSION__: string;
 
 async function main(): Promise<number> {
