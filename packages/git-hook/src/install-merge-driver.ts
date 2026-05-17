@@ -32,6 +32,10 @@ export const GITATTRS_BLOCK =
   '# `zettelgeist merge-driver tasks` and is wired into .git/config by\n' +
   '# install-hook.\n' +
   'specs/*/tasks.md merge=zettelgeist-tasks\n' +
+  '# requirements.md frontmatter merges field-by-field (status with conflict\n' +
+  '# marker if divergent, lists union, scalars with conflict marker if both\n' +
+  '# non-empty differ); body merged textually.\n' +
+  'specs/*/requirements.md merge=zettelgeist-frontmatter\n' +
   GITATTRS_MARKER_END;
 
 /**
@@ -173,6 +177,23 @@ export async function installMergeDrivers(
     [
       '-C', repoRoot, 'config', 'merge.zettelgeist-tasks.driver',
       'zettelgeist merge-driver tasks %O %A %B',
+    ],
+  );
+
+  // 4. Register the `zettelgeist-frontmatter` driver. Same justification as
+  //    tasks — requirements.md's frontmatter is self-contained.
+  await execFileP(
+    'git',
+    [
+      '-C', repoRoot, 'config', 'merge.zettelgeist-frontmatter.name',
+      'Zettelgeist requirements.md YAML frontmatter merge',
+    ],
+  );
+  await execFileP(
+    'git',
+    [
+      '-C', repoRoot, 'config', 'merge.zettelgeist-frontmatter.driver',
+      'zettelgeist merge-driver frontmatter %O %A %B',
     ],
   );
 

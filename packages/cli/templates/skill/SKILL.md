@@ -40,6 +40,21 @@ tools. Do **not** invent a `.zettelgeist.yaml` to make this skill apply.
    their text, either-side-checked wins, tags are unioned, prose is
    preserved from `ours`. Renamed tasks appear as both versions (so
    you can spot the rename and consolidate manually).
+6. **Frontmatter merges per-field.** `requirements.md`'s YAML block
+   merges field-by-field: `status` (conflict marker on divergence),
+   `depends_on`/`replaces` (set union), `blocked_by`/`part_of`/`merged_into`
+   (one-empty + one-non-empty → non-empty; both-different → conflict),
+   `auto_merge` (logical OR). Body text below `---` uses standard
+   text-merge. Conflict markers in YAML use `# <<<<<<<` comment syntax
+   so the file stays parseable.
+7. **`zettelgeist sync`** is the safe way to bring your local branch up
+   to date. Wraps `git fetch && git rebase` and lets the merge drivers
+   above auto-resolve. Use `zettelgeist sync --check` before a mutating
+   action to detect drift without modifying the working tree (exits
+   non-zero if a sync is needed).
+8. **`zg-tui`** is the terminal-native surface for when you're outside
+   VS Code and a browser is overkill. Board, detail, graph, docs +
+   command palette (`?`). Runs in-process — no separate server needed.
 
 ## The agent loop
 

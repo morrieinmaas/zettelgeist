@@ -1,0 +1,40 @@
+{
+  "name": "@zettelgeist/tui",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "author": "Mo <motechnix@gmail.com>",
+  "description": "Zettelgeist TUI: terminal-native spec board, detail view, dependency graph, and docs browser.",
+  "keywords": ["zettelgeist", "spec-driven-development", "markdown", "project-management", "tui", "terminal", "kanban"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/morrieinmaas/zettelgeist.git",
+    "directory": "packages/tui"
+  },
+  "bugs": "https://github.com/morrieinmaas/zettelgeist/issues",
+  "homepage": "https://github.com/morrieinmaas/zettelgeist#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "bin": { "zg-tui": "./dist/bin.js" },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "node scripts/bundle.mjs && chmod +x dist/bin.js",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "ink": "^5.0.1",
+    "react": "^18.3.1",
+    "gray-matter": "^4.0.3",
+    "js-yaml": "^3.14.2"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/react": "^18.3.0",
+    "@zettelgeist/core": "workspace:*",
+    "@zettelgeist/fs-adapters": "workspace:*",
+    "esbuild": "^0.24.0",
+    "ink-testing-library": "^4.0.0"
+  }
+}

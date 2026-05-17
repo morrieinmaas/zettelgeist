@@ -1,5 +1,5 @@
 import { promises as fs } from 'node:fs';
-import { mergeTasksMd } from '@zettelgeist/core';
+import { mergeTasksMd, mergeFrontmatter } from '@zettelgeist/core';
 import { okEnvelope, errorEnvelope, type Envelope } from '../output.js';
 
 export const HELP = `zettelgeist merge-driver <kind> <base> <ours> <theirs> [--json]
@@ -9,11 +9,16 @@ export const HELP = `zettelgeist merge-driver <kind> <base> <ours> <theirs> [--j
   by \`zettelgeist install-hook\`).
 
   Kinds:
-    tasks    \`specs/*/tasks.md\`. Three-way merge that matches tasks by
-             text identity. Per-task: either side checked wins; both
-             un-checked from a checked base un-checks; tags union; renamed
-             tasks appear as two entries. Preserves prose structure from
-             \`ours\` (headings, blank lines, etc.).
+    tasks         \`specs/*/tasks.md\`. Three-way merge that matches tasks by
+                  text identity. Per-task: either side checked wins; both
+                  un-checked from a checked base un-checks; tags union;
+                  renamed tasks appear as two entries. Prose preserved from
+                  \`ours\`.
+    frontmatter   \`specs/*/requirements.md\`. Splits each side into
+                  (YAML block, body); merges the YAML field-by-field
+                  (status with conflict marker if divergent; lists union;
+                  scalars with conflict marker if both non-empty differ);
+                  body is text-merged.
 
   Note: \`specs/INDEX.md\` is NOT handled by a custom driver. It uses
   \`merge=union\` plus the \`post-merge\` hook installed by \`install-hook\`
@@ -28,8 +33,8 @@ export const HELP = `zettelgeist merge-driver <kind> <base> <ours> <theirs> [--j
     --json   Emit a JSON envelope on stdout (useful for tests).
 `;
 
-export type MergeDriverKind = 'tasks';
-const KINDS: ReadonlySet<MergeDriverKind> = new Set(['tasks']);
+export type MergeDriverKind = 'tasks' | 'frontmatter';
+const KINDS: ReadonlySet<MergeDriverKind> = new Set(['tasks', 'frontmatter']);
 
 export function isMergeDriverKind(s: string): s is MergeDriverKind {
   return KINDS.has(s as MergeDriverKind);
@@ -61,19 +66,19 @@ async function readOrEmpty(p: string): Promise<string> {
 export async function mergeDriverCommand(
   input: MergeDriverInput,
 ): Promise<Envelope<MergeDriverOk>> {
-  if (input.kind === 'tasks') {
-    return tasksDriver(input);
-  }
-  return errorEnvelope(`unknown merge driver kind: ${input.kind}`);
-}
-
-async function tasksDriver(input: MergeDriverInput): Promise<Envelope<MergeDriverOk>> {
   const [base, ours, theirs] = await Promise.all([
     readOrEmpty(input.basePath),
     readOrEmpty(input.oursPath),
     readOrEmpty(input.theirsPath),
   ]);
-  const result = mergeTasksMd(base, ours, theirs);
+  let result: { content: string; ok: boolean };
+  if (input.kind === 'tasks') {
+    result = mergeTasksMd(base, ours, theirs);
+  } else if (input.kind === 'frontmatter') {
+    result = mergeFrontmatter(base, ours, theirs);
+  } else {
+    return errorEnvelope(`unknown merge driver kind: ${input.kind}`);
+  }
   try {
     await fs.writeFile(input.oursPath, result.content, 'utf8');
   } catch (err) {
@@ -81,5 +86,5 @@ async function tasksDriver(input: MergeDriverInput): Promise<Envelope<MergeDrive
       `merge-driver: cannot write resolution to ${input.oursPath}: ${(err as Error).message}`,
     );
   }
-  return okEnvelope({ kind: 'tasks', resolved: true, outputPath: input.oursPath });
+  return okEnvelope({ kind: input.kind, resolved: true, outputPath: input.oursPath });
 }

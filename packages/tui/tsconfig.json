@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "jsx": "react",
+    "baseUrl": ".",
+    "paths": {
+      "@zettelgeist/core": ["../core/src/index.ts"],
+      "@zettelgeist/fs-adapters": ["../fs-adapters/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*", "tests/**/*"]
+}

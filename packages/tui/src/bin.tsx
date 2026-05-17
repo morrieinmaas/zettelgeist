@@ -1,0 +1,69 @@
+import React from 'react';
+import { render } from 'ink';
+import { promises as fs } from 'node:fs';
+import * as path from 'node:path';
+import { App, type View } from './app.js';
+
+async function main(): Promise<number> {
+  const argv = process.argv.slice(2);
+  if (argv.includes('--help') || argv.includes('-h')) {
+    process.stdout.write(HELP);
+    return 0;
+  }
+  if (argv.includes('--version')) {
+    process.stdout.write('zg-tui 0.1.0\n');
+    return 0;
+  }
+
+  let initialView: View = 'board';
+  const viewArg = argv.find((a) => a.startsWith('--view='));
+  if (viewArg) {
+    const v = viewArg.slice('--view='.length);
+    if (v === 'board' || v === 'detail' || v === 'graph' || v === 'docs') initialView = v;
+  }
+
+  const cwd = process.cwd();
+  // Refuse to run outside a Zettelgeist repo. Cleanest UX: bail before
+  // Ink takes over the terminal.
+  try {
+    await fs.access(path.join(cwd, '.zettelgeist.yaml'));
+  } catch {
+    process.stderr.write(
+      `zg-tui: no .zettelgeist.yaml found in ${cwd}. Run inside a Zettelgeist repo or initialize one.\n`,
+    );
+    return 2;
+  }
+
+  // `render` returns a controller with `.waitUntilExit()` — we await that so
+  // the process stays alive until the user quits via `q` / `Ctrl-C`.
+  const instance = render(<App cwd={cwd} initialView={initialView} />);
+  await instance.waitUntilExit();
+  return 0;
+}
+
+const HELP = `zg-tui — terminal UI for Zettelgeist
+
+  Run inside a directory containing .zettelgeist.yaml. Opens an interactive
+  view of the spec board, detail, dependency graph, and docs.
+
+  Usage:
+    zg-tui [--view=board|detail|graph|docs]
+    zg-tui --help
+    zg-tui --version
+
+  Keys (in-app):
+    ↑↓ ←→ / hjkl   navigate
+    enter          open / select
+    1 2 3 4        jump to board / detail / graph / docs
+    tab            cycle views
+    ?              command palette
+    q / Ctrl-C     quit
+`;
+
+main().then(
+  (code) => process.exit(code),
+  (err) => {
+    process.stderr.write(`zg-tui: ${err instanceof Error ? err.message : String(err)}\n`);
+    process.exit(1);
+  },
+);

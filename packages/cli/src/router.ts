@@ -29,6 +29,7 @@ const KNOWN_COMMANDS = new Set([
   'serve',
   'export-doc',
   'merge-driver',
+  'sync',
 ]);
 
 const FLAG_OPTIONS = {
