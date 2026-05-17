@@ -15,7 +15,13 @@ let localB: string;
 
 async function setupTwoClones(): Promise<void> {
   upstream = await fs.mkdtemp(path.join(os.tmpdir(), 'zg-sync-upstream-'));
-  await execFileP('git', ['init', '--bare', '-q'], { cwd: upstream });
+  // `-b main` makes `main` the default branch so the bare repo's HEAD
+  // points to it. Without this, Ubuntu's git (which defaults to `master`)
+  // would leave HEAD on an empty `master`, and `git clone` would check
+  // out the empty branch — localB would then have no files. macOS git
+  // typically has `init.defaultBranch=main` set via brew, masking this
+  // in local runs.
+  await execFileP('git', ['init', '--bare', '-q', '-b', 'main'], { cwd: upstream });
 
   localA = await fs.mkdtemp(path.join(os.tmpdir(), 'zg-sync-A-'));
   await execFileP('git', ['clone', '-q', upstream, localA], { cwd: os.tmpdir() });
@@ -179,7 +185,7 @@ describe('syncCommand — repo state edge cases', () => {
 
   it('reports no-upstream in --check when none configured', async () => {
     const orphan = await fs.mkdtemp(path.join(os.tmpdir(), 'zg-sync-orphan-'));
-    await execFileP('git', ['init', '-q'], { cwd: orphan });
+    await execFileP('git', ['init', '-q', '-b', 'main'], { cwd: orphan });
     await execFileP('git', ['config', 'user.email', 'o@e'], { cwd: orphan });
     await execFileP('git', ['config', 'user.name', 'O'], { cwd: orphan });
     await fs.writeFile(path.join(orphan, 'README.md'), '# init\n');
