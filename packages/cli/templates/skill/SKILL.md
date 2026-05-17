@@ -34,6 +34,12 @@ tools. Do **not** invent a `.zettelgeist.yaml` to make this skill apply.
    tree and commits the result as `[zg] regen INDEX after merge`. If you
    see that commit on the log after a merge, that's the hook fixing
    things up — it's expected.
+5. **`tasks.md` merges semantically.** Two agents ticking different
+   tasks (or even the same task) on different branches won't conflict.
+   `install-hook` registers a custom merge driver: tasks are matched by
+   their text, either-side-checked wins, tags are unioned, prose is
+   preserved from `ours`. Renamed tasks appear as both versions (so
+   you can spot the rename and consolidate manually).
 
 ## The agent loop
 

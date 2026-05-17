@@ -144,6 +144,8 @@ Two conformant implementations MUST produce byte-identical `INDEX.md` for the sa
 
 **v0.2 distributed-merge note (non-normative):** because `INDEX.md` is fully derived, merging two branches that both regenerated it produces a content conflict on every concurrent change. Implementations SHOULD configure `specs/INDEX.md merge=union` in `.gitattributes` so the merge produces a (transient) concatenation rather than conflict markers, AND install a `post-merge` hook that runs the regen against the now-fully-merged tree, replacing the concatenation with the correct INDEX. The v0.2 reference implementation does this automatically via `zettelgeist install-hook`. The merged INDEX is still required to match the byte-identical-rule above against the post-merge tree.
 
+For `specs/*/tasks.md`, v0.2 implementations SHOULD configure a semantic three-way merge. Tasks are matched by their cleaned text (after numeric-prefix and known-tag stripping per §6); per matched task: either side checked → checked (commutative), both un-checked from a checked base → un-checked, tags are unioned, prose structure from `ours` is preserved. Renamed tasks coexist as two entries (delete-and-add semantics). The v0.2 reference implementation ships this as the `zettelgeist merge-driver tasks` driver wired into `.git/config` by `install-hook`, with `specs/*/tasks.md merge=zettelgeist-tasks` in `.gitattributes`. Unlike INDEX, the tasks driver does not depend on any other file's state, so the per-file driver approach works correctly.
+
 ## 10. Validation errors
 
 Implementations MUST emit validation errors using these machine codes. Human-readable messages are implementation freedom.

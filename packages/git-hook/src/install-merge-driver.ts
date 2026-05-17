@@ -27,6 +27,11 @@ export const GITATTRS_BLOCK =
   '# then the post-merge hook regenerates it from the merged tree.\n' +
   '# See `zettelgeist install-hook`.\n' +
   'specs/INDEX.md merge=union\n' +
+  '# tasks.md merges semantically (per-task: either-checked wins, tags\n' +
+  '# union, prose from `ours` preserved). The custom driver lives at\n' +
+  '# `zettelgeist merge-driver tasks` and is wired into .git/config by\n' +
+  '# install-hook.\n' +
+  'specs/*/tasks.md merge=zettelgeist-tasks\n' +
   GITATTRS_MARKER_END;
 
 /**
@@ -152,8 +157,29 @@ export async function installMergeDrivers(
   await fs.writeFile(hookPath, next, 'utf8');
   await fs.chmod(hookPath, 0o755);
 
+  // 3. Register the `zettelgeist-tasks` custom driver in .git/config. The
+  // tasks.md case CAN use a driver (unlike INDEX) because tasks.md merging
+  // doesn't depend on any other file's state — the driver gets all the info
+  // it needs from %O/%A/%B.
+  await execFileP(
+    'git',
+    [
+      '-C', repoRoot, 'config', 'merge.zettelgeist-tasks.name',
+      'Zettelgeist tasks.md three-way merge',
+    ],
+  );
+  await execFileP(
+    'git',
+    [
+      '-C', repoRoot, 'config', 'merge.zettelgeist-tasks.driver',
+      'zettelgeist merge-driver tasks %O %A %B',
+    ],
+  );
+
   // Strip any stale `merge.zettelgeist-index.*` entries left over from a
-  // prior driver-based attempt. Each call is no-op if the entry is absent.
+  // prior driver-based attempt at the INDEX problem. (The current strategy
+  // for INDEX is post-merge regen, not a driver.) Each call is no-op if the
+  // entry is absent.
   await execFileP('git', ['-C', repoRoot, 'config', '--unset', 'merge.zettelgeist-index.name'])
     .catch(() => undefined);
   await execFileP('git', ['-C', repoRoot, 'config', '--unset', 'merge.zettelgeist-index.driver'])

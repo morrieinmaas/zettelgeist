@@ -6,6 +6,7 @@ import { HELP as INSTALL_HOOK_HELP } from './commands/install-hook.js';
 import { HELP as INSTALL_SKILL_HELP } from './commands/install-skill.js';
 import { HELP as SERVE_HELP } from './commands/serve.js';
 import { HELP as EXPORT_DOC_HELP } from './commands/export-doc.js';
+import { HELP as MERGE_DRIVER_HELP } from './commands/merge-driver.js';
 
 const HELP = `zettelgeist v0.1
 
@@ -34,6 +35,7 @@ const COMMAND_HELP: Record<string, string> = {
   'install-skill': INSTALL_SKILL_HELP,
   serve: SERVE_HELP,
   'export-doc': EXPORT_DOC_HELP,
+  'merge-driver': MERGE_DRIVER_HELP,
 };
 
 async function main(): Promise<number> {
@@ -120,6 +122,21 @@ async function main(): Promise<number> {
         ...(inv.flags.template ? { templatePath: inv.flags.template } : {}),
       });
       emit(ctx, env, () => (env.ok ? `export-doc: wrote ${env.data.output}` : ''));
+      return env.ok ? 0 : 1;
+    }
+    case 'merge-driver': {
+      const { mergeDriverCommand, isMergeDriverKind } = await import('./commands/merge-driver.js');
+      const [kind, basePath, oursPath, theirsPath] = inv.args;
+      if (!kind || !basePath || !oursPath || !theirsPath) {
+        process.stderr.write('merge-driver: expected <kind> <base> <ours> <theirs>\n');
+        return 2;
+      }
+      if (!isMergeDriverKind(kind)) {
+        process.stderr.write(`merge-driver: unknown kind '${kind}' (supported: tasks)\n`);
+        return 2;
+      }
+      const env = await mergeDriverCommand({ kind, basePath, oursPath, theirsPath });
+      emit(ctx, env, () => (env.ok ? `merge-driver: resolved ${env.data.kind} → ${env.data.outputPath}` : ''));
       return env.ok ? 0 : 1;
     }
     default:
