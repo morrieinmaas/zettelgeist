@@ -6,6 +6,7 @@
 |------|--------|----------|------------|
 | events-catalogue | planned | 0/7 | — |
 | frontmatter-merge-driver | done | 8/9 | — |
+| gcc-alignment | planned | 0/15 | — |
 | index-merge-driver | done | 9/9 | — |
 | mcp-sdk-migration | planned | 0/6 | — |
 | per-actor-claim | in-progress | 9/11 | — |
@@ -25,6 +26,7 @@
 graph TD
   events-catalogue
   frontmatter-merge-driver
+  gcc-alignment
   index-merge-driver
   mcp-sdk-migration
   per-actor-claim
@@ -37,6 +39,9 @@ graph TD
   viewer-empty-state
   vscode-extension
   wiki-links
+  gcc-alignment --> frontmatter-merge-driver
+  gcc-alignment --> per-actor-claim
+  gcc-alignment --> sync-command
   index-merge-driver --> per-actor-claim
   sync-command --> frontmatter-merge-driver
   sync-command --> index-merge-driver

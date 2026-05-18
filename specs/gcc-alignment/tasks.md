@@ -1,0 +1,23 @@
+- [ ] 1. `.log.md` writer in `@zettelgeist/mcp-server` — every existing write tool gets an `appendLogEntry({spec, agentId, action, args})` call after its commit step. New file `packages/mcp-server/src/log.ts`.
+- [ ] 2. Cycle markers on `claim_spec` (`## ⊢`) and `release_spec` (`## ⊣ ... sha=<sha>`). The sha is the most recent HEAD after the release commit lands.
+- [ ] 3. Deterministic rotation helper in `@zettelgeist/core`: `rotateLog(content, maxCycles=50)` → returns trimmed content. Pure function, unit-testable. Drops oldest complete cycle when count > maxCycles; never touches an open cycle.
+- [ ] 4. Walker exclusion — `loadSpec` / `loadAllSpecs` ignore `.log.md` (today they only walk specific filenames; verify it doesn't get pulled in via any glob).
+- [ ] 5. Spec amendment `spec/zettelgeist-v0.1.md` §9.4 documenting `.log.md` shape, cycle markers, rotation rule. Plus conformance fixture `spec/conformance/fixtures/NN-log-md/` proving the walker ignores it.
+- [ ] 6. `zettelgeist context` CLI command (new file `packages/cli/src/commands/context.ts`). Subcommands: default, `--spec <name>`, `--log <name> [--offset N]`, `--metadata <name> [<key>]`. JSON envelope + plain-text rendering.
+- [ ] 7. Cycle parser in `@zettelgeist/core`: `parseLogCycles(content)` → `Array<{open: Marker, entries: Entry[], close?: Marker}>`. Used by both rotation and context retrieval. Pure, unit-testable.
+- [ ] 8. MCP `context` tool — wraps the CLI command, same args, returns structured JSON. Register in `packages/mcp-server/src/tools/read.ts`.
+- [ ] 9. Tests:
+  - Unit: rotation (boundary at 50, 51, in-progress cycle untouched, no-op when empty)
+  - Unit: cycle parser (well-formed, missing close, double-open, malformed lines)
+  - Integration: MCP `claim_spec` → tick → release writes a complete cycle to `.log.md` with correct sha
+  - Integration: `zettelgeist context --log foo --offset 0` returns most recent cycle
+  - Integration: `--offset N` past available cycles exits non-zero with the git-log hint
+- [ ] 10. SKILL.md updates:
+  - Document `.log.md` (what writes it, when to read it, rotation behaviour)
+  - Document `context` tool (when to call vs `read_spec`, K=1 convention)
+  - Document the `INDEX.md` narrative-roadmap convention (Goal / Active milestones / Now-Next-Later)
+- [ ] 11. README update — link the GCC paper, frame v0.3 as adopting the windowed-retrieval pattern from Wu et al. 2026.
+- [ ] 12. Changeset (minor bump on `core`, `cli`, `mcp-server`; tui unchanged unless we surface `.log.md` in the detail view — defer that to v0.3.x).
+- [ ] 13. ~~Formal benchmark gating (SWE-Bench harness)~~ — deferred. Wrong shape for our value prop; dogfood instead.
+- [ ] 14. ~~Recursive-fold summary in handoff.md on `release_spec`~~ — out of scope. Requires LLM on write path; rejected by design.
+- [ ] 15. ~~GCC BRANCH/MERGE as reasoning trajectories~~ — won't ship. Conflicts with git branches; +2.4pp ablation gain doesn't justify the mental-model cost.
