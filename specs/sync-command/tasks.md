@@ -1,8 +1,8 @@
-- [ ] 1. `zettelgeist sync` CLI command (handlers, help text, JSON envelope)
-- [ ] 2. `--check` mode (read-only, exit code reflects drift)
-- [ ] 3. Shells out to git for fetch / rebase
-- [ ] 4. Calls `regen` post-resolve
-- [ ] 5. Returns structured summary on success (machine-readable for agents)
-- [ ] 6. Tests with fake remotes (vitest + temp repos)
-- [ ] 7. Add MCP tool `sync_repo` mirroring the CLI behavior
-- [ ] 8. Changeset (minor bump on cli + mcp-server)
+- [x] 1. `zettelgeist sync` CLI command with help, JSON envelope, structured response
+- [x] 2. `--check` mode (read-only; exit non-zero when needs-sync)
+- [x] 3. Shells out to git for fetch / rebase / status / rev-list
+- [x] 4. Calls `regen` post-resolve, commits `[zg] regen INDEX after sync` if changed
+- [x] 5. Structured response: status (up-to-date/fast-forwarded/rebased/needs-sync/no-upstream), pulled/replayed commit counts, indexRegenerated bool
+- [x] 6. 7 integration tests with real bare-remote + 2 clones (vitest + temp repos)
+- [ ] ~~MCP `sync_repo` tool mirror~~ — deferred. CLI is the primary interface; can be added in v0.2.x without a format bump.
+- [x] 8. Changeset (minor bump on cli)

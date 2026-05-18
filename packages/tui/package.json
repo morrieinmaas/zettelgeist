@@ -1,20 +1,22 @@
 {
-  "name": "@zettelgeist/cli",
+  "name": "@zettelgeist/tui",
   "version": "0.2.0",
   "license": "Apache-2.0",
   "author": "Mo <motechnix@gmail.com>",
-  "description": "Zettelgeist CLI: regen, validate, install-hook, serve, export-doc commands.",
+  "description": "Zettelgeist TUI: terminal-native spec board, detail view, dependency graph, and docs browser.",
   "keywords": [
     "zettelgeist",
     "spec-driven-development",
     "markdown",
     "project-management",
-    "cli"
+    "tui",
+    "terminal",
+    "kanban"
   ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/morrieinmaas/zettelgeist.git",
-    "directory": "packages/cli"
+    "directory": "packages/tui"
   },
   "bugs": "https://github.com/morrieinmaas/zettelgeist/issues",
   "homepage": "https://github.com/morrieinmaas/zettelgeist#readme",
@@ -23,29 +25,29 @@
   },
   "type": "module",
   "bin": {
-    "zettelgeist": "./dist/bin.js"
+    "zg-tui": "./dist/bin.js"
   },
   "files": [
     "dist",
     "README.md"
   ],
   "scripts": {
-    "build": "node scripts/bundle.mjs && chmod +x dist/bin.js && cp -r templates dist/templates && node scripts/copy-viewer.mjs",
+    "build": "node scripts/bundle.mjs && chmod +x dist/bin.js",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test": "vitest run"
   },
   "dependencies": {
+    "ink": "^5.0.1",
+    "react": "^18.3.1",
     "gray-matter": "^4.0.3",
-    "js-yaml": "^3.14.2",
-    "marked": "^14.0.0"
+    "js-yaml": "^3.14.2"
   },
   "devDependencies": {
-    "@playwright/test": "^1.51.0",
     "@types/js-yaml": "^4.0.9",
+    "@types/react": "^18.3.0",
     "@zettelgeist/core": "workspace:*",
     "@zettelgeist/fs-adapters": "workspace:*",
-    "@zettelgeist/git-hook": "workspace:*",
-    "esbuild": "^0.24.0"
+    "esbuild": "^0.24.0",
+    "ink-testing-library": "^4.0.0"
   }
 }

@@ -1,10 +1,17 @@
 ---
-status: planned
+status: done
 priority: medium
 target_version: 0.2
 ---
 
 # Custom git merge driver for YAML frontmatter blocks in `requirements.md`
+
+> **Shipped in v0.2.** Authoritative behavior now lives in
+> [`spec/zettelgeist-v0.1.md` §9.3](../../spec/zettelgeist-v0.1.md#93-requirementsmd-frontmatter-merge-v02-non-normative).
+> The "Acceptance criteria" section below is the original design proposal
+> and is preserved for history; the actual rules evolved during review
+> (notably `auto_merge` and scalars are now 3-way, not raw OR / non-empty-
+> wins). Read §9.3 for current behavior.
 
 ## Problem
 

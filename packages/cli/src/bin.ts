@@ -7,8 +7,13 @@ import { HELP as INSTALL_SKILL_HELP } from './commands/install-skill.js';
 import { HELP as SERVE_HELP } from './commands/serve.js';
 import { HELP as EXPORT_DOC_HELP } from './commands/export-doc.js';
 import { HELP as MERGE_DRIVER_HELP } from './commands/merge-driver.js';
+import { HELP as SYNC_HELP } from './commands/sync.js';
+import { HELP as TUI_HELP } from './commands/tui.js';
 
-const HELP = `zettelgeist v0.1
+// Replaced at bundle time via esbuild's `define` (see scripts/bundle.mjs).
+declare const __ZG_CLI_VERSION__: string;
+
+const HELP = `zettelgeist v${__ZG_CLI_VERSION__}
 
 Usage:
   zettelgeist <command> [options]
@@ -19,6 +24,8 @@ Commands:
   install-hook [--force]         install pre-commit hook
   install-skill [--scope S]      install the agent skill (Claude Code etc.)
   serve [--port N] [--no-open]   serve the viewer over HTTP
+  sync [--check]                 fetch + rebase, auto-resolve managed conflicts
+  tui  [--view=NAME]             open the terminal UI (requires @zettelgeist/tui)
   export-doc <path> [--template T]  render markdown to HTML
 
 Global flags:
@@ -36,10 +43,21 @@ const COMMAND_HELP: Record<string, string> = {
   serve: SERVE_HELP,
   'export-doc': EXPORT_DOC_HELP,
   'merge-driver': MERGE_DRIVER_HELP,
+  sync: SYNC_HELP,
+  tui: TUI_HELP,
 };
 
 async function main(): Promise<number> {
-  const inv = parseInvocation(process.argv.slice(2));
+  // `--version` short-circuits before the router so it works without
+  // configuring it as a "command" (matches the convention every other
+  // npm CLI follows).
+  const argv = process.argv.slice(2);
+  if (argv.includes('--version') || argv.includes('-v')) {
+    process.stdout.write(`zettelgeist ${__ZG_CLI_VERSION__}\n`);
+    return 0;
+  }
+
+  const inv = parseInvocation(argv);
 
   if (inv.kind === 'help') {
     const text = (inv.topic && COMMAND_HELP[inv.topic]) || HELP;
@@ -124,6 +142,45 @@ async function main(): Promise<number> {
       emit(ctx, env, () => (env.ok ? `export-doc: wrote ${env.data.output}` : ''));
       return env.ok ? 0 : 1;
     }
+    case 'sync': {
+      const { syncCommand } = await import('./commands/sync.js');
+      const env = await syncCommand({
+        cwd,
+        check: inv.flags.check ?? false,
+        ...(inv.flags['allow-dirty'] ? { allowDirty: true } : {}),
+      });
+      emit(ctx, env, () => {
+        if (!env.ok) return '';
+        const { status, commitsBehind, commitsAhead, indexRegenerated, indexCommitFailed } = env.data;
+        const counts = `behind=${commitsBehind}, ahead=${commitsAhead}`;
+        const extras: string[] = [];
+        if (indexRegenerated) extras.push('INDEX regenerated');
+        if (indexCommitFailed) extras.push('WARNING: INDEX regen commit failed — working tree may be dirty');
+        const tail = extras.length > 0 ? `, ${extras.join(', ')}` : '';
+        return `sync: ${status} (${counts}${tail})`;
+      });
+      if (!env.ok) return 1;
+      // --check semantics: exit non-zero when a sync is needed OR repo isn't ready.
+      if (inv.flags.check && ['needs-sync', 'no-upstream', 'not-a-repo', 'detached-head'].includes(env.data.status)) {
+        return 1;
+      }
+      // If the regen-commit step failed during a real sync, the working tree
+      // is left with a modified INDEX.md. Surface this as a failed exit.
+      if (env.data.indexCommitFailed) return 1;
+      return 0;
+    }
+    case 'tui': {
+      const { tuiCommand } = await import('./commands/tui.js');
+      const env = await tuiCommand({
+        cwd,
+        ...(inv.flags.view ? { view: inv.flags.view } : {}),
+      });
+      emit(ctx, env, () =>
+        env.ok ? `tui: ${env.data.binary} exited ${env.data.exitCode}` : '',
+      );
+      if (!env.ok) return 1;
+      return env.data.exitCode;
+    }
     case 'merge-driver': {
       const { mergeDriverCommand, isMergeDriverKind } = await import('./commands/merge-driver.js');
       const [kind, basePath, oursPath, theirsPath] = inv.args;
@@ -132,12 +189,24 @@ async function main(): Promise<number> {
         return 2;
       }
       if (!isMergeDriverKind(kind)) {
-        process.stderr.write(`merge-driver: unknown kind '${kind}' (supported: tasks)\n`);
+        process.stderr.write(
+          `merge-driver: unknown kind '${kind}' (supported: tasks, frontmatter)\n`,
+        );
         return 2;
       }
       const env = await mergeDriverCommand({ kind, basePath, oursPath, theirsPath });
-      emit(ctx, env, () => (env.ok ? `merge-driver: resolved ${env.data.kind} → ${env.data.outputPath}` : ''));
-      return env.ok ? 0 : 1;
+      emit(ctx, env, () =>
+        env.ok
+          ? env.data.cleanlyResolved
+            ? `merge-driver: resolved ${env.data.kind} → ${env.data.outputPath}`
+            : `merge-driver: ${env.data.kind} had conflicts; wrote markers to ${env.data.outputPath}`
+          : '',
+      );
+      if (!env.ok) return 1;
+      // Per git's merge-driver contract: exit 0 = clean resolution, exit
+      // non-zero = conflict markers in the file. Surface this so git records
+      // the file as conflicted and rebase/merge stops for the user.
+      return env.data.cleanlyResolved ? 0 : 1;
     }
     default:
       process.stderr.write(`unhandled command: ${inv.name}\n`);
