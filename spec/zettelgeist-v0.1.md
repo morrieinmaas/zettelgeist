@@ -170,6 +170,27 @@ The body below the closing `---` is merged via a textual three-way merge (the re
 
 The driver's exit code follows git's contract: 0 = clean resolution (no markers); non-zero = the file contains conflict markers and git MUST treat it as conflicted (rebase / merge pauses for the user). Implementations that don't propagate the exit code will leak unresolved conflict markers into commits.
 
+### 9.4 Per-spec `.log.md` Observation–Thought–Action trace (v0.3, non-normative)
+
+v0.3 implementations MAY write a per-spec `.log.md` file under `<specs_dir>/<name>/.log.md` to record fine-grained agent activity. The file is dotfile-prefixed so editors fold it; implementations of the file walker (§4, §7, §8) MUST ignore `.log.md` — it does not contribute to status derivation, the dependency graph, validation, or `INDEX.md` regeneration. It is metadata about *how* the spec evolved, not state.
+
+The file is plain UTF-8 markdown, committed alongside the spec. Each line is one of:
+
+- **Cycle open** — `## ⊢ <ISO-8601-timestamp> · agent=<agent-id> · claim`
+- **Cycle close** — `## ⊣ <ISO-8601-timestamp> · agent=<agent-id> · release · sha=<commit-sha>`
+- **Action entry** — `- <ISO-8601-timestamp> · agent=<agent-id> · <action-call>`
+- **Header / stray** — any other line is preserved on round-trip (file headers, hand-written notes).
+
+A *cycle* is one `## ⊢ ... claim` marker, zero or more `- ...` action lines, optionally followed by one `## ⊣ ... release` marker. A cycle without a release marker is **in-progress**. The `<commit-sha>` in a release marker SHOULD point at the last work commit produced during the cycle.
+
+The `<action-call>` SHOULD be a short, deterministic rendering of the operation (e.g. `tick_task(2)`, `set_status(draft → in-progress)`, `write_handoff()`). Implementations MUST NOT call an LLM to produce this string — the log is deterministic by design.
+
+**Rotation.** Implementations SHOULD cap `.log.md` at 50 complete cycles per spec. When a release pushes the file above the cap, the oldest *complete* cycle MUST be dropped whole; in-progress cycles are never dropped. The git history of the file is the long-term record — older cycles are recoverable via `git log <specs_dir>/<name>/.log.md`. Implementations MUST NOT call an LLM to summarise or fold dropped cycles.
+
+**Reading.** A v0.2 reader that pre-dates §9.4 will simply ignore `.log.md` (dotfile, not in the recognised-files list of §4). No back-compat layer required.
+
+The v0.3 reference implementation ships this as the MCP server's automatic log-writing behavior on every write tool (claim/release/tick/handoff/set-status/patch-frontmatter/write-spec-file), and exposes windowed retrieval via the `context` CLI command and matching MCP tool. The design is directly inspired by the Git-Context-Controller paper (Wu et al., 2026, [arXiv:2508.00031](https://arxiv.org/abs/2508.00031)), adapted to Zettelgeist's git-shaped workflow.
+
 ## 10. Validation errors
 
 Implementations MUST emit validation errors using these machine codes. Human-readable messages are implementation freedom.
@@ -178,7 +199,7 @@ Implementations MUST emit validation errors using these machine codes. Human-rea
 |---|---|
 | `E_CYCLE` | A cycle was detected in the `depends_on` graph. `path` is the cycle as an ordered list of spec names. |
 | `E_INVALID_FRONTMATTER` | YAML in `requirements.md` (or `.zettelgeist.yaml`) failed to parse, or a known field has the wrong type. `path` is the file path; `detail` is implementation-defined. |
-| `E_EMPTY_SPEC` | A folder under `<specs_dir>` matches the spec-name pattern but contains no `.md` files anywhere. `path` is the folder path. |
+| `E_EMPTY_SPEC` | A folder under `<specs_dir>` matches the spec-name pattern but contains no non-dotfile `.md` files anywhere. Dotfile-prefixed markdown (e.g. `.log.md` from §9.4) is metadata, not spec content. `path` is the folder path. |
 
 Conditions not enumerated above (nested `lenses/` directories, folder names that don't match the spec-name pattern, unknown `format_version`) are non-errors at the format level. Implementations MAY surface them as warnings.
 
@@ -264,3 +285,5 @@ Each numbered rule below cites the conformance fixture(s) that prove it. New rul
 | §10 | `E_INVALID_FRONTMATTER` is reachable. | 07-invalid-frontmatter |
 | §10 | `E_EMPTY_SPEC` is reachable. | 08-empty-spec |
 | §10 | Multiple errors sorted by `(code, path)`. | 11-mixed-errors |
+| §9.4 | `.log.md` is walker-ignored: present file does not contribute to status / graph / validation / INDEX. | 45-log-md-ignored |
+| §9.4 | A folder whose only `.md` content is `.log.md` (dotfile) is NOT loaded as a spec; instead `E_EMPTY_SPEC` is emitted, surfacing the inconsistency. | 46-log-md-only-skipped |

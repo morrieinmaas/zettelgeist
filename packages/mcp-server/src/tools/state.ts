@@ -8,6 +8,7 @@ import { makeDiskFsReader } from '@zettelgeist/fs-adapters';
 import { installPreCommitHook } from '@zettelgeist/git-hook';
 import type { ToolDef } from '../server.js';
 import { safeJoin } from '../util/safe-join.js';
+import { writeCycleMarker } from '../util/log-entry.js';
 
 const execFileP = promisify(execFile);
 
@@ -39,6 +40,21 @@ export const claimSpecTool: ToolDef<z.infer<typeof claimInput>, { acknowledged: 
     await fs.unlink(safeJoin(dir, '.claim')).catch((err: NodeJS.ErrnoException) => {
       if (err.code !== 'ENOENT') throw err;
     });
+
+    // v0.3: open a cycle in .log.md and commit the marker. .claim files
+    // are gitignored, so without this marker the claim event would be
+    // invisible to anyone reading the spec history.
+    await writeCycleMarker({
+      cwd: ctx.cwd,
+      specsDir: cfg.config.specsDir,
+      specName: args.name,
+      agentId: agentSlug,
+      kind: 'claim',
+    });
+    const logRel = path.posix.join(cfg.config.specsDir, args.name, '.log.md');
+    await execFileP('git', ['add', logRel], { cwd: ctx.cwd });
+    await execFileP('git', ['commit', '-m', `[zg] claim: ${args.name}`], { cwd: ctx.cwd });
+
     return { acknowledged: true, agent_id: agentSlug };
   },
 };
@@ -67,6 +83,37 @@ export const releaseSpecTool: ToolDef<z.infer<typeof releaseInput>, { acknowledg
         if (err.code !== 'ENOENT') throw err;
       });
     }
+
+    // v0.3: close the cycle in .log.md with the sha of the most recent
+    // work commit (HEAD before this release commit). If no cycle is
+    // open, the helper drops an orphan-comment in the log header — we
+    // still commit the release marker either way so the log records
+    // the release attempt.
+    let sha: string;
+    try {
+      sha = (await execFileP('git', ['rev-parse', 'HEAD'], { cwd: ctx.cwd })).stdout.trim();
+    } catch {
+      sha = 'unknown';
+    }
+    await writeCycleMarker({
+      cwd: ctx.cwd,
+      specsDir: cfg.config.specsDir,
+      specName: args.name,
+      agentId: agentSlug,
+      kind: 'release',
+      sha,
+    });
+    const logRel = path.posix.join(cfg.config.specsDir, args.name, '.log.md');
+    await execFileP('git', ['add', logRel], { cwd: ctx.cwd });
+    // Use --allow-empty in the unlikely case the log was rotated to the
+    // same content; that produces no diff but we still want a commit so
+    // the release event is anchored in git history.
+    await execFileP(
+      'git',
+      ['commit', '--allow-empty', '-m', `[zg] release: ${args.name}`],
+      { cwd: ctx.cwd },
+    );
+
     return { acknowledged: true, removed };
   },
 };

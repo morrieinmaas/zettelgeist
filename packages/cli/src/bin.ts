@@ -9,6 +9,7 @@ import { HELP as EXPORT_DOC_HELP } from './commands/export-doc.js';
 import { HELP as MERGE_DRIVER_HELP } from './commands/merge-driver.js';
 import { HELP as SYNC_HELP } from './commands/sync.js';
 import { HELP as TUI_HELP } from './commands/tui.js';
+import { HELP as CONTEXT_HELP } from './commands/context.js';
 
 // Replaced at bundle time via esbuild's `define` (see scripts/bundle.mjs).
 declare const __ZG_CLI_VERSION__: string;
@@ -26,6 +27,8 @@ Commands:
   serve [--port N] [--no-open]   serve the viewer over HTTP
   sync [--check]                 fetch + rebase, auto-resolve managed conflicts
   tui  [--view=NAME]             open the terminal UI (requires @zettelgeist/tui)
+  context [--spec NAME | --log NAME [--offset N] | --metadata NAME [KEY]]
+                                 windowed retrieval over specs and per-spec .log.md
   export-doc <path> [--template T]  render markdown to HTML
 
 Global flags:
@@ -45,6 +48,7 @@ const COMMAND_HELP: Record<string, string> = {
   'merge-driver': MERGE_DRIVER_HELP,
   sync: SYNC_HELP,
   tui: TUI_HELP,
+  context: CONTEXT_HELP,
 };
 
 async function main(): Promise<number> {
@@ -180,6 +184,40 @@ async function main(): Promise<number> {
       );
       if (!env.ok) return 1;
       return env.data.exitCode;
+    }
+    case 'context': {
+      const { contextCommand } = await import('./commands/context.js');
+      // Determine mode from flags. Precedence: --log > --spec > --metadata > status.
+      let mode: 'status' | 'spec' | 'log' | 'metadata' = 'status';
+      let specName: string | undefined;
+      let metadataKey: string | undefined;
+      if (inv.flags.log !== undefined) {
+        mode = 'log';
+        specName = inv.flags.log;
+      } else if (inv.flags.spec !== undefined) {
+        mode = 'spec';
+        specName = inv.flags.spec;
+      } else if (inv.flags.metadata !== undefined) {
+        mode = 'metadata';
+        specName = inv.flags.metadata;
+        metadataKey = inv.args[0];
+      }
+      const offsetRaw = inv.flags.offset;
+      const offset = offsetRaw !== undefined ? Number.parseInt(offsetRaw, 10) : undefined;
+      if (offset !== undefined && Number.isNaN(offset)) {
+        process.stderr.write(`context: --offset must be an integer (got '${offsetRaw}')\n`);
+        return 2;
+      }
+      const env = await contextCommand({
+        cwd,
+        mode,
+        ...(specName !== undefined ? { specName } : {}),
+        ...(offset !== undefined ? { offset } : {}),
+        ...(metadataKey !== undefined ? { metadataKey } : {}),
+      });
+      const { formatContext } = await import('./commands/context.js');
+      emit(ctx, env, () => (env.ok ? formatContext(env.data) : ''));
+      return env.ok ? 0 : 1;
     }
     case 'merge-driver': {
       const { mergeDriverCommand, isMergeDriverKind } = await import('./commands/merge-driver.js');

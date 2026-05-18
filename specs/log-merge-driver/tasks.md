@@ -1,0 +1,15 @@
+- [ ] 1. `mergeLogCycles(base, ours, theirs)` pure function in `@zettelgeist/core` — operates on parsed `LogCycle[]` arrays, returns `{cycles, ok}` where `ok` is false when any cycle needed a conflict marker.
+- [ ] 2. Union semantics: cycles unique by `open.timestamp + agentId` (compound key) sorted by `open.timestamp` after merge. Re-apply rotation (`DEFAULT_MAX_CYCLES`) on the result.
+- [ ] 3. Abandoned-cycle handling: open cycles on one side and not the other are kept whole, with a stray `<!-- abandoned during merge -->` line appended.
+- [ ] 4. `zettelgeist merge-driver log` CLI dispatch in `packages/cli/src/commands/merge-driver.ts` — adds `log` to the `KIND` set alongside `tasks` and `frontmatter`. Reuses the `mergeFrontmatter`-style ok→exit-code propagation.
+- [ ] 5. `install-hook` updates: register `merge.zettelgeist-log.{driver,name}` in `.git/config` and append `specs/*/.log.md merge=zettelgeist-log` to the `.gitattributes` marker block. Legacy un-namespaced detection mirrors the v0.2 path.
+- [ ] 6. Tests:
+  - Unit: `mergeLogCycles` with disjoint cycles → union+sort.
+  - Unit: same cycle on both sides → no duplicate.
+  - Unit: divergent cycle bodies → conflict marker, `ok: false`.
+  - Unit: abandoned cycle on one side → preserved with stray annotation.
+  - Integration: real `git merge` of two branches that both appended distinct cycles → driver resolves cleanly.
+  - Integration: driver exit code is non-zero when content carries markers (git records the file as conflicted).
+- [ ] 7. Spec amendment `spec/zettelgeist-v0.1.md` §9.4 — append the merge-driver contract (driver name, exit-code rule, conflict-marker format). Add a conformance fixture proving end-to-end merge behavior.
+- [ ] 8. SKILL.md update: note that `.log.md` is now semantically merged across actors, so `context --status` accuracy holds even under concurrent multi-machine work.
+- [ ] 9. Changeset (patch bump on `core`, `cli`, `git-hook`).

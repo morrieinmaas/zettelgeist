@@ -6,8 +6,9 @@
 |------|--------|----------|------------|
 | events-catalogue | planned | 0/7 | — |
 | frontmatter-merge-driver | done | 8/9 | — |
-| gcc-alignment | planned | 0/15 | — |
+| gcc-alignment | in-review | 12/15 | — |
 | index-merge-driver | done | 9/9 | — |
+| log-merge-driver | planned | 0/9 | — |
 | mcp-sdk-migration | planned | 0/6 | — |
 | per-actor-claim | in-progress | 9/11 | — |
 | per-command-help | in-review | 5/5 | — |
@@ -28,6 +29,7 @@ graph TD
   frontmatter-merge-driver
   gcc-alignment
   index-merge-driver
+  log-merge-driver
   mcp-sdk-migration
   per-actor-claim
   per-command-help
@@ -43,6 +45,9 @@ graph TD
   gcc-alignment --> per-actor-claim
   gcc-alignment --> sync-command
   index-merge-driver --> per-actor-claim
+  log-merge-driver --> frontmatter-merge-driver
+  log-merge-driver --> gcc-alignment
+  log-merge-driver --> tasks-merge-driver
   sync-command --> frontmatter-merge-driver
   sync-command --> index-merge-driver
   sync-command --> tasks-merge-driver

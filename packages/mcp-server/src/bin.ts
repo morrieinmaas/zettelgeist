@@ -1,7 +1,7 @@
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { makeServer, type AnyTool, type PromptDef } from './server.js';
 import {
-  listSpecsTool, readSpecTool, readSpecFileTool, validateRepoTool,
+  listSpecsTool, readSpecTool, readSpecFileTool, validateRepoTool, contextTool,
 } from './tools/read.js';
 import {
   writeSpecFileTool, writeHandoffTool,
@@ -16,7 +16,7 @@ import {
 import { skillBody } from './skill.js';
 
 const tools: AnyTool[] = [
-  listSpecsTool, readSpecTool, readSpecFileTool, validateRepoTool,
+  listSpecsTool, readSpecTool, readSpecFileTool, validateRepoTool, contextTool,
   writeSpecFileTool, writeHandoffTool,
   tickTaskTool, untickTaskTool, setStatusTool, patchFrontmatterTool,
   claimSpecTool, releaseSpecTool, regenerateIndexTool, installGitHookTool,

@@ -7,6 +7,8 @@ import { promisify } from 'node:util';
 import {
   claimSpecTool, releaseSpecTool, regenerateIndexTool, installGitHookTool,
 } from '../../src/tools/state.js';
+import { tickTaskTool } from '../../src/tools/write.js';
+import { parseLogCycles } from '@zettelgeist/core';
 
 const execFileP = promisify(execFile);
 let tmp: string;
@@ -99,5 +101,79 @@ describe('stateTools', () => {
     const hook = await fs.readFile(path.join(tmp, '.git', 'hooks', 'pre-commit'), 'utf8');
     expect(hook).toContain('# >>> zettelgeist >>>');
     expect(hook).toContain('# <<< zettelgeist <<<');
+  });
+
+  // v0.3 — per-spec .log.md OTA trace.
+  describe('.log.md cycle writes (v0.3)', () => {
+    beforeEach(async () => {
+      await fs.writeFile(
+        path.join(tmp, 'specs', 'foo', 'tasks.md'),
+        '- [ ] one\n- [ ] two\n',
+      );
+      await execFileP('git', ['add', '.'], { cwd: tmp });
+      await execFileP('git', ['commit', '-q', '-m', 'add tasks'], { cwd: tmp });
+    });
+
+    it('claim_spec opens a cycle (## ⊢ ... claim) in .log.md and commits it', async () => {
+      await claimSpecTool.handler({ name: 'foo', agent_id: 'alice' }, { cwd: tmp });
+      const log = await fs.readFile(path.join(tmp, 'specs', 'foo', '.log.md'), 'utf8');
+      const parsed = parseLogCycles(log);
+      expect(parsed.cycles).toHaveLength(1);
+      expect(parsed.cycles[0]!.open.agentId).toBe('alice');
+      expect(parsed.cycles[0]!.close).toBeNull();
+    });
+
+    it('tick_task during an open cycle appends an action entry', async () => {
+      await claimSpecTool.handler({ name: 'foo', agent_id: 'alice' }, { cwd: tmp });
+      await tickTaskTool.handler({ name: 'foo', n: 1 }, { cwd: tmp });
+      const log = await fs.readFile(path.join(tmp, 'specs', 'foo', '.log.md'), 'utf8');
+      const parsed = parseLogCycles(log);
+      expect(parsed.cycles).toHaveLength(1);
+      const actions = parsed.cycles[0]!.entries.filter((e) => e.kind === 'action');
+      expect(actions).toHaveLength(1);
+      expect((actions[0] as { action: string }).action).toBe('tick_task(1)');
+    });
+
+    it('release_spec closes the cycle with a sha pointing at the prior commit', async () => {
+      await claimSpecTool.handler({ name: 'foo', agent_id: 'alice' }, { cwd: tmp });
+      await tickTaskTool.handler({ name: 'foo', n: 1 }, { cwd: tmp });
+      // Capture the sha of the tick commit — that's what release should record.
+      const tickSha = (await execFileP('git', ['rev-parse', 'HEAD'], { cwd: tmp })).stdout.trim();
+      await releaseSpecTool.handler({ name: 'foo', agent_id: 'alice' }, { cwd: tmp });
+      const log = await fs.readFile(path.join(tmp, 'specs', 'foo', '.log.md'), 'utf8');
+      const parsed = parseLogCycles(log);
+      expect(parsed.cycles).toHaveLength(1);
+      expect(parsed.cycles[0]!.close).not.toBeNull();
+      expect(parsed.cycles[0]!.close?.agentId).toBe('alice');
+      expect(parsed.cycles[0]!.close?.sha).toBe(tickSha);
+    });
+
+    it('a full claim → tick → tick → release cycle produces a complete, well-formed entry', async () => {
+      await claimSpecTool.handler({ name: 'foo', agent_id: 'morrie' }, { cwd: tmp });
+      await tickTaskTool.handler({ name: 'foo', n: 1 }, { cwd: tmp });
+      await tickTaskTool.handler({ name: 'foo', n: 2 }, { cwd: tmp });
+      await releaseSpecTool.handler({ name: 'foo', agent_id: 'morrie' }, { cwd: tmp });
+      const log = await fs.readFile(path.join(tmp, 'specs', 'foo', '.log.md'), 'utf8');
+      const parsed = parseLogCycles(log);
+      expect(parsed.cycles).toHaveLength(1);
+      const cycle = parsed.cycles[0]!;
+      expect(cycle.open.agentId).toBe('morrie');
+      expect(cycle.close).not.toBeNull();
+      const actions = cycle.entries
+        .filter((e) => e.kind === 'action')
+        .map((e) => (e as { action: string }).action);
+      expect(actions).toEqual(['tick_task(1)', 'tick_task(2)']);
+    });
+
+    it('does NOT include .log.md in the spec\'s state derivation (walker ignores it)', async () => {
+      await claimSpecTool.handler({ name: 'foo', agent_id: 'alice' }, { cwd: tmp });
+      await tickTaskTool.handler({ name: 'foo', n: 1 }, { cwd: tmp });
+      // Read the spec via list_specs — the log.md must not pollute progress.
+      const { listSpecsTool } = await import('../../src/tools/read.js');
+      const specs = await listSpecsTool.handler({}, { cwd: tmp });
+      const foo = specs.find((s) => s.name === 'foo')!;
+      // Two tasks, one ticked. .log.md must NOT contribute fake tasks.
+      expect(foo.progress).toBe('1/2');
+    });
   });
 });

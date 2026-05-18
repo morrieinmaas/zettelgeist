@@ -26,7 +26,13 @@ export const writeSpecFileTool: ToolDef<z.infer<typeof writeSpecFileInput>, { co
     const specDir = safeJoin(specsRoot, args.name);
     const fileAbs = safeJoin(specDir, args.relpath);
     const fileRel = path.relative(ctx.cwd, fileAbs).split(path.sep).join('/');
-    return writeFileAndCommit(ctx.cwd, fileRel, args.content, `[zg] write: ${args.name}/${args.relpath}`);
+    return writeFileAndCommit(
+      ctx.cwd,
+      fileRel,
+      args.content,
+      `[zg] write: ${args.name}/${args.relpath}`,
+      { log: { specName: args.name, action: `write_file(${args.relpath})` } },
+    );
   },
 };
 
@@ -43,7 +49,13 @@ export const writeHandoffTool: ToolDef<z.infer<typeof writeHandoffInput>, { comm
     const specDir = safeJoin(specsRoot, args.name);
     const fileAbs = safeJoin(specDir, 'handoff.md');
     const fileRel = path.relative(ctx.cwd, fileAbs).split(path.sep).join('/');
-    return writeFileAndCommit(ctx.cwd, fileRel, args.content, `[zg] handoff: ${args.name}`);
+    return writeFileAndCommit(
+      ctx.cwd,
+      fileRel,
+      args.content,
+      `[zg] handoff: ${args.name}`,
+      { log: { specName: args.name, action: 'write_handoff()' } },
+    );
   },
 };
 
@@ -72,7 +84,13 @@ async function tickOrUntick(cwd: string, name: string, n: number, checked: boole
   }
   if (!mutated) throw new Error(`no task at index ${n} in ${name}`);
   const op = checked ? 'tick' : 'untick';
-  return writeFileAndCommit(cwd, tasksRel, lines.join('\n'), `[zg] ${op}: ${name}#${n}`);
+  return writeFileAndCommit(
+    cwd,
+    tasksRel,
+    lines.join('\n'),
+    `[zg] ${op}: ${name}#${n}`,
+    { log: { specName: name, action: `${op}_task(${n})` } },
+  );
 }
 
 const tickTaskInput = z.object({ name: z.string(), n: z.number().int().positive() });
@@ -131,7 +149,14 @@ export const patchFrontmatterTool: ToolDef<z.infer<typeof patchFrontmatterInput>
     }
     const newFm = Object.keys(data).length > 0 ? `---\n${yaml.dump(data)}---\n` : '';
     const newContent = newFm + (parsed.content.startsWith('\n') ? parsed.content.slice(1) : parsed.content);
-    return writeFileAndCommit(ctx.cwd, reqRel, newContent, `[zg] patch-frontmatter: ${args.name}`);
+    const patchKeys = Object.keys(args.patch).join(',');
+    return writeFileAndCommit(
+      ctx.cwd,
+      reqRel,
+      newContent,
+      `[zg] patch-frontmatter: ${args.name}`,
+      { log: { specName: args.name, action: `patch_frontmatter(${patchKeys})` } },
+    );
   },
 };
 
@@ -149,6 +174,7 @@ export const setStatusTool: ToolDef<z.infer<typeof setStatusInput>, { commit: st
     const raw = await fs.readFile(reqAbs, 'utf8').catch(() => '');
     const parsed = matter(raw, {});
     const data = { ...(parsed.data ?? {}) } as Record<string, unknown>;
+    const prevStatus = (data.status as string | undefined) ?? '(derived)';
     if (args.status === null) {
       delete data.status;
       delete data.blocked_by;
@@ -158,6 +184,13 @@ export const setStatusTool: ToolDef<z.infer<typeof setStatusInput>, { commit: st
     }
     const newFm = Object.keys(data).length > 0 ? `---\n${yaml.dump(data)}---\n` : '';
     const newContent = newFm + (parsed.content.startsWith('\n') ? parsed.content.slice(1) : parsed.content);
-    return writeFileAndCommit(ctx.cwd, reqRel, newContent, `[zg] set-status: ${args.name}`);
+    const nextStatus = args.status === null ? '(cleared)' : args.status;
+    return writeFileAndCommit(
+      ctx.cwd,
+      reqRel,
+      newContent,
+      `[zg] set-status: ${args.name}`,
+      { log: { specName: args.name, action: `set_status(${prevStatus} → ${nextStatus})` } },
+    );
   },
 };

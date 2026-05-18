@@ -42,6 +42,10 @@ Spec-driven-development tools (Kiro, spec-kit, EARS) get the file part right: sp
 
 Zettelgeist makes the **repo own the state** (markdown files, git-diffable, agent-mutable, prose-friendly) and ships a **clickable HTML viewer for non-coders** that runs locally and never gets committed to user repos. Every UI mutation is a markdown edit plus a commit; restart the UI and nothing is lost because nothing lived in the UI.
 
+### Powered by research
+
+The v0.3 design (`.log.md` per-spec Observation–Thought–Action traces + windowed `zettelgeist context` retrieval) directly implements the highest-leverage feature combination from [*Git-Context-Controller: Manage the Context of Agents by Agentic Git*](https://arxiv.org/abs/2508.00031) (Wu et al., 2026). GCC's ablation attributes **+6.2pp on SWE-Bench Verified** to that pairing alone — the largest single-feature contribution in their study. We adopted it deterministically: no LLM calls on the write path, no recursive-fold summaries, no summarisation cost; the git history is the long-term record and cycles are addressable by claim/release markers and the sha they produced.
+
 ---
 
 ## Quickstart
@@ -228,7 +232,8 @@ specs/user-auth/
   lenses/
     design.md           # optional: domain-specific views (security, UX, ops, ...)
     security-review.md
-  .claim                # gitignored: per-machine lock so two agents don't collide
+  .claim-<agent>        # gitignored: per-actor lock so two agents don't collide
+  .log.md               # optional v0.3: append-only Observation-Thought-Action trace
 ```
 
 A spec is *valid* if at least one of `requirements.md`, `tasks.md`, `handoff.md`, or `lenses/*.md` exists.
