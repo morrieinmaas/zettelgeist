@@ -1,6 +1,6 @@
 # @zettelgeist/mcp-server
 
-Stdio MCP server exposing 16 tools for agents operating on [Zettelgeist v0.1](../../spec/zettelgeist-v0.1.md) repositories.
+Stdio MCP server exposing 17 tools for agents operating on [Zettelgeist v0.1](../../spec/zettelgeist-v0.1.md) repositories.
 
 ## Install
 

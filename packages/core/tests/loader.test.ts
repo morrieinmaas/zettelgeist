@@ -67,4 +67,25 @@ describe('loadAllSpecs', () => {
     const specs = await loadAllSpecs(fs);
     expect(specs.map((s) => s.name)).toEqual(['real']);
   });
+
+  it('ignores .log.md when deriving spec state (no contribution to frontmatter/tasks/handoff)', async () => {
+    // v0.3 §9.4: .log.md is metadata about *how* the spec evolved, not state.
+    // The walker must not pick it up as if it were a recognised file.
+    const fs = makeMemFs({
+      '.zettelgeist.yaml': 'format_version: "0.1"\n',
+      'specs/foo/requirements.md': '---\nstatus: planned\n---\n# Foo\n',
+      'specs/foo/.log.md':
+        '## ⊢ T1 · agent=a · claim\n- T2 · agent=a · tick_task(1)\n## ⊣ T3 · agent=a · release · sha=abc\n',
+    });
+    const specs = await loadAllSpecs(fs);
+    expect(specs).toHaveLength(1);
+    const spec = specs[0]!;
+    expect(spec.name).toBe('foo');
+    // .log.md must NOT pollute any of these:
+    expect(spec.requirements).toBe('# Foo\n');
+    expect(spec.tasks).toEqual([]);
+    expect(spec.handoff).toBeNull();
+    expect(spec.lenses.size).toBe(0);
+    expect(spec.frontmatter).toEqual({ status: 'planned' });
+  });
 });

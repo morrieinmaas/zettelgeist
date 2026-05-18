@@ -5,6 +5,35 @@ export type { FrontmatterResult } from './frontmatter.js';
 export { parseTasks } from './tasks.js';
 export { mergeTasksMd } from './merge-tasks.js';
 export { mergeFrontmatter } from './merge-frontmatter.js';
+export {
+  parseLogCycles,
+  serializeLog,
+  rotateLog,
+  appendAction,
+  appendClaim,
+  appendRelease,
+  DEFAULT_MAX_CYCLES,
+} from './log.js';
+export { gatherContext, summariseCycle } from './context.js';
+export type {
+  ContextResult,
+  CycleSummary,
+  GatherContextArgs,
+  LogEnvelope,
+  MetadataEnvelope,
+  RecentRelease,
+  SpecEnvelope,
+  StatusEnvelope,
+} from './context.js';
+export type {
+  LogActionEntry,
+  LogStrayEntry,
+  LogEntry,
+  CycleOpenMarker,
+  CycleCloseMarker,
+  LogCycle,
+  ParsedLog,
+} from './log.js';
 export { loadSpec, loadAllSpecs, scanClaimedSpecs, sanitizeAgentId, defaultAgentId } from './loader.js';
 export { deriveStatus, STATUSES } from './status.js';
 export { buildGraph } from './graph.js';

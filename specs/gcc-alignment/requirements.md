@@ -1,5 +1,5 @@
 ---
-status: planned
+status: in-review
 priority: high
 target_version: 0.3
 depends_on: [sync-command, frontmatter-merge-driver, per-actor-claim]

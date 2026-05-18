@@ -4,7 +4,8 @@ import * as path from 'node:path';
 import {
   loadAllSpecs, loadSpec, deriveStatus, loadConfig, validateRepo,
   scanClaimedSpecs,
-  type Status, type ValidationError,
+  gatherContext,
+  type Status, type ValidationError, type ContextResult,
 } from '@zettelgeist/core';
 import { makeDiskFsReader } from '@zettelgeist/fs-adapters';
 import type { ToolDef } from '../server.js';
@@ -107,5 +108,35 @@ export const validateRepoTool: ToolDef<Record<string, never>, { errors: Validati
     const cfg = await loadConfig(reader);
     const validation = await validateRepo(reader, cfg.config.specsDir);
     return { errors: [...cfg.errors, ...validation.errors] };
+  },
+};
+
+const contextInput = z.object({
+  mode: z.enum(['status', 'spec', 'log', 'metadata']),
+  spec: z.string().optional(),
+  offset: z.number().int().nonnegative().optional(),
+  key: z.string().optional(),
+});
+
+export const contextTool: ToolDef<z.infer<typeof contextInput>, ContextResult> = {
+  name: 'context',
+  description:
+    'Windowed retrieval over the repo\'s structured memory. Modes: ' +
+    '"status" (project overview — INDEX state, claimed specs, last 3 cycle releases); ' +
+    '"spec" (a single spec\'s frontmatter + handoff.md + most recent cycle from .log.md); ' +
+    '"log" (most recent cycle for a spec; combine with `offset` to scroll back); ' +
+    '"metadata" (one frontmatter key, or all if key is omitted). ' +
+    'Mirrors GCC\'s CONTEXT command (Wu et al., 2026, arXiv:2508.00031). ' +
+    'Use this instead of read_spec_file when you only need a slice — it bounds the ' +
+    'token cost of resuming work on a spec with deep history.',
+  inputSchema: contextInput,
+  async handler(args, ctx) {
+    const reader = makeDiskFsReader(ctx.cwd);
+    return await gatherContext(reader, {
+      mode: args.mode,
+      ...(args.spec !== undefined ? { specName: args.spec } : {}),
+      ...(args.offset !== undefined ? { offset: args.offset } : {}),
+      ...(args.key !== undefined ? { metadataKey: args.key } : {}),
+    });
   },
 };

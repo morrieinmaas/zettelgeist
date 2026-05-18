@@ -70,6 +70,24 @@ tools. Do **not** invent a `.zettelgeist.yaml` to make this skill apply.
 8. **`zg-tui`** is the terminal-native surface for when you're outside
    VS Code and a browser is overkill. Board, detail, graph, docs +
    command palette (`?`). Runs in-process — no separate server needed.
+9. **Per-spec OTA log (v0.3).** Every MCP write tool auto-appends a
+   one-line entry to `specs/<name>/.log.md`. A *cycle* is one
+   `claim_spec → ... → release_spec` pair; the release marker carries
+   the sha of the last work commit. Bounded at 50 cycles per spec;
+   older cycles roll off but stay in `git log`. No LLM, no
+   summarisation — deterministic, fast, free.
+10. **`zettelgeist context` (v0.3) is the windowed retrieval API.** Use
+    it INSTEAD of `read_spec_file` when you only need a slice:
+    - `context` (no args) → project status + claimed specs + last 3
+      cycle releases.
+    - `context --spec <name>` → frontmatter + handoff + most recent
+      cycle from `.log.md`. K=1 by default.
+    - `context --log <name> [--offset N]` → scroll the cycle history.
+    - `context --metadata <name> [<key>]` → one frontmatter value.
+    Mirrors the GCC pattern (Wu et al., 2026, arXiv:2508.00031); the
+    point is to bound your token cost on long histories. The same
+    interface is exposed as an MCP tool with input
+    `{mode, spec?, offset?, key?}`.
 
 ## The agent loop
 

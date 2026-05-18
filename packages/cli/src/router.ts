@@ -11,6 +11,10 @@ export interface CommandFlags {
   scope?: string;
   'allow-dirty'?: boolean;
   view?: string;
+  spec?: string;
+  log?: string;
+  metadata?: string;
+  offset?: string;
 }
 
 export type Invocation =
@@ -33,6 +37,7 @@ const KNOWN_COMMANDS = new Set([
   'merge-driver',
   'sync',
   'tui',
+  'context',
 ]);
 
 const FLAG_OPTIONS = {
@@ -46,6 +51,10 @@ const FLAG_OPTIONS = {
   scope:     { type: 'string'  as const },
   'allow-dirty': { type: 'boolean' as const },
   view:      { type: 'string'  as const },
+  spec:      { type: 'string'  as const },
+  log:       { type: 'string'  as const },
+  metadata:  { type: 'string'  as const },
+  offset:    { type: 'string'  as const },
 };
 
 export function parseInvocation(argv: string[]): Invocation {
@@ -77,6 +86,10 @@ export function parseInvocation(argv: string[]): Invocation {
     ...(values.scope !== undefined ? { scope: values.scope } : {}),
     ...(values['allow-dirty'] !== undefined ? { 'allow-dirty': values['allow-dirty'] } : {}),
     ...(values.view !== undefined ? { view: values.view } : {}),
+    ...(values.spec !== undefined ? { spec: values.spec } : {}),
+    ...(values.log !== undefined ? { log: values.log } : {}),
+    ...(values.metadata !== undefined ? { metadata: values.metadata } : {}),
+    ...(values.offset !== undefined ? { offset: values.offset } : {}),
   };
 
   return { kind: 'command', name: first, args: positionals, flags };

@@ -6,7 +6,7 @@
 |------|--------|----------|------------|
 | events-catalogue | planned | 0/7 | — |
 | frontmatter-merge-driver | done | 8/9 | — |
-| gcc-alignment | planned | 0/15 | — |
+| gcc-alignment | in-review | 12/15 | — |
 | index-merge-driver | done | 9/9 | — |
 | mcp-sdk-migration | planned | 0/6 | — |
 | per-actor-claim | in-progress | 9/11 | — |
