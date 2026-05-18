@@ -68,6 +68,22 @@ describe('loadAllSpecs', () => {
     expect(specs.map((s) => s.name)).toEqual(['real']);
   });
 
+  it('does NOT load a folder whose only .md file is .log.md (dotfile-prefixed markdown is walker-ignored)', async () => {
+    // v0.3 §9.4 walker-exclusion: a stray .log.md (e.g. left behind
+    // after a delete-spec, or written by a misuse) MUST NOT cause a
+    // folder to be loaded as a spec. Without this, an empty cycle
+    // history could resurrect a deleted spec as a phantom row in
+    // INDEX.md.
+    const fs = makeMemFs({
+      '.zettelgeist.yaml': 'format_version: "0.1"\n',
+      'specs/zombie/.log.md':
+        '## ⊢ T1 · agent=a · claim\n## ⊣ T2 · agent=a · release · sha=abc\n',
+      'specs/real/requirements.md': '# Real\n',
+    });
+    const specs = await loadAllSpecs(fs);
+    expect(specs.map((s) => s.name)).toEqual(['real']);
+  });
+
   it('ignores .log.md when deriving spec state (no contribution to frontmatter/tasks/handoff)', async () => {
     // v0.3 §9.4: .log.md is metadata about *how* the spec evolved, not state.
     // The walker must not pick it up as if it were a recognised file.

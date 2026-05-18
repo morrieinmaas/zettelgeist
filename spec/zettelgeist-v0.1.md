@@ -199,7 +199,7 @@ Implementations MUST emit validation errors using these machine codes. Human-rea
 |---|---|
 | `E_CYCLE` | A cycle was detected in the `depends_on` graph. `path` is the cycle as an ordered list of spec names. |
 | `E_INVALID_FRONTMATTER` | YAML in `requirements.md` (or `.zettelgeist.yaml`) failed to parse, or a known field has the wrong type. `path` is the file path; `detail` is implementation-defined. |
-| `E_EMPTY_SPEC` | A folder under `<specs_dir>` matches the spec-name pattern but contains no `.md` files anywhere. `path` is the folder path. |
+| `E_EMPTY_SPEC` | A folder under `<specs_dir>` matches the spec-name pattern but contains no non-dotfile `.md` files anywhere. Dotfile-prefixed markdown (e.g. `.log.md` from §9.4) is metadata, not spec content. `path` is the folder path. |
 
 Conditions not enumerated above (nested `lenses/` directories, folder names that don't match the spec-name pattern, unknown `format_version`) are non-errors at the format level. Implementations MAY surface them as warnings.
 
@@ -286,3 +286,4 @@ Each numbered rule below cites the conformance fixture(s) that prove it. New rul
 | §10 | `E_EMPTY_SPEC` is reachable. | 08-empty-spec |
 | §10 | Multiple errors sorted by `(code, path)`. | 11-mixed-errors |
 | §9.4 | `.log.md` is walker-ignored: present file does not contribute to status / graph / validation / INDEX. | 45-log-md-ignored |
+| §9.4 | A folder whose only `.md` content is `.log.md` (dotfile) is NOT loaded as a spec; instead `E_EMPTY_SPEC` is emitted, surfacing the inconsistency. | 46-log-md-only-skipped |

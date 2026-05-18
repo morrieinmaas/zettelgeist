@@ -136,6 +136,31 @@ describe('gatherContext — log mode', () => {
     ).rejects.toThrow(/rotated out.*git log/);
   });
 
+  it('--log offset 0 returns the OPEN cycle when one is in progress', async () => {
+    // Load-bearing invariant: the parser preserves chronological order
+    // so the open cycle ends up last in the array, which becomes index 0
+    // after `[...cycles].reverse()`. If anyone changes the parser's
+    // ordering this test will catch it.
+    const fs = makeMemFs({
+      '.zettelgeist.yaml': ZG_YAML,
+      'specs/foo/requirements.md': '# Foo\n',
+      'specs/foo/.log.md':
+        '## ⊢ T1 · agent=a · claim\n## ⊣ T2 · agent=a · release · sha=closed1\n' +
+        '## ⊢ T3 · agent=a · claim\n## ⊣ T4 · agent=a · release · sha=closed2\n' +
+        '## ⊢ T5 · agent=b · claim\n- T6 · agent=b · tick_task(1)\n',
+    });
+    const r = await gatherContext(fs, { mode: 'log', specName: 'foo' });
+    if (r.mode !== 'log') throw new Error('wrong mode');
+    expect(r.totalCycles).toBe(3);
+    expect(r.offset).toBe(0);
+    expect(r.cycle.close).toBeNull(); // it's the open cycle
+    expect(r.cycle.open.agentId).toBe('b');
+    // Scrolling back one should reveal the most recent CLOSED cycle.
+    const back1 = await gatherContext(fs, { mode: 'log', specName: 'foo', offset: 1 });
+    if (back1.mode !== 'log') throw new Error('wrong mode');
+    expect(back1.cycle.close?.sha).toBe('closed2');
+  });
+
   it('throws on a spec with no .log.md', async () => {
     const fs = makeMemFs({
       '.zettelgeist.yaml': ZG_YAML,

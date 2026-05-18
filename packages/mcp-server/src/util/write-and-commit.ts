@@ -74,14 +74,17 @@ export async function writeFileAndCommit(
         specsDir: cfg.config.specsDir,
         specName: options.log.specName,
       }));
-    const { logRelPath } = await writeLogEntry({
+    const { logRelPath, wrote } = await writeLogEntry({
       cwd,
       specsDir: cfg.config.specsDir,
       specName: options.log.specName,
       agentId,
       action: options.log.action,
     });
-    filesToAdd.push(logRelPath);
+    // Only stage .log.md when something actually changed on disk —
+    // the writer short-circuits on missing-file-without-open-cycle to
+    // avoid materialising orphan-only logs.
+    if (wrote) filesToAdd.push(logRelPath);
   }
 
   await execFileP('git', ['add', ...filesToAdd], { cwd });

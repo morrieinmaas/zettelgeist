@@ -61,13 +61,19 @@ export function defaultAgentId(): string {
 /**
  * Returns true if `dir` (recursively) contains at least one file whose name ends with `.md`.
  * Exported because validateRepo also needs this check to emit `E_EMPTY_SPEC`.
+ *
+ * Dotfiles are excluded: a folder whose only `.md` content is `.log.md`
+ * (or any other dotfile-prefixed markdown) is NOT considered a populated
+ * spec. This makes the v0.3 §9.4 walker-exclusion guarantee structural
+ * rather than incidental — a stray `.log.md` left behind after a
+ * delete-spec can't accidentally count as a spec.
  */
 export async function folderContainsMarkdown(fs: FsReader, dir: string): Promise<boolean> {
   const entries = await fs.readDir(dir);
   for (const e of entries) {
     if (e.isDir) {
       if (await folderContainsMarkdown(fs, `${dir}/${e.name}`)) return true;
-    } else if (e.name.endsWith('.md')) {
+    } else if (e.name.endsWith('.md') && !e.name.startsWith('.')) {
       return true;
     }
   }
