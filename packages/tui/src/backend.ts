@@ -25,10 +25,10 @@ export interface SpecDetail {
 
 /**
  * In-process backend for the TUI. Reads via @zettelgeist/core directly —
- * no REST round-trips, no separate process. Writes go through the same
- * tmp+rename + git-commit pattern used by the CLI/MCP, so every TUI
- * action produces a real git commit identical to what the REST API or
- * MCP server would emit.
+ * no REST round-trips, no separate process. Read-only at v0.2; mutations
+ * still flow through the CLI / MCP / web viewer. Writes will route
+ * through the same tmp+rename + git-commit pattern as those surfaces
+ * when they land in v0.2.x.
  *
  * Designed for direct unit testing too: the TUI views call backend
  * functions; backend functions don't depend on Ink or React.

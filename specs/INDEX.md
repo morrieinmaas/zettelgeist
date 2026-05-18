@@ -5,7 +5,7 @@
 | Spec | Status | Progress | Blocked by |
 |------|--------|----------|------------|
 | events-catalogue | planned | 0/7 | — |
-| frontmatter-merge-driver | planned | 8/9 | — |
+| frontmatter-merge-driver | done | 8/9 | — |
 | index-merge-driver | done | 9/9 | — |
 | mcp-sdk-migration | planned | 0/6 | — |
 | per-actor-claim | in-progress | 9/11 | — |

@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "license": "Apache-2.0",
   "author": "Mo <motechnix@gmail.com>",
-  "description": "Zettelgeist MCP server: 15 tools for agents to operate on Zettelgeist repositories.",
+  "description": "Zettelgeist MCP server: 16 tools for agents to operate on Zettelgeist repositories.",
   "keywords": [
     "zettelgeist",
     "spec-driven-development",

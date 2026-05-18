@@ -16,9 +16,11 @@ export const HELP = `zettelgeist merge-driver <kind> <base> <ours> <theirs> [--j
                   \`ours\`.
     frontmatter   \`specs/*/requirements.md\`. Splits each side into
                   (YAML block, body); merges the YAML field-by-field
-                  (status with conflict marker if divergent; lists union;
-                  scalars with conflict marker if both non-empty differ);
-                  body is text-merged.
+                  with 3-way semantics (status / scalars: divergent
+                  change → conflict marker, including when one side's
+                  change is an explicit clear; lists: set union;
+                  auto_merge: 3-way, not raw OR); body is merged via
+                  \`git merge-file -p\` for line-level three-way merge.
 
   Note: \`specs/INDEX.md\` is NOT handled by a custom driver. It uses
   \`merge=union\` plus the \`post-merge\` hook installed by \`install-hook\`
