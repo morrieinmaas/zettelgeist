@@ -42,11 +42,41 @@ const ALLOWED_STATUSES = new Set<Status>([
 
 const PATCH_FORBIDDEN_KEYS = new Set(['status', 'blocked_by']);
 
+/**
+ * Sentinel error thrown when the workspace lacks `.zettelgeist.yaml`.
+ * Callers (tree provider, webview, command handlers) catch this and
+ * surface a friendly init dialog instead of leaking the raw ENOENT.
+ */
+export class NotInitializedError extends Error {
+  readonly code = 'ZG_NOT_INITIALIZED';
+  constructor(public readonly workspaceRoot: string) {
+    super(
+      `Zettelgeist is not initialized in ${workspaceRoot}. ` +
+        `Run "Zettelgeist: Initialize Workspace" or \`zettelgeist init\` to set it up.`,
+    );
+    this.name = 'NotInitializedError';
+  }
+}
+
+export function isNotInitializedError(err: unknown): err is NotInitializedError {
+  return (
+    err instanceof Error &&
+    (err as { code?: string }).code === 'ZG_NOT_INITIALIZED'
+  );
+}
+
 export function makeBackend(workspaceRoot: string) {
   // Lookup specsDir once per request via loadConfig — cheap, but cached state
   // would be wrong if the user edits .zettelgeist.yaml live.
   async function getCtx() {
     const reader = makeDiskFsReader(workspaceRoot);
+    // Probe the marker file BEFORE calling loadConfig so we can produce
+    // a typed error. loadConfig would otherwise leak a generic ENOENT
+    // upstream and tree-provider / webview can't tell that case apart
+    // from "config has a syntax error" etc.
+    if (!(await reader.exists('.zettelgeist.yaml'))) {
+      throw new NotInitializedError(workspaceRoot);
+    }
     const cfg = await loadConfig(reader);
     return { cwd: workspaceRoot, specsDir: cfg.config.specsDir, reader };
   }

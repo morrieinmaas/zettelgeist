@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import type { makeBackend } from './backend.js';
+import { isNotInitializedError } from './backend.js';
 
 type Status = 'draft' | 'planned' | 'in-progress' | 'in-review' | 'done' | 'blocked' | 'cancelled';
 
@@ -64,6 +65,33 @@ class StatusGroup extends TreeNode {
   }
 }
 
+/**
+ * Empty-state node shown when the workspace lacks `.zettelgeist.yaml`.
+ * Clicking it launches the init command.
+ */
+class InitPromptNode extends TreeNode {
+  constructor() {
+    super('Initialize Zettelgeist…', vscode.TreeItemCollapsibleState.None);
+    this.iconPath = new vscode.ThemeIcon('rocket');
+    this.tooltip =
+      'This workspace is not a Zettelgeist repo yet. Click to create ' +
+      '.zettelgeist.yaml + specs/ + docs/.';
+    this.contextValue = 'zg.initPrompt';
+    this.command = {
+      command: 'zettelgeist.init',
+      title: 'Initialize Zettelgeist',
+    };
+  }
+}
+
+class InfoNode extends TreeNode {
+  constructor(label: string, codicon: string) {
+    super(label, vscode.TreeItemCollapsibleState.None);
+    this.iconPath = new vscode.ThemeIcon(codicon);
+    this.contextValue = 'zg.info';
+  }
+}
+
 class SpecNode extends TreeNode {
   constructor(public readonly spec: SpecListItem) {
     super(spec.name, vscode.TreeItemCollapsibleState.None);
@@ -105,15 +133,33 @@ export class SpecTreeProvider implements vscode.TreeDataProvider<TreeNode> {
       ];
     }
     if (parent instanceof StatusGroup) {
-      const all = await this.listSpecs();
-      return all.filter((s) => s.status === parent.status).map((s) => new SpecNode(s));
+      const r = await this.fetchSpecs();
+      if (r.kind !== 'ok') return [];
+      return r.specs
+        .filter((s) => s.status === parent.status)
+        .map((s) => new SpecNode(s));
     }
     if (!parent) {
-      const all = await this.listSpecs();
+      const r = await this.fetchSpecs();
+      // Not-initialized → render the friendly init prompt as the entire
+      // tree root. No Views section (the webview would error the same
+      // way), no status groups.
+      if (r.kind === 'not-initialized') {
+        return [
+          new InitPromptNode(),
+          new InfoNode(
+            'This workspace has no .zettelgeist.yaml',
+            'info',
+          ),
+        ];
+      }
+      if (r.kind !== 'ok') {
+        return [new InfoNode(`Error: ${r.message}`, 'error')];
+      }
       const counts: Record<Status, number> = {
         draft: 0, planned: 0, 'in-progress': 0, 'in-review': 0, done: 0, blocked: 0, cancelled: 0,
       };
-      for (const s of all) counts[s.status]++;
+      for (const s of r.specs) counts[s.status]++;
       // Roots: a Views section at the top, then one group per non-empty status.
       const groups = STATUS_ORDER
         .filter((status) => counts[status] > 0)
@@ -123,12 +169,17 @@ export class SpecTreeProvider implements vscode.TreeDataProvider<TreeNode> {
     return [];
   }
 
-  private async listSpecs(): Promise<SpecListItem[]> {
+  private async fetchSpecs(): Promise<
+    | { kind: 'ok'; specs: SpecListItem[] }
+    | { kind: 'not-initialized' }
+    | { kind: 'error'; message: string }
+  > {
     try {
       const result = await this.backend.dispatch({ id: 0, method: 'listSpecs', args: [] });
-      return result as SpecListItem[];
-    } catch {
-      return [];
+      return { kind: 'ok', specs: result as SpecListItem[] };
+    } catch (err) {
+      if (isNotInitializedError(err)) return { kind: 'not-initialized' };
+      return { kind: 'error', message: (err as Error).message };
     }
   }
 }

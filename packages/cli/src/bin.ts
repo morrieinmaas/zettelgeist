@@ -10,6 +10,7 @@ import { HELP as MERGE_DRIVER_HELP } from './commands/merge-driver.js';
 import { HELP as SYNC_HELP } from './commands/sync.js';
 import { HELP as TUI_HELP } from './commands/tui.js';
 import { HELP as CONTEXT_HELP } from './commands/context.js';
+import { HELP as INIT_HELP } from './commands/init.js';
 
 // Replaced at bundle time via esbuild's `define` (see scripts/bundle.mjs).
 declare const __ZG_CLI_VERSION__: string;
@@ -20,6 +21,7 @@ Usage:
   zettelgeist <command> [options]
 
 Commands:
+  init [--force]                 initialize the current directory as a Zettelgeist repo
   regen [--check]                regenerate specs/INDEX.md
   validate                       validate the repo against the spec
   install-hook [--force]         install pre-commit hook
@@ -49,6 +51,7 @@ const COMMAND_HELP: Record<string, string> = {
   sync: SYNC_HELP,
   tui: TUI_HELP,
   context: CONTEXT_HELP,
+  init: INIT_HELP,
 };
 
 async function main(): Promise<number> {
@@ -77,6 +80,26 @@ async function main(): Promise<number> {
   const cwd = process.cwd();
 
   switch (inv.name) {
+    case 'init': {
+      const { initCommand } = await import('./commands/init.js');
+      const env = await initCommand({ path: cwd, force: inv.flags.force ?? false });
+      emit(ctx, env, () => {
+        if (!env.ok) return '';
+        const lines = [`init: ready at ${cwd}`];
+        if (env.data.created.length > 0) {
+          lines.push(`  created:   ${env.data.created.join(', ')}`);
+        }
+        if (env.data.preserved.length > 0) {
+          lines.push(`  preserved: ${env.data.preserved.join(', ')}`);
+        }
+        lines.push(
+          '  next: run `zettelgeist install-hook` to keep INDEX.md in sync on commit,',
+          '        or create your first spec under specs/<name>/requirements.md',
+        );
+        return lines.join('\n');
+      });
+      return env.ok ? 0 : 1;
+    }
     case 'regen': {
       const { regenCommand } = await import('./commands/regen.js');
       const env = await regenCommand({ path: cwd, check: inv.flags.check ?? false });

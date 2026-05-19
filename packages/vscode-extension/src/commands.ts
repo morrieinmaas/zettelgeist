@@ -115,6 +115,95 @@ export function stopServer(): void {
   }
 }
 
+/**
+ * Initialize the open workspace as a Zettelgeist repo. Triggered from
+ * the "Initialize…" tree item or the empty-state prompt when an
+ * uninitialized workspace activates the extension. Mirrors `zettelgeist
+ * init` from the CLI; kept inline so the extension doesn't need to shell
+ * out for first-time onboarding (faster, no CLI-resolution failure path).
+ */
+export async function runInit(): Promise<boolean> {
+  const root = getWorkspaceRoot();
+  if (!root) {
+    vscode.window.showErrorMessage('Zettelgeist: open a workspace folder first.');
+    return false;
+  }
+  const cfgAbs = path.join(root, '.zettelgeist.yaml');
+  try {
+    await fs.access(cfgAbs);
+    // Already initialized — surface a friendly notice instead of treating
+    // this as an error path.
+    vscode.window.showInformationMessage(
+      'Zettelgeist: this workspace is already initialized.',
+    );
+    return true;
+  } catch {
+    /* expected — proceed with init */
+  }
+
+  const confirm = await vscode.window.showInformationMessage(
+    `Initialize Zettelgeist in ${path.basename(root)}?`,
+    {
+      modal: true,
+      detail:
+        'Creates .zettelgeist.yaml + specs/ + docs/ + .zettelgeist/ in the workspace root, ' +
+        'and appends an ignore block to .gitignore. Nothing is committed; review the changes ' +
+        'in your VCS before pushing.',
+    },
+    'Initialize',
+  );
+  if (confirm !== 'Initialize') return false;
+
+  try {
+    // .zettelgeist.yaml — the opt-in marker.
+    await fs.writeFile(
+      cfgAbs,
+      'format_version: "0.1"\n# specs_dir: specs            # uncomment to override\n',
+      'utf8',
+    );
+    // Bring the directory layout up to v0.3 baseline. mkdir({recursive})
+    // is idempotent so a partially-initialized workspace is recovered.
+    await fs.mkdir(path.join(root, 'specs'), { recursive: true });
+    await fs.mkdir(path.join(root, 'docs'), { recursive: true });
+    await fs.mkdir(path.join(root, '.zettelgeist'), { recursive: true });
+
+    // Append a marker block to .gitignore so tool-managed state and
+    // per-actor claims stay out of commits. Idempotent — the marker is
+    // a unique substring we test for before appending.
+    const giPath = path.join(root, '.gitignore');
+    let giContent = '';
+    try { giContent = await fs.readFile(giPath, 'utf8'); } catch { /* will create */ }
+    if (!giContent.includes('# >>> zettelgeist >>>')) {
+      const block =
+        '# >>> zettelgeist >>>\n' +
+        '# Tool-managed state (regen cache, exported HTML, etc.).\n' +
+        '.zettelgeist/regen-cache.json\n' +
+        '.zettelgeist/exports/\n' +
+        '# Per-actor claim files (v0.2 distributed-conflict design).\n' +
+        'specs/*/.claim\n' +
+        'specs/*/.claim-*\n' +
+        '# <<< zettelgeist <<<\n';
+      const sep = giContent === '' || giContent.endsWith('\n') ? '' : '\n';
+      await fs.writeFile(giPath, giContent + sep + block, 'utf8');
+    }
+
+    vscode.window.showInformationMessage(
+      'Zettelgeist: workspace initialized. Open the board (Activity Bar → Zettelgeist) ' +
+        'or run “Zettelgeist: Install Pre-commit Hook” to keep INDEX.md in sync on commits.',
+    );
+    // Refresh the tree provider so the empty-state node is replaced by
+    // the real spec list (which will be empty for a fresh repo, but
+    // accurate).
+    await vscode.commands.executeCommand('zettelgeist.refreshTree');
+    return true;
+  } catch (err) {
+    vscode.window.showErrorMessage(
+      `Zettelgeist init failed: ${(err as Error).message}`,
+    );
+    return false;
+  }
+}
+
 export async function runInstallHook(): Promise<void> {
   const root = getWorkspaceRoot();
   if (!root) {
