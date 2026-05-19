@@ -15,6 +15,14 @@ export {
   DEFAULT_MAX_CYCLES,
 } from './log.js';
 export { gatherContext, summariseCycle } from './context.js';
+export {
+  DEFAULT_CONFIG,
+  DEFAULT_GITIGNORE_BLOCK,
+  GITIGNORE_MARKER_BEGIN,
+  GITIGNORE_MARKER_END,
+  INIT_DIRS,
+  gitignoreWithMarkerBlock,
+} from './init-defaults.js';
 export type {
   ContextResult,
   CycleSummary,

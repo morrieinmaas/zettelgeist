@@ -2,7 +2,10 @@ import * as vscode from 'vscode';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
-import { runConformance, loadConfig } from '@zettelgeist/core';
+import {
+  runConformance, loadConfig,
+  DEFAULT_CONFIG, INIT_DIRS, gitignoreWithMarkerBlock,
+} from '@zettelgeist/core';
 import { makeDiskFsReader } from '@zettelgeist/fs-adapters';
 import { installPreCommitHook } from '@zettelgeist/git-hook';
 
@@ -112,6 +115,90 @@ export function stopServer(): void {
   if (serverProc && !serverProc.killed) {
     serverProc.kill();
     serverProc = null;
+  }
+}
+
+/**
+ * Initialize the open workspace as a Zettelgeist repo. Triggered from
+ * the "Initialize…" tree item or the empty-state prompt when an
+ * uninitialized workspace activates the extension. Mirrors `zettelgeist
+ * init` from the CLI; kept inline so the extension doesn't need to shell
+ * out for first-time onboarding (faster, no CLI-resolution failure path).
+ */
+export async function runInit(): Promise<boolean> {
+  const root = getWorkspaceRoot();
+  if (!root) {
+    vscode.window.showErrorMessage('Zettelgeist: open a workspace folder first.');
+    return false;
+  }
+  const cfgAbs = path.join(root, '.zettelgeist.yaml');
+  try {
+    await fs.access(cfgAbs);
+    // Already initialized — surface a friendly notice instead of treating
+    // this as an error path. Also refresh the tree so a stale init-prompt
+    // node (e.g. when the user created .zettelgeist.yaml in another
+    // window) is replaced by the real spec list. Without this the tree
+    // stays on the prompt until the user manually hits refresh.
+    vscode.window.showInformationMessage(
+      'Zettelgeist: this workspace is already initialized.',
+    );
+    await vscode.commands.executeCommand('zettelgeist.refreshTree');
+    return true;
+  } catch {
+    /* expected — proceed with init */
+  }
+
+  const confirm = await vscode.window.showInformationMessage(
+    `Initialize Zettelgeist in ${path.basename(root)}?`,
+    {
+      modal: true,
+      detail:
+        'Creates .zettelgeist.yaml + specs/ + docs/ + .zettelgeist/ in the workspace root, ' +
+        'and appends an ignore block to .gitignore. Nothing is committed; review the changes ' +
+        'in your VCS before pushing.',
+    },
+    'Initialize',
+  );
+  if (confirm !== 'Initialize') return false;
+
+  try {
+    // .zettelgeist.yaml — the opt-in marker. Content lives in core's
+    // init-defaults so the CLI and this extension write byte-identical
+    // files (no drift between surfaces).
+    await fs.writeFile(cfgAbs, DEFAULT_CONFIG, 'utf8');
+
+    // Directory layout (specs/, docs/, .zettelgeist/) — set lives in
+    // core's INIT_DIRS. mkdir({recursive}) is idempotent so a partially
+    // initialized workspace heals on re-run.
+    for (const dir of INIT_DIRS) {
+      await fs.mkdir(path.join(root, dir), { recursive: true });
+    }
+
+    // Append our marker block to .gitignore so tool-managed state and
+    // per-actor claims stay out of commits. The shared helper returns
+    // null when the marker is already present (idempotent re-run).
+    const giPath = path.join(root, '.gitignore');
+    let giContent = '';
+    try { giContent = await fs.readFile(giPath, 'utf8'); } catch { /* will create */ }
+    const nextGi = gitignoreWithMarkerBlock(giContent);
+    if (nextGi !== null) {
+      await fs.writeFile(giPath, nextGi, 'utf8');
+    }
+
+    vscode.window.showInformationMessage(
+      'Zettelgeist: workspace initialized. Open the board (Activity Bar → Zettelgeist) ' +
+        'or run “Zettelgeist: Install Pre-commit Hook” to keep INDEX.md in sync on commits.',
+    );
+    // Refresh the tree provider so the empty-state node is replaced by
+    // the real spec list (which will be empty for a fresh repo, but
+    // accurate).
+    await vscode.commands.executeCommand('zettelgeist.refreshTree');
+    return true;
+  } catch (err) {
+    vscode.window.showErrorMessage(
+      `Zettelgeist init failed: ${(err as Error).message}`,
+    );
+    return false;
   }
 }
 

@@ -38,6 +38,7 @@ const KNOWN_COMMANDS = new Set([
   'sync',
   'tui',
   'context',
+  'init',
 ]);
 
 const FLAG_OPTIONS = {

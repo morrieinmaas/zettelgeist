@@ -1,20 +1,53 @@
 import * as vscode from 'vscode';
 import { openBoard } from './webview.js';
-import { runRegen, runInstallHook, runOpenInBrowser, stopServer } from './commands.js';
+import {
+  runRegen, runInstallHook, runOpenInBrowser, stopServer, runInit,
+} from './commands.js';
 import { makeBackend } from './backend.js';
 import { SpecTreeProvider } from './tree-provider.js';
+import { promises as fs } from 'node:fs';
+import * as path from 'node:path';
+
+/**
+ * Cheap probe: does the current workspace look like a Zettelgeist repo?
+ * Used as a gate before opening the board / running regen so the user
+ * sees a friendly init prompt instead of a raw ENOENT inside a webview.
+ */
+async function isInitialized(): Promise<boolean> {
+  const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+  if (!root) return false;
+  try {
+    await fs.access(path.join(root, '.zettelgeist.yaml'));
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export function activate(ctx: vscode.ExtensionContext): void {
   const cfg = () => vscode.workspace.getConfiguration('zettelgeist');
 
   ctx.subscriptions.push(
-    vscode.commands.registerCommand('zettelgeist.open', () => {
-      // Use the configured default view when invoked without a route.
+    vscode.commands.registerCommand('zettelgeist.open', async () => {
+      // Open Board is the most common entrypoint. If the workspace isn't
+      // initialized yet, prompt for init instead of letting the webview
+      // surface a raw ENOENT.
+      if (!(await isInitialized())) {
+        const ok = await runInit();
+        if (!ok) return;
+      }
       const view = cfg().get<string>('defaultView', 'board');
       const route = view === 'board' ? undefined : `/${view}`;
       return openBoard(ctx, route);
     }),
-    vscode.commands.registerCommand('zettelgeist.openRoute', (route?: string) => openBoard(ctx, route)),
+    vscode.commands.registerCommand('zettelgeist.openRoute', async (route?: string) => {
+      if (!(await isInitialized())) {
+        const ok = await runInit();
+        if (!ok) return;
+      }
+      return openBoard(ctx, route);
+    }),
+    vscode.commands.registerCommand('zettelgeist.init', runInit),
     vscode.commands.registerCommand('zettelgeist.regen', runRegen),
     vscode.commands.registerCommand('zettelgeist.installHook', runInstallHook),
     vscode.commands.registerCommand('zettelgeist.openInBrowser', runOpenInBrowser),
