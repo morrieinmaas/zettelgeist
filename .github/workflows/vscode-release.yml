@@ -55,6 +55,14 @@ jobs:
             echo "::error::VSX_TOKEN secret is not set"
             exit 1
           fi
+          # First-time-publish handling: ovsx requires the publisher
+          # namespace to exist before any publish. `create-namespace` is
+          # idempotent — exits non-zero if the namespace already exists
+          # (`409 Conflict`), which is fine for re-runs. We swallow that
+          # specific failure with `|| true` so subsequent releases keep
+          # working. Any other failure (auth, network) surfaces via the
+          # publish step that follows.
+          npx --yes ovsx create-namespace morriearty-zg -p "$OVSX_PAT" || true
           npx --yes ovsx publish "zettelgeist-${{ steps.ver.outputs.version }}.vsix" -p "$OVSX_PAT"
 
       - name: Publish to VS Code Marketplace (optional)
