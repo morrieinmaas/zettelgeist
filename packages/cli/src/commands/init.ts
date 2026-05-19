@@ -1,5 +1,10 @@
 import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
+import {
+  DEFAULT_CONFIG,
+  INIT_DIRS,
+  gitignoreWithMarkerBlock,
+} from '@zettelgeist/core';
 import { okEnvelope, errorEnvelope, type Envelope } from '../output.js';
 
 export const HELP = `zettelgeist init [--force] [--json]
@@ -38,20 +43,6 @@ export interface InitOk {
   preserved: string[];
 }
 
-const DEFAULT_CONFIG = `format_version: "0.1"
-# specs_dir: specs            # uncomment to override
-`;
-
-const DEFAULT_GITIGNORE_BLOCK = `# >>> zettelgeist >>>
-# Tool-managed state (regen cache, exported HTML, etc.).
-.zettelgeist/regen-cache.json
-.zettelgeist/exports/
-# Per-actor claim files (v0.2 distributed-conflict design).
-specs/*/.claim
-specs/*/.claim-*
-# <<< zettelgeist <<<
-`;
-
 async function exists(p: string): Promise<boolean> {
   try {
     await fs.access(p);
@@ -81,34 +72,18 @@ export async function initCommand(input: InitInput): Promise<Envelope<InitOk>> {
     return errorEnvelope(`init: cannot write ${cfgPath}: ${(err as Error).message}`);
   }
 
-  // specs/ — empty directory the first spec will land in. We don't
-  // create a placeholder file here so the user doesn't have to delete
-  // it on their first real spec.
-  const specsDir = path.join(cwd, 'specs');
-  if (await exists(specsDir)) {
-    preserved.push('specs/');
-  } else {
-    await fs.mkdir(specsDir, { recursive: true });
-    created.push('specs/');
-  }
-
-  // docs/ — non-spec markdown. Optional but a near-zero-cost convention.
-  const docsDir = path.join(cwd, 'docs');
-  if (await exists(docsDir)) {
-    preserved.push('docs/');
-  } else {
-    await fs.mkdir(docsDir, { recursive: true });
-    created.push('docs/');
-  }
-
-  // .zettelgeist/ — tool-managed state directory. Created here so the
-  // regen cache and exports have a home; gitignored via the block below.
-  const stateDir = path.join(cwd, '.zettelgeist');
-  if (await exists(stateDir)) {
-    preserved.push('.zettelgeist/');
-  } else {
-    await fs.mkdir(stateDir, { recursive: true });
-    created.push('.zettelgeist/');
+  // Directory layout (specs/, docs/, .zettelgeist/) — the set lives in
+  // core's INIT_DIRS so the extension's runInit() materializes the same
+  // shape. mkdir({recursive:true}) is idempotent; pre-existing dirs are
+  // reported as `preserved`.
+  for (const dir of INIT_DIRS) {
+    const abs = path.join(cwd, dir);
+    if (await exists(abs)) {
+      preserved.push(`${dir}/`);
+    } else {
+      await fs.mkdir(abs, { recursive: true });
+      created.push(`${dir}/`);
+    }
   }
 
   // .gitignore — append our marker block if it isn't there yet.
@@ -121,11 +96,11 @@ export async function initCommand(input: InitInput): Promise<Envelope<InitOk>> {
   } catch {
     /* will create */
   }
-  if (giContent.includes('# >>> zettelgeist >>>')) {
+  const nextGi = gitignoreWithMarkerBlock(giContent);
+  if (nextGi === null) {
     preserved.push('.gitignore');
   } else {
-    const sep = giContent === '' || giContent.endsWith('\n') ? '' : '\n';
-    await fs.writeFile(giPath, giContent + sep + DEFAULT_GITIGNORE_BLOCK, 'utf8');
+    await fs.writeFile(giPath, nextGi, 'utf8');
     created.push(giExisted ? '.gitignore (block appended)' : '.gitignore');
   }
 

@@ -1,6 +1,17 @@
 ---
+"@zettelgeist/core": minor
 "@zettelgeist/cli": minor
 ---
+
+### `@zettelgeist/core` — shared init defaults
+
+New module `init-defaults` exports the canonical content for `zettelgeist init` so the CLI and the VS Code extension produce byte-identical output. Public API:
+
+- `DEFAULT_CONFIG` — the `.zettelgeist.yaml` template (`format_version: "0.1"`)
+- `DEFAULT_GITIGNORE_BLOCK` — the marker-delimited gitignore block (claim files + tool-managed state)
+- `GITIGNORE_MARKER_BEGIN` / `GITIGNORE_MARKER_END` — the marker pair for idempotent detection
+- `INIT_DIRS` — canonical three-dir layout (`specs`, `docs`, `.zettelgeist`)
+- `gitignoreWithMarkerBlock(existing)` — pure function; returns the new content or `null` if marker already present
 
 ### `zettelgeist init` CLI command
 

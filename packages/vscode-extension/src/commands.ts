@@ -2,7 +2,10 @@ import * as vscode from 'vscode';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
-import { runConformance, loadConfig } from '@zettelgeist/core';
+import {
+  runConformance, loadConfig,
+  DEFAULT_CONFIG, INIT_DIRS, gitignoreWithMarkerBlock,
+} from '@zettelgeist/core';
 import { makeDiskFsReader } from '@zettelgeist/fs-adapters';
 import { installPreCommitHook } from '@zettelgeist/git-hook';
 
@@ -132,10 +135,14 @@ export async function runInit(): Promise<boolean> {
   try {
     await fs.access(cfgAbs);
     // Already initialized — surface a friendly notice instead of treating
-    // this as an error path.
+    // this as an error path. Also refresh the tree so a stale init-prompt
+    // node (e.g. when the user created .zettelgeist.yaml in another
+    // window) is replaced by the real spec list. Without this the tree
+    // stays on the prompt until the user manually hits refresh.
     vscode.window.showInformationMessage(
       'Zettelgeist: this workspace is already initialized.',
     );
+    await vscode.commands.executeCommand('zettelgeist.refreshTree');
     return true;
   } catch {
     /* expected — proceed with init */
@@ -155,36 +162,27 @@ export async function runInit(): Promise<boolean> {
   if (confirm !== 'Initialize') return false;
 
   try {
-    // .zettelgeist.yaml — the opt-in marker.
-    await fs.writeFile(
-      cfgAbs,
-      'format_version: "0.1"\n# specs_dir: specs            # uncomment to override\n',
-      'utf8',
-    );
-    // Bring the directory layout up to v0.3 baseline. mkdir({recursive})
-    // is idempotent so a partially-initialized workspace is recovered.
-    await fs.mkdir(path.join(root, 'specs'), { recursive: true });
-    await fs.mkdir(path.join(root, 'docs'), { recursive: true });
-    await fs.mkdir(path.join(root, '.zettelgeist'), { recursive: true });
+    // .zettelgeist.yaml — the opt-in marker. Content lives in core's
+    // init-defaults so the CLI and this extension write byte-identical
+    // files (no drift between surfaces).
+    await fs.writeFile(cfgAbs, DEFAULT_CONFIG, 'utf8');
 
-    // Append a marker block to .gitignore so tool-managed state and
-    // per-actor claims stay out of commits. Idempotent — the marker is
-    // a unique substring we test for before appending.
+    // Directory layout (specs/, docs/, .zettelgeist/) — set lives in
+    // core's INIT_DIRS. mkdir({recursive}) is idempotent so a partially
+    // initialized workspace heals on re-run.
+    for (const dir of INIT_DIRS) {
+      await fs.mkdir(path.join(root, dir), { recursive: true });
+    }
+
+    // Append our marker block to .gitignore so tool-managed state and
+    // per-actor claims stay out of commits. The shared helper returns
+    // null when the marker is already present (idempotent re-run).
     const giPath = path.join(root, '.gitignore');
     let giContent = '';
     try { giContent = await fs.readFile(giPath, 'utf8'); } catch { /* will create */ }
-    if (!giContent.includes('# >>> zettelgeist >>>')) {
-      const block =
-        '# >>> zettelgeist >>>\n' +
-        '# Tool-managed state (regen cache, exported HTML, etc.).\n' +
-        '.zettelgeist/regen-cache.json\n' +
-        '.zettelgeist/exports/\n' +
-        '# Per-actor claim files (v0.2 distributed-conflict design).\n' +
-        'specs/*/.claim\n' +
-        'specs/*/.claim-*\n' +
-        '# <<< zettelgeist <<<\n';
-      const sep = giContent === '' || giContent.endsWith('\n') ? '' : '\n';
-      await fs.writeFile(giPath, giContent + sep + block, 'utf8');
+    const nextGi = gitignoreWithMarkerBlock(giContent);
+    if (nextGi !== null) {
+      await fs.writeFile(giPath, nextGi, 'utf8');
     }
 
     vscode.window.showInformationMessage(
