@@ -36,11 +36,13 @@ jobs:
       - name: Build viewer + extension
         run: pnpm -r build
 
-      - name: Read extension version
+      - name: Read extension version + publisher
         id: ver
         run: |
           v=$(node -p "require('./packages/vscode-extension/package.json').version")
+          p=$(node -p "require('./packages/vscode-extension/package.json').publisher")
           echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "publisher=$p" >> "$GITHUB_OUTPUT"
 
       - name: Package .vsix
         working-directory: packages/vscode-extension
@@ -62,7 +64,11 @@ jobs:
           # specific failure with `|| true` so subsequent releases keep
           # working. Any other failure (auth, network) surfaces via the
           # publish step that follows.
-          npx --yes ovsx create-namespace morriearty-zg -p "$OVSX_PAT" || true
+          # Use the publisher declared in packages/vscode-extension/
+          # package.json. The Open VSX namespace MUST match the
+          # `publisher` field baked into the .vsix at package time, so
+          # reading both from the same source eliminates drift.
+          npx --yes ovsx create-namespace "${{ steps.ver.outputs.publisher }}" -p "$OVSX_PAT" || true
           npx --yes ovsx publish "zettelgeist-${{ steps.ver.outputs.version }}.vsix" -p "$OVSX_PAT"
 
       - name: Publish to VS Code Marketplace (optional)
@@ -83,8 +89,14 @@ jobs:
             git tag "$tag" || true
             git push origin "$tag" || true
           fi
+          # Marketplace URLs use different publisher namespaces by design:
+          # Open VSX listing is under `morrieinmaas` (legacy + larger user
+          # base); VS Code Marketplace listing is under `morriearty-zg`
+          # (separate publishing flow). The .vsix attached here is built
+          # with the Open VSX publisher; the MS Marketplace flavor is
+          # built locally via `pnpm --filter zettelgeist package:msm`.
           gh release create "$tag" \
             "packages/vscode-extension/zettelgeist-${{ steps.ver.outputs.version }}.vsix" \
             --title "VS Code extension $tag" \
-            --notes "Install from VS Code / Cursor: Extensions → ⋯ → Install from VSIX → select the attached file. Also available at https://open-vsx.org/extension/morriearty-zg/zettelgeist and https://marketplace.visualstudio.com/items?itemName=morriearty-zg.zettelgeist" \
+            --notes "Install from VS Code / Cursor / Windsurf: Extensions → ⋯ → Install from VSIX → select the attached file. Also available at https://open-vsx.org/extension/morrieinmaas/zettelgeist and https://marketplace.visualstudio.com/items?itemName=morriearty-zg.zettelgeist" \
             || gh release upload "$tag" "packages/vscode-extension/zettelgeist-${{ steps.ver.outputs.version }}.vsix" --clobber
