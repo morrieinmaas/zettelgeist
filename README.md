@@ -80,8 +80,7 @@ Opens the viewer at <http://127.0.0.1:7681> with a fully populated [example repo
 ```bash
 npm i -g @zettelgeist/cli
 cd your-repo
-echo 'format_version: "0.1"' > .zettelgeist.yaml
-mkdir specs                               # spec files live here
+zettelgeist init                          # scaffolds .zettelgeist.yaml + specs/ + docs/ + .gitignore block
 zettelgeist install-hook                  # optional: keeps specs/INDEX.md current on each commit
 zettelgeist serve                         # opens the viewer in your browser
 ```
@@ -309,18 +308,23 @@ The interesting case. A PM drags a spec from Draft to Planned; an agent claims i
 
 | Command | Description |
 |---|---|
+| `zettelgeist init [--force]` | Scaffold a new repo: `.zettelgeist.yaml` + `specs/` + `docs/` + `.zettelgeist/` + `.gitignore` block. Idempotent on the dir layout. |
 | `zettelgeist regen [--check]` | Regenerate `specs/INDEX.md`. `--check` exits non-zero if stale. |
 | `zettelgeist validate` | Validate the repo against the format spec. |
 | `zettelgeist install-hook [--force]` | Install the pre-commit hook (smart-merge with any existing hook). |
 | `zettelgeist install-skill [--scope user\|project\|agents-md] [--force]` | Install the agent workflow skill. `user` (default) is system-wide for this user; `project` is per-repo and commit-friendly; `agents-md` smart-merges into `AGENTS.md` for cross-tool coverage (Codex, Copilot CLI). |
+| `zettelgeist sync [--check] [--allow-dirty]` | Fetch + rebase the current branch, auto-resolving Zettelgeist-managed conflicts (INDEX, tasks, frontmatter). `--check` is read-only. |
+| `zettelgeist context [--spec NAME \| --log NAME [--offset N] \| --metadata NAME [KEY]]` | Windowed retrieval over the structured memory: project status, per-spec, per-cycle log, or one frontmatter key. v0.3+. |
 | `zettelgeist serve [--port N] [--no-open]` | Launch the local viewer (default port 7681). |
+| `zettelgeist tui [--view=NAME]` | Open the terminal UI (requires `@zettelgeist/tui`). |
 | `zettelgeist export-doc <path> [--template T]` | Render a markdown file to standalone HTML. |
+| `zettelgeist merge-driver <kind> <base> <ours> <theirs>` | Git custom merge driver dispatch. Invoked automatically by git after `install-hook`; rarely called directly. |
 
 Per-command help: `zettelgeist <command> --help`.
 
-### MCP tools (16)
+### MCP tools (17)
 
-`list_specs`, `read_spec`, `read_spec_file`, `validate_repo`, `write_spec_file`, `tick_task`, `untick_task`, `set_status`, `patch_frontmatter`, `write_handoff`, `regenerate_index`, `claim_spec`, `release_spec`, `install_git_hook`, `prepare_synthesis_context`, `write_artifact`.
+`list_specs`, `read_spec`, `read_spec_file`, `validate_repo`, `context` (v0.3+ windowed retrieval), `write_spec_file`, `tick_task`, `untick_task`, `set_status`, `patch_frontmatter`, `write_handoff`, `regenerate_index`, `claim_spec`, `release_spec`, `install_git_hook`, `prepare_synthesis_context`, `write_artifact`.
 
 Full schemas: [packages/mcp-server/SKILL.md](packages/mcp-server/SKILL.md).
 
