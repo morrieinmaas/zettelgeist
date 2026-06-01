@@ -133,6 +133,78 @@ describe('deriveStatus', () => {
     ).toBe('in-review');
   });
 
+  it('self-heals a `status: draft` override when every counted task is checked (unmerged)', () => {
+    // The board's "+" button pins `status: draft` so new cards appear in
+    // the draft column. Without a self-heal, the override beats the
+    // derived status forever — even after the user ticks every task.
+    expect(
+      deriveStatus(
+        spec({
+          frontmatter: { status: 'draft' },
+          tasks: [
+            { index: 1, checked: true, text: 'a', tags: [] },
+            { index: 2, checked: true, text: 'b', tags: [] },
+          ],
+        }),
+        emptyRepoState,
+      ),
+    ).toBe('in-review');
+  });
+
+  it('self-healed draft override goes to "done" when also merged', () => {
+    expect(
+      deriveStatus(
+        spec({
+          name: 'foo',
+          frontmatter: { status: 'draft' },
+          tasks: [{ index: 1, checked: true, text: 'a', tags: [] }],
+        }),
+        { claimedSpecs: new Set(), mergedSpecs: new Set(['foo']) },
+      ),
+    ).toBe('done');
+  });
+
+  it('respects a `status: draft` override when only SOME tasks are checked', () => {
+    // Partial progress might be deliberate ("I want to rethink this; keep
+    // it on the draft column"), so we only self-heal at all-done.
+    expect(
+      deriveStatus(
+        spec({
+          frontmatter: { status: 'draft' },
+          tasks: [
+            { index: 1, checked: true, text: 'a', tags: [] },
+            { index: 2, checked: false, text: 'b', tags: [] },
+          ],
+        }),
+        emptyRepoState,
+      ),
+    ).toBe('draft');
+  });
+
+  it('respects a `status: draft` override when there are no counted tasks', () => {
+    // Matches conformance fixture 19-all-statuses/a-draft: status:draft
+    // override on a spec with no tasks at all stays "draft".
+    expect(
+      deriveStatus(spec({ frontmatter: { status: 'draft' } }), emptyRepoState),
+    ).toBe('draft');
+  });
+
+  it('does NOT self-heal other override values even when all tasks are checked', () => {
+    // The self-heal is narrowly for `draft` — other overrides may reflect
+    // intentional user state and must not be silently re-derived.
+    for (const s of ['planned', 'in-progress', 'in-review', 'done', 'blocked', 'cancelled'] as const) {
+      expect(
+        deriveStatus(
+          spec({
+            frontmatter: { status: s },
+            tasks: [{ index: 1, checked: true, text: 'a', tags: [] }],
+          }),
+          emptyRepoState,
+        ),
+      ).toBe(s);
+    }
+  });
+
   it('returns "done" when all non-#skip tasks ticked and merged', () => {
     expect(
       deriveStatus(
