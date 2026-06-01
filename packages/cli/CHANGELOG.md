@@ -1,5 +1,11 @@
 # @zettelgeist/cli
 
+## 0.4.1
+
+### Patch Changes
+
+- [#15](https://github.com/morrieinmaas/zettelgeist/pull/15) [`8853133`](https://github.com/morrieinmaas/zettelgeist/commit/885313385695e90d0b0845e8a811a5096fe433a1) Thanks [@morrieinmaas](https://github.com/morrieinmaas)! - Pre-commit hook now self-disables in repos that aren't zettelgeist repos. Previously, a stale install left over from a removed config (or a partial init) would block every commit with `error: not a zettelgeist repo`. The installed hook block now exits 0 silently when `.zettelgeist.yaml` is missing. Re-run `zettelgeist install-hook` (or `zettelgeist init`) to update existing hooks.
+
 ## 0.4.0
 
 ### Minor Changes

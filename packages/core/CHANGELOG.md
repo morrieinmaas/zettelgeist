@@ -1,5 +1,11 @@
 # @zettelgeist/core
 
+## 0.4.1
+
+### Patch Changes
+
+- [#15](https://github.com/morrieinmaas/zettelgeist/pull/15) [`8853133`](https://github.com/morrieinmaas/zettelgeist/commit/885313385695e90d0b0845e8a811a5096fe433a1) Thanks [@morrieinmaas](https://github.com/morrieinmaas)! - `deriveStatus` now ignores a `status: draft` frontmatter override when the spec has at least one counted task and every counted task is checked. The override is provably stale in that case (the board's "+" button writes it on new-card creation and nothing clears it afterwards). The card transparently moves to `in-review` (or `done` if merged) on the next render — no file mutation, no user action. Other override values (`planned`, `in-progress`, `in-review`, `done`, `blocked`, `cancelled`) and `draft` overrides with partial or zero progress are unchanged.
+
 ## 0.4.0
 
 ### Minor Changes
