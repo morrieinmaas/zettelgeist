@@ -1,6 +1,6 @@
 {
   "name": "@zettelgeist/mcp-server",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "license": "Apache-2.0",
   "author": "Mo <motechnix@gmail.com>",
   "description": "Zettelgeist MCP server: 16 tools for agents to operate on Zettelgeist repositories.",
