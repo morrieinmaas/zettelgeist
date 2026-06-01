@@ -8,8 +8,14 @@ export const HOOK_MARKER_END = '# <<< zettelgeist <<<';
 // Resolve the zettelgeist binary at hook execution time. Pre-commit hooks
 // run with the user's login PATH, which won't include ./node_modules/.bin —
 // so we fall back to the workspace-local binary if PATH lookup misses.
+//
+// The leading `.zettelgeist.yaml` guard makes the hook self-disabling in
+// repos that aren't zettelgeist repos: a stale install left over from a
+// removed config, or a partial init, would otherwise block every commit
+// with `error: not a zettelgeist repo`.
 export const HOOK_BLOCK =
   HOOK_MARKER_BEGIN + '\n' +
+  '[ -f .zettelgeist.yaml ] || exit 0\n' +
   'if command -v zettelgeist >/dev/null 2>&1; then\n' +
   '  zettelgeist regen --check\n' +
   'elif [ -x ./node_modules/.bin/zettelgeist ]; then\n' +

@@ -50,6 +50,35 @@ describe('mergeHookContent', () => {
     expect(HOOK_BLOCK).toContain('command -v zettelgeist');
     expect(HOOK_BLOCK).toContain('./node_modules/.bin/zettelgeist');
   });
+
+  it('HOOK_BLOCK self-disables when .zettelgeist.yaml is missing', () => {
+    expect(HOOK_BLOCK).toContain('[ -f .zettelgeist.yaml ] || exit 0');
+  });
+});
+
+describe('HOOK_BLOCK execution', () => {
+  let tmp: string;
+
+  beforeEach(async () => {
+    tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'zg-hook-exec-'));
+  });
+
+  afterEach(async () => {
+    await fs.rm(tmp, { recursive: true, force: true });
+  });
+
+  it('exits 0 silently in a directory without .zettelgeist.yaml', async () => {
+    // We run the block in sh from inside `tmp`, with PATH cleared so the
+    // command-v fallback would otherwise fail. The pre-flight check must
+    // short-circuit before any zettelgeist lookup happens.
+    const { stdout, stderr } = await execFileP(
+      'sh',
+      ['-c', HOOK_BLOCK],
+      { cwd: tmp, env: { PATH: '/usr/bin:/bin' } },
+    );
+    expect(stderr).toBe('');
+    expect(stdout).toBe('');
+  });
 });
 
 describe('installPreCommitHook', () => {
