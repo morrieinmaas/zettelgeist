@@ -88,6 +88,23 @@ describe('writeTools', () => {
     expect(after).toContain('# foo');
   });
 
+  it('tick_task clears a `status: draft`-only frontmatter and drops the fence', async () => {
+    // When `status: draft` is the only frontmatter key, clearing it
+    // should produce a file with no frontmatter block at all (the
+    // dump-empty-then-fence branch in plannedDraftOverrideClear).
+    const reqPath = path.join(tmp, 'specs', 'foo', 'requirements.md');
+    await fs.writeFile(reqPath, '---\nstatus: draft\n---\n# foo\n');
+    await execFileP('git', ['add', '.'], { cwd: tmp });
+    await execFileP('git', ['commit', '-q', '-m', 'pin draft alone'], { cwd: tmp });
+
+    await tickTaskTool.handler({ name: 'foo', n: 1 }, { cwd: tmp });
+
+    const after = await fs.readFile(reqPath, 'utf8');
+    expect(after).not.toContain('---');
+    expect(after).not.toContain('status');
+    expect(after).toContain('# foo');
+  });
+
   it('tick_task leaves other status overrides alone', async () => {
     // `blocked` is a documented v0.1 frontmatter override. Ticking a
     // task on a blocked spec MUST NOT silently un-block it.

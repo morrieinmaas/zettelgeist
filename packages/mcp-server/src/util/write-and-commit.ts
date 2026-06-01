@@ -29,14 +29,16 @@ export interface WriteAndCommitOptions {
     agentId?: string;
   };
   /**
-   * Additional file paths (repo-relative, POSIX-style) to include in the
-   * same commit as the main write. Callers are responsible for having
-   * already written these to disk; the helper just stages them. Used by
-   * tools that need to make an atomic multi-file edit (e.g. tick_task
-   * auto-clearing a stale `status: draft` override in requirements.md
-   * alongside the tasks.md tick).
+   * Additional `{ relPath, content }` pairs written and committed
+   * atomically with the main file. The helper performs the temp+rename
+   * write BEFORE running conformance, so all files are on disk by the
+   * time INDEX.md regenerates — keeping the failure mode symmetric with
+   * the single-file path (a conformance throw leaves a consistent
+   * working-tree diff rather than a half-applied state). Used by tools
+   * that need a multi-file atomic edit, e.g. `tick_task` clearing a
+   * `status: draft` override in requirements.md alongside the tick.
    */
-  extraFiles?: ReadonlyArray<string>;
+  extraWrites?: ReadonlyArray<{ relPath: string; content: string }>;
 }
 
 export async function writeFileAndCommit(
@@ -51,6 +53,19 @@ export async function writeFileAndCommit(
   const tmp = `${fileAbs}.tmp`;
   await fs.writeFile(tmp, content, 'utf8');
   await fs.rename(tmp, fileAbs);
+
+  // Stage any caller-supplied extra writes the same way (temp+rename)
+  // BEFORE running conformance, so INDEX.md regenerates against the
+  // post-write state of every file in this transaction.
+  if (options?.extraWrites) {
+    for (const w of options.extraWrites) {
+      const abs = path.join(cwd, w.relPath);
+      await fs.mkdir(path.dirname(abs), { recursive: true });
+      const t = `${abs}.tmp`;
+      await fs.writeFile(t, w.content, 'utf8');
+      await fs.rename(t, abs);
+    }
+  }
 
   // Regen — load config first so we can reuse it for the .log.md path too.
   const reader = makeDiskFsReader(cwd);
@@ -96,8 +111,8 @@ export async function writeFileAndCommit(
     if (wrote) filesToAdd.push(logRelPath);
   }
 
-  if (options?.extraFiles) {
-    for (const f of options.extraFiles) filesToAdd.push(f);
+  if (options?.extraWrites) {
+    for (const w of options.extraWrites) filesToAdd.push(w.relPath);
   }
 
   await execFileP('git', ['add', ...filesToAdd], { cwd });
