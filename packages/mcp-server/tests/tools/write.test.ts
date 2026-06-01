@@ -69,6 +69,61 @@ describe('writeTools', () => {
     expect(after.startsWith('- [ ] one')).toBe(true);
   });
 
+  it('tick_task clears a stale `status: draft` override on requirements.md', async () => {
+    // Simulate the board's "+" button: it pins `status: draft` so the
+    // new card lands in the draft column. Without auto-clear, ticking
+    // every task would still show the spec as draft because the
+    // frontmatter override beats the derived status.
+    const reqPath = path.join(tmp, 'specs', 'foo', 'requirements.md');
+    await fs.writeFile(reqPath, '---\nstatus: draft\ndepends_on: []\n---\n# foo\n');
+    await execFileP('git', ['add', '.'], { cwd: tmp });
+    await execFileP('git', ['commit', '-q', '-m', 'pin draft'], { cwd: tmp });
+
+    await tickTaskTool.handler({ name: 'foo', n: 1 }, { cwd: tmp });
+
+    const after = await fs.readFile(reqPath, 'utf8');
+    expect(after).not.toContain('status:');
+    // Other frontmatter fields survive untouched.
+    expect(after).toContain('depends_on: []');
+    expect(after).toContain('# foo');
+  });
+
+  it('tick_task leaves other status overrides alone', async () => {
+    // `blocked` is a documented v0.1 frontmatter override. Ticking a
+    // task on a blocked spec MUST NOT silently un-block it.
+    const reqPath = path.join(tmp, 'specs', 'foo', 'requirements.md');
+    await fs.writeFile(reqPath, '---\nstatus: blocked\nblocked_by: waiting\n---\n# foo\n');
+    await execFileP('git', ['add', '.'], { cwd: tmp });
+    await execFileP('git', ['commit', '-q', '-m', 'pin blocked'], { cwd: tmp });
+
+    await tickTaskTool.handler({ name: 'foo', n: 1 }, { cwd: tmp });
+
+    const after = await fs.readFile(reqPath, 'utf8');
+    expect(after).toContain('status: blocked');
+    expect(after).toContain('blocked_by: waiting');
+  });
+
+  it('untick_task does NOT clear a draft override', async () => {
+    // Untick is symmetrical-undo, not a forward-progress signal — leave
+    // any pin in place so the user can reset a card back to draft.
+    const reqPath = path.join(tmp, 'specs', 'foo', 'requirements.md');
+    await fs.writeFile(reqPath, '---\nstatus: draft\n---\n# foo\n');
+    await execFileP('git', ['add', '.'], { cwd: tmp });
+    await execFileP('git', ['commit', '-q', '-m', 'pin draft'], { cwd: tmp });
+
+    // First tick clears the override (per previous test); restore it so
+    // we're testing untick in isolation.
+    await tickTaskTool.handler({ name: 'foo', n: 1 }, { cwd: tmp });
+    await fs.writeFile(reqPath, '---\nstatus: draft\n---\n# foo\n');
+    await execFileP('git', ['add', '.'], { cwd: tmp });
+    await execFileP('git', ['commit', '-q', '-m', 'restore pin'], { cwd: tmp });
+
+    await untickTaskTool.handler({ name: 'foo', n: 1 }, { cwd: tmp });
+
+    const after = await fs.readFile(reqPath, 'utf8');
+    expect(after).toContain('status: draft');
+  });
+
   it('writeSpecFileTool rejects relpath with traversal', async () => {
     await expect(writeSpecFileTool.handler(
       { name: 'foo', relpath: '../../evil.txt', content: 'pwn' },

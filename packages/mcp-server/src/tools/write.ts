@@ -61,6 +61,43 @@ export const writeHandoffTool: ToolDef<z.infer<typeof writeHandoffInput>, { comm
 
 const TASK_LINE = /^([\s>]*[-*+]\s+\[)([ xX])(\]\s+.*)$/;
 
+/**
+ * If `requirements.md` has a `status: draft` frontmatter override, strip
+ * it and return the new file content + repo-relative path so the caller
+ * can stage it alongside the tasks.md write. Returns `null` when there
+ * is nothing to clear (no requirements.md, no frontmatter, status not
+ * draft, or status is one of the user-intentional values).
+ *
+ * Rationale: `draft` is uniquely the "no work yet" state. A `tick_task`
+ * is unambiguous evidence that work has started, so a pinned `draft`
+ * override (typically written by the board's "+" button) is provably
+ * wrong and would otherwise mask all forward progress. Other override
+ * values (`planned`, `in-progress`, `in-review`, `done`, `blocked`,
+ * `cancelled`) may reflect explicit user intent — we leave those alone.
+ */
+async function clearedDraftOverride(
+  cwd: string,
+  specDir: string,
+): Promise<{ relPath: string; content: string } | null> {
+  const reqAbs = safeJoin(specDir, 'requirements.md');
+  let raw: string;
+  try {
+    raw = await fs.readFile(reqAbs, 'utf8');
+  } catch {
+    return null;
+  }
+  const parsed = matter(raw, {});
+  const data = { ...(parsed.data ?? {}) } as Record<string, unknown>;
+  if (data.status !== 'draft') return null;
+  delete data.status;
+  const newFm = Object.keys(data).length > 0 ? `---\n${yaml.dump(data)}---\n` : '';
+  const body = parsed.content.startsWith('\n') ? parsed.content.slice(1) : parsed.content;
+  const newContent = newFm + body;
+  await fs.writeFile(reqAbs, newContent, 'utf8');
+  const relPath = path.relative(cwd, reqAbs).split(path.sep).join('/');
+  return { relPath, content: newContent };
+}
+
 async function tickOrUntick(cwd: string, name: string, n: number, checked: boolean): Promise<{ commit: string }> {
   const reader = makeDiskFsReader(cwd);
   const cfg = await loadConfig(reader);
@@ -83,13 +120,29 @@ async function tickOrUntick(cwd: string, name: string, n: number, checked: boole
     }
   }
   if (!mutated) throw new Error(`no task at index ${n} in ${name}`);
+
+  // Tick (only) clears a stale `status: draft` override on requirements.md
+  // so the board doesn't keep the card pinned in the draft column after
+  // the user has started working. Untick intentionally does NOT clear —
+  // an untick might be undoing an accidental tick on a draft spec, and
+  // re-pinning to draft would be the right move there.
+  const extraFiles: string[] = [];
+  if (checked) {
+    const cleared = await clearedDraftOverride(cwd, specDir);
+    if (cleared) extraFiles.push(cleared.relPath);
+  }
+
   const op = checked ? 'tick' : 'untick';
+  const opts: { log: { specName: string; action: string }; extraFiles?: ReadonlyArray<string> } = {
+    log: { specName: name, action: `${op}_task(${n})` },
+  };
+  if (extraFiles.length > 0) opts.extraFiles = extraFiles;
   return writeFileAndCommit(
     cwd,
     tasksRel,
     lines.join('\n'),
     `[zg] ${op}: ${name}#${n}`,
-    { log: { specName: name, action: `${op}_task(${n})` } },
+    opts,
   );
 }
 

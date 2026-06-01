@@ -28,6 +28,15 @@ export interface WriteAndCommitOptions {
     action: string;
     agentId?: string;
   };
+  /**
+   * Additional file paths (repo-relative, POSIX-style) to include in the
+   * same commit as the main write. Callers are responsible for having
+   * already written these to disk; the helper just stages them. Used by
+   * tools that need to make an atomic multi-file edit (e.g. tick_task
+   * auto-clearing a stale `status: draft` override in requirements.md
+   * alongside the tasks.md tick).
+   */
+  extraFiles?: ReadonlyArray<string>;
 }
 
 export async function writeFileAndCommit(
@@ -85,6 +94,10 @@ export async function writeFileAndCommit(
     // the writer short-circuits on missing-file-without-open-cycle to
     // avoid materialising orphan-only logs.
     if (wrote) filesToAdd.push(logRelPath);
+  }
+
+  if (options?.extraFiles) {
+    for (const f of options.extraFiles) filesToAdd.push(f);
   }
 
   await execFileP('git', ['add', ...filesToAdd], { cwd });
