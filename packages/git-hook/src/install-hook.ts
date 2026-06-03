@@ -9,13 +9,25 @@ export const HOOK_MARKER_END = '# <<< zettelgeist <<<';
 // run with the user's login PATH, which won't include ./node_modules/.bin —
 // so we fall back to the workspace-local binary if PATH lookup misses.
 //
-// The leading `.zettelgeist.yaml` guard makes the hook self-disabling in
-// repos that aren't zettelgeist repos: a stale install left over from a
-// removed config, or a partial init, would otherwise block every commit
-// with `error: not a zettelgeist repo`.
+// Two pre-flight guards keep the hook from blocking commits in states
+// where its check is meaningless:
+//
+//   1. No `.zettelgeist.yaml` → not a zettelgeist repo. A stale install
+//      from a removed config or a partial init would otherwise fail every
+//      commit with `error: not a zettelgeist repo`.
+//
+//   2. `specs/INDEX.md` not tracked in HEAD on this branch → the index
+//      file isn't part of this branch's history (back-in-time checkout,
+//      fresh repo before the first regen, branch that predates the
+//      `init` commit). There's nothing to be stale about; without this
+//      guard, `regen --check` fails with `specs/INDEX.md is missing` and
+//      the user can't commit on the branch. We hardcode the `specs/`
+//      path because `specs_dir` overrides are out of scope for the
+//      shell-level guard; users who override can write their own hook.
 export const HOOK_BLOCK =
   HOOK_MARKER_BEGIN + '\n' +
   '[ -f .zettelgeist.yaml ] || exit 0\n' +
+  'git ls-files --error-unmatch specs/INDEX.md >/dev/null 2>&1 || exit 0\n' +
   'if command -v zettelgeist >/dev/null 2>&1; then\n' +
   '  zettelgeist regen --check\n' +
   'elif [ -x ./node_modules/.bin/zettelgeist ]; then\n' +
