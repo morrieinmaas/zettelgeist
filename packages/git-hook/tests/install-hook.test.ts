@@ -54,6 +54,12 @@ describe('mergeHookContent', () => {
   it('HOOK_BLOCK self-disables when .zettelgeist.yaml is missing', () => {
     expect(HOOK_BLOCK).toContain('[ -f .zettelgeist.yaml ] || exit 0');
   });
+
+  it('HOOK_BLOCK self-disables when specs/INDEX.md is not tracked in HEAD', () => {
+    expect(HOOK_BLOCK).toContain(
+      'git ls-files --error-unmatch specs/INDEX.md >/dev/null 2>&1 || exit 0',
+    );
+  });
 });
 
 describe('HOOK_BLOCK execution', () => {
